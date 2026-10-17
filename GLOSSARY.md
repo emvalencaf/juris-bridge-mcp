@@ -35,3 +35,7 @@ _Avoid_: response, payload
 **URN Lex**:
 The LexML Uniform Resource Name that canonically identifies a norm (for example `urn:lex:br:federal:lei:2021-04-01;14133`).
 _Avoid_: norm ID, law ID
+
+**Reference deployment**:
+The documented, supported way for a user to run the server on their own AWS account; other targets run the same container but are not provisioned by this project.
+_Avoid_: production, hosted instance

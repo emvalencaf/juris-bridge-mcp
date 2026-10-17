@@ -17,3 +17,5 @@ heading when `development` is released to `master`.
 - Research notes under `docs/research/`: DataJud API, LexML access, court data
   access, AWS deployment options, legislation access (Playwright and
   alternatives) and a benchmark of similar legal-data MCP servers.
+- ADR 0002: DataJud is self-hosted per user and the MVP sources (DataJud, Senado
+  API, Planalto/Câmara Legin) need no browser; `URN Lex` added to `GLOSSARY.md`.

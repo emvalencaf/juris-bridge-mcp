@@ -31,3 +31,7 @@ _Avoid_: laws, norms
 **Normalized result**:
 The source-independent shape returned by a tool, carrying the originating Source and a citation URL.
 _Avoid_: response, payload
+
+**URN Lex**:
+The LexML Uniform Resource Name that canonically identifies a norm (for example `urn:lex:br:federal:lei:2021-04-01;14133`).
+_Avoid_: norm ID, law ID

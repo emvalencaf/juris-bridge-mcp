@@ -1,8 +1,8 @@
 # Code Standards
 
-These standards apply to everything committed here. Sections marked *(stack)*
-are placeholders: replace them with your project's language, formatter, linter
-and test conventions when you start from this template.
+These standards apply to everything committed here. Tool settings live in
+`pyproject.toml`, which is the source of truth; this file names the tools instead
+of repeating their values.
 
 ## General
 
@@ -11,14 +11,61 @@ and test conventions when you start from this template.
   document variables in `.env.example`.
 - Every behavior change comes with a test, or a stated reason why not.
 
-## Stack *(stack)*
+## Stack
 
-- Language: Python ≥ 3.11, managed with `uv`.
-- Lint and format: `ruff` (config in `pyproject.toml`), enforced by the `pre-commit` hook.
+- Language: Python ≥ 3.12, managed with `uv`.
+- Lint and format: `ruff` (config in `pyproject.toml`, including the `S` security rules), enforced by the `pre-commit` hook and CI.
+- Types: `mypy` (config in `pyproject.toml`), run in CI.
 - Encoding: UTF-8, NFC-normalized, no BOM, no zero-width or bidi control characters
   (enforced by `scripts/check_unicode.py`).
-- Test command: _to be defined_
-- Directory layout: _to be defined_
+- Test command: `uv run pytest` (`pytest` with `pytest-asyncio`); tests live in `tests/`.
+- Directory layout: flat package `juris_bridge_mcp/` at the repo root; tests in `tests/`.
+  See [Architecture](#architecture).
+- Docstrings: Google style on public modules, classes and functions.
+
+## Architecture
+
+Modular and layered, one concept per module, following FastMCP's server model
+([ADR 0001](docs/adr/0001-vertical-slices-on-fastmcp.md)).
+
+| Path (under `juris_bridge_mcp/`) | Role |
+|---|---|
+| `main.py` | Entry point: reads settings, starts the server |
+| `bootstrap.py` | Composition root: builds shared clients, mounts one FastMCP sub-server per module on the root server |
+| `config/` | One settings class per concern (`server.py`, `http.py`, `datajud.py`), each with its own `JURIS_BRIDGE_<CONCERN>_` env prefix; shared base in `base.py` |
+| `health.py` | Plain HTTP routes outside MCP |
+| `modules/<concept>/` | A self-contained vertical slice, one per concept (see below) |
+| `providers/<name>/` | External service: `client.py` (transport), `queries.py`, `schemas.py`, `errors.py`; shared by modules, knows nothing of any domain |
+| `shared/` | Cross-cutting errors, HTTP client factory, observability |
+
+Inside `modules/<concept>/`, five sibling folders (flat, none nested in another):
+
+| Folder | Holds |
+|---|---|
+| `domain/` | Entities, value objects and domain errors; pure, imports only `shared/` |
+| `ports/` | The interfaces (`Protocol`s) the module needs or offers; one per file |
+| `application/use_cases/` | One use case per file; depends on `ports/` and `domain/` only |
+| `adapters/` | Implementations of ports (e.g. `datajud_case_repository.py`) and the module's inbound adapter (`mcp_tools.py`, a FastMCP sub-server) |
+| `infrastructure/` | Technical wiring of the module (`container.py`: builds adapters, injects them into use cases, returns the sub-server) |
+
+Any of these folders may contain subdirectories that group related files by
+sub-concept, e.g. `application/use_cases/movements/`, `adapters/datajud/` or
+`ports/repositories/`. Rules: create one when about three or more files share a
+sub-concept (not before), name it after the sub-concept (never `misc` or `utils`),
+and keep it to one level unless a second one clearly pays off. Subdirectories do
+not change the dependency rule below, and imports stay absolute from the package
+root.
+
+Adding a concept means adding a `modules/<concept>/` folder and one `app.mount(...)`
+line in `bootstrap.py`. Rules: one concept per module, one responsibility per file,
+modules do not import each other (share through `shared/` or a port). Settings are
+never read outside `config/` and `main.py`; they reach other code as arguments.
+
+Dependency rule (arrows are "may import"):
+`adapters` → `application` → `ports` → `domain`; `infrastructure` → everything in
+its module. `domain` imports no other layer; `ports` and `application` never import
+`adapters`, `infrastructure` or `providers`. Tests mirror it:
+`tests/unit/modules/`, `tests/contract/providers/`, `tests/integration/mcp/`.
 
 ## Documentation
 

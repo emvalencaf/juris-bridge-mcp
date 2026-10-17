@@ -19,7 +19,7 @@ jobs:
           exit 1
 
   checks:
-    name: Unicode, ruff, wiki
+    name: Unicode, ruff, types, tests, wiki
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +30,10 @@ jobs:
         run: uvx ruff check .
       - name: Ruff format
         run: uvx ruff format --check .
+      - name: Types
+        run: uv run --dev mypy juris_bridge_mcp
+      - name: Tests
+        run: uv run --dev pytest
       - name: Wiki bundle
         run: |
           if [ -d .wiki ]; then

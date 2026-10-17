@@ -1,7 +1,7 @@
 ---
 type: Reference
-title: Getting started — Project knowledge
-description: Starting point for the Project knowledge OKF bundle.
+title: Getting started — Juris Bridge MCP knowledge
+description: Starting point for the Juris Bridge MCP knowledge OKF bundle.
 tags:
 - getting-started
 status: stable

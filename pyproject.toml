@@ -1,13 +1,38 @@
 [project]
-name = "project-name"
+name = "juris-bridge-mcp"
+description = "A remote, extensible and testable MCP server that gives AI agents access to Brazilian judicial data through a unified interface."
 version = "0.1.0"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=4.1.0",
+    "httpx>=0.28.1",
+    "pydantic-settings>=2.16.0",
+]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 # vendored third-party skills are not ours to lint
 extend-exclude = [".agents", ".claude"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "N", "RUF"]
+select = ["E", "F", "W", "I", "B", "UP", "N", "RUF", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]

@@ -13,3 +13,7 @@ heading when `development` is released to `master`.
   each with `domain`, `ports`, `application/use_cases`, `adapters` and
   `infrastructure` (see `CODE_STANDARDS.md` and ADR 0001), plus `.env.example`,
   a `Dockerfile` and the `tests/` layout.
+- `GLOSSARY.md` with the initial domain language.
+- Research notes under `docs/research/`: DataJud API, LexML access, court data
+  access, AWS deployment options, legislation access (Playwright and
+  alternatives) and a benchmark of similar legal-data MCP servers.

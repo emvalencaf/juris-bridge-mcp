@@ -79,6 +79,22 @@ A remote, extensible and testable MCP server that gives AI agents access to Braz
 
 ## Usage
 
+### Running the server
+
+The same image runs everywhere; it only reads environment variables (see `.env.example`).
+
+```bash
+# uv
+JURIS_BRIDGE_SERVER_API_KEYS=my-key JURIS_BRIDGE_DATAJUD_API_KEY=... uv run python -m juris_bridge_mcp.main
+
+# container (MCP endpoint: http://localhost:8000/mcp, Authorization: Bearer my-key)
+docker build -t juris-bridge-mcp .
+docker run --rm -p 8000:8000 --env-file .env juris-bridge-mcp
+```
+
+The AWS Reference deployment (Lambda + Function URL, Terraform) lives in
+[`deploy/aws/`](deploy/aws/README.md); run `deploy/aws/wizard.sh`.
+
 ### Known limits
 
 - The rate limiter is **per instance**: each warm environment counts on its own, so

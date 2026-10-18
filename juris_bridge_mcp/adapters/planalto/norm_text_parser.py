@@ -17,7 +17,12 @@ _BREAKS = frozenset({"p", "br", "div", "tr", "li", "table", "h1", "h2", "h3", "h
 _VOID = frozenset({"br", "hr", "img", "meta", "link", "input", "col", "area", "base", "param"})
 _SKIPPED = frozenset({"script", "style", "head"})
 _STRUCK = frozenset({"strike", "s", "del"})
-_HEADING = re.compile(r"(parte|livro|título|capítulo|seção|subseção|anexo)\b", re.IGNORECASE)
+# Some pages drop the accents (`TITULO`, `CAPITULO`).
+_HEADING = re.compile(
+    r"(parte|livro|t[ií]tulo|subt[ií]tulo|cap[ií]tulo|se[cç][ãa]o|subse[cç][ãa]o|anexo)\b",
+    re.IGNORECASE,
+)
+_MIN_SHOUTED_CHARS = 4
 _MAX_HEADING_CHARS = 150
 # A rubric is the short title of the next article ("Lugar do crime"): it has no closing
 # punctuation and does not open like a provision part (§, inciso, alínea, Parágrafo, Pena).
@@ -78,8 +83,9 @@ def parse_norm_text(html: str, *, url: str) -> NormText:
     """Return the plain text of the page at `url`, or raise `SchemaDrift` if it has no articles.
 
     A line that opens with `Art.` starts an article, which runs to the next article, to a
-    heading (`CAPÍTULO`, `Seção`...) or to the closing `Brasília, ...` line. The rubric title of
-    the next article (`Lugar do crime`) that trails an article is left out of it.
+    heading (`CAPÍTULO`, `Seção`, or a line in capitals) or to the closing `Brasília, ...` line.
+    The rubric title of the next article (`Lugar do crime`) that trails an article is left
+    out of it.
     """
     reader = _Lines()
     reader.feed(html)
@@ -129,7 +135,16 @@ def _drop_trailing_rubrics(block: list[tuple[str, bool]]) -> None:
 
 def _closes_article(line: str) -> bool:
     return line.startswith("Brasília,") or (
-        len(line) <= _MAX_HEADING_CHARS and _HEADING.match(line) is not None
+        len(line) <= _MAX_HEADING_CHARS and (_HEADING.match(line) is not None or _is_shouted(line))
+    )
+
+
+def _is_shouted(line: str) -> bool:
+    """Tell a heading in capitals (`DAS PENALIDADES`) from a provision like `I - (VETADO);`."""
+    return (
+        len(line) >= _MIN_SHOUTED_CHARS
+        and line.isupper()
+        and all(char.isalpha() or char in " .,'" for char in line)
     )
 
 

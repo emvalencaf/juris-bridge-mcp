@@ -138,6 +138,35 @@ def test_a_provision_without_closing_punctuation_is_not_taken_for_a_rubric():
     assert seventh.endswith("Pena - detenção de um a dois anos") and "I - os crimes" in seventh
 
 
+@pytest.mark.parametrize(
+    "heading", ["SUBTÍTULO II", "TITULO III", "CAPITULO I", "Seção VIII", "DAS PENALIDADES"]
+)
+def test_a_heading_closes_the_article_before_it(heading):
+    html = _page_of(
+        "Art. 9º A sociedade adquire personalidade jurídica com a inscrição.",
+        heading,
+        "Da Sociedade Não Personificada",
+        "Art. 10. Texto seguinte para o teste.",
+    )
+
+    ninth = parse_norm_text(html, url="u").articles[0].text
+
+    assert ninth == "Art. 9º A sociedade adquire personalidade jurídica com a inscrição."
+
+
+def test_a_vetoed_provision_in_capitals_does_not_close_the_article():
+    html = _page_of(
+        "Art. 11. O agente poderá:",
+        "I - (VETADO);",
+        "II - provas da prática de atos ilícitos.",
+        "Art. 12. Texto seguinte para o teste.",
+    )
+
+    eleventh = parse_norm_text(html, url="u").articles[0].text
+
+    assert "I - (VETADO);" in eleventh and "II - provas" in eleventh
+
+
 def test_the_text_is_plain_and_decoded():
     text = _parse("lei_14133_2021.htm").text
 

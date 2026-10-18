@@ -10,8 +10,10 @@ heading when `development` is released to `master`.
 ### Changed
 
 - Planalto norm text (#43): the rubric title of the next article (e.g. `Lugar do crime`) no
-  longer trails the previous article. Known limits of the flags, article boundaries and page
-  paths are documented in the README and the `get_legislation` description.
+  longer trails the previous article, and a heading without accents (`TITULO`), a `SUBTÍTULO` or a
+  line in capitals (`DAS PENALIDADES`) now ends the article before it. Known limits of the flags,
+  article boundaries and page paths are documented in the README and the `get_legislation`
+  description.
 - Cursor (#40): `Cursor.court` is now the neutral `scope`, and the position is whatever the
   search needs, validated by the use case that issued it (a sort position for Cases, an offset
   for Legislation). `Cursor.decode` now requires the `scopes` it accepts.

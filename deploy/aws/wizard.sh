@@ -62,8 +62,11 @@ REPO="$(terraform output -raw ecr_repository_url)"
 say "4/6 Image ($REPO)"
 PLATFORM="linux/${ARCH/x86_64/amd64}"
 aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "${REPO%%/*}"
-# --provenance=false: Lambda rejects the multi-manifest index buildx adds by default.
-docker build --provenance=false --platform "$PLATFORM" -f "$ROOT/deploy/aws/Dockerfile" \
+# BuildKit adds a multi-manifest index that Lambda rejects; --provenance=false avoids it.
+# The legacy builder (no buildx) has no such flag and already builds a plain image.
+BUILD_FLAGS=()
+if docker buildx version >/dev/null 2>&1; then BUILD_FLAGS=(--provenance=false); fi
+docker build ${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"} --platform "$PLATFORM" -f "$ROOT/deploy/aws/Dockerfile" \
   -t "$REPO:latest" "$ROOT"
 docker push "$REPO:latest"
 

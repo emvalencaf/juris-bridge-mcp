@@ -180,3 +180,19 @@ async def test_total_wait_across_limiter_and_backoff_stays_within_the_budget():
     assert caught.value.code is ErrorCode.SOURCE_UNAVAILABLE
     assert len(seen) == 1
     assert rec.slept == []
+
+
+async def test_upstream_call_is_recorded_on_the_wide_event_with_retries():
+    from juris_bridge_mcp.adapters import wide_event
+
+    event = wide_event.WideEvent({}, "r")
+    token = wide_event.start(event)
+    try:
+        rec = Recorder()
+        transport, _ = scripted(httpx.Response(503), httpx.Response(200))
+        await make(transport, rec).request("GET", "https://x.test/")
+    finally:
+        wide_event.stop(token)
+
+    (entry,) = event.upstream
+    assert (entry["source"], entry["status"], entry["retries"]) == ("datajud", 200, 1)

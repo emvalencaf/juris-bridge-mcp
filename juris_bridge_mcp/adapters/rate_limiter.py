@@ -1,12 +1,11 @@
 """Per-instance sliding-window rate limiter that fails fast instead of hanging the agent."""
 
 import asyncio
-import math
 import time
 from collections import deque
 from collections.abc import Awaitable, Callable
 
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import rate_limited
 
 
 class RateLimiter:
@@ -45,13 +44,10 @@ class RateLimiter:
             slot = self._slots[-self._max_requests] + self._window
         wait = slot - now
         if wait > self._max_wait:
-            raise ToolFailure(
-                ErrorCode.RATE_LIMITED,
+            raise rate_limited(
+                self._source,
                 f"{self._source} request limit reached on this instance",
-                source=self._source,
-                retryable=True,
-                retry_after_seconds=math.ceil(wait),
-                hint="Wait retry_after_seconds before calling again.",
+                retry_after_seconds=wait,
             )
         self._slots.append(slot)
         if wait > 0:

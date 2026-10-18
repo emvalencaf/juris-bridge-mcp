@@ -1,14 +1,13 @@
 """The one HTTP client every upstream call goes through: honest identity, rate limit, retries."""
 
 import asyncio
-import math
 import random
 from collections.abc import Awaitable, Callable
 from typing import Any
 
 import httpx
 
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, rate_limited
 from juris_bridge_mcp.ports.limiter import Limiter
 
 USER_AGENT = (
@@ -71,12 +70,10 @@ class UpstreamClient:
 
     def _failure(self, response: httpx.Response, wait: float) -> ToolFailure:
         if response.status_code == 429:
-            return ToolFailure(
-                ErrorCode.RATE_LIMITED,
+            return rate_limited(
+                self._source,
                 f"{self._source} is rate limiting this server",
-                source=self._source,
-                retryable=True,
-                retry_after_seconds=math.ceil(wait),
+                retry_after_seconds=wait,
             )
         return ToolFailure(
             ErrorCode.SOURCE_UNAVAILABLE,

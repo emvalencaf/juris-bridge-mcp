@@ -1,6 +1,7 @@
 """The closed set of Error codes and the MCP error shape every tool failure uses."""
 
 import json
+import math
 from enum import StrEnum
 from typing import Any
 
@@ -63,3 +64,15 @@ class ToolFailure(Exception):  # noqa: N818 - domain term, not a generic error s
 def to_tool_error(failure: ToolFailure) -> ToolError:
     """Convert a failure into the MCP error (`isError: true`) a tool raises."""
     return ToolError(failure.to_json())
+
+
+def rate_limited(source: str, message: str, *, retry_after_seconds: float) -> ToolFailure:
+    """Build the retryable `rate_limited` failure, rounding the wait up to whole seconds."""
+    return ToolFailure(
+        ErrorCode.RATE_LIMITED,
+        message,
+        source=source,
+        retryable=True,
+        retry_after_seconds=math.ceil(retry_after_seconds),
+        hint="Wait retry_after_seconds before calling again.",
+    )

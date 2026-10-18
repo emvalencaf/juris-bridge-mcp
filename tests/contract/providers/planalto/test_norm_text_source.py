@@ -93,6 +93,39 @@ def test_an_article_repealed_by_note_is_flagged_revoked():
     assert text.find_article("185")[0].text.startswith("Art. 185 -")
 
 
+def _page_of(*lines: str) -> str:
+    filler = "<p>Esta lei dispõe sobre assuntos diversos para o teste do analisador.</p>" * 4
+    return "<html><body>" + filler + "".join(f"<p>{line}</p>" for line in lines) + "</body></html>"
+
+
+def test_the_rubric_of_the_next_article_does_not_trail_the_previous_one():
+    html = _page_of(
+        "Art. 5º Aplica-se a lei brasileira ao crime cometido no território nacional.",
+        "§ 1º Para os efeitos penais, consideram-se como extensão do território",
+        "Lugar do crime",
+        "Art. 6º Considera-se praticado o crime no lugar da ação.",
+    )
+
+    articles = {a.key: a.text for a in parse_norm_text(html, url="u").articles}
+
+    assert articles["5"].endswith("extensão do território")
+    assert "Lugar do crime" not in articles["5"]
+    assert articles["6"].startswith("Art. 6º")
+
+
+def test_a_provision_without_closing_punctuation_is_not_taken_for_a_rubric():
+    html = _page_of(
+        "Art. 7º Ficam sujeitos à lei brasileira:",
+        "I - os crimes contra a vida",
+        "Pena - detenção de um a dois anos",
+        "Art. 8º Texto seguinte para o teste.",
+    )
+
+    seventh = parse_norm_text(html, url="u").articles[0].text
+
+    assert seventh.endswith("Pena - detenção de um a dois anos") and "I - os crimes" in seventh
+
+
 def test_the_text_is_plain_and_decoded():
     text = _parse("lei_14133_2021.htm").text
 

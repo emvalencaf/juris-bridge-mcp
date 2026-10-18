@@ -66,9 +66,10 @@ resource "aws_lambda_function" "server" {
   environment {
     variables = merge(
       {
-        JURIS_BRIDGE_SERVER_API_KEYS = var.api_keys
-        JURIS_BRIDGE_DATAJUD_API_KEY = var.datajud_api_key
-        JURIS_BRIDGE_LOG_COMMIT_HASH = var.commit_hash
+        JURIS_BRIDGE_SERVER_API_KEYS         = var.api_keys
+        JURIS_BRIDGE_DATAJUD_API_KEY         = var.datajud_api_key
+        JURIS_BRIDGE_DATAJUD_TIMEOUT_SECONDS = tostring(var.datajud_timeout_seconds)
+        JURIS_BRIDGE_LOG_COMMIT_HASH         = var.commit_hash
       },
       var.extra_environment,
     )

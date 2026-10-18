@@ -21,7 +21,7 @@ first (`terraform apply -target=aws_ecr_repository.image`), push the image, then
 
 ## What Terraform creates
 
-- Lambda function (container image, `arm64` by default, 512 MB, 60 s) and Function URL.
+- Lambda function (container image, `arm64` by default, 512 MB, 120 s, DataJud timeout 45 s) and Function URL.
 - Log group with 30-day retention and four saved Logs Insights queries (slowest requests,
   errors, calls by tool, cold starts) over the [wide events](../../docs/adr/0004-wide-event-logging-to-stdout.md).
 - `api_keys` and `datajud_api_key` are sensitive variables turned into Lambda environment

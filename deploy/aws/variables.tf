@@ -39,8 +39,15 @@ variable "memory_mb" {
 }
 
 variable "timeout_seconds" {
-  type    = number
-  default = 60
+  description = "Lambda timeout; keep it above datajud_timeout_seconds so the app answers first."
+  type        = number
+  default     = 120
+}
+
+variable "datajud_timeout_seconds" {
+  description = "How long the app waits for DataJud, which takes 18 s or more from us-east-1."
+  type        = number
+  default     = 45
 }
 
 variable "api_keys" {

@@ -2,6 +2,7 @@
 
 import asyncio
 import random
+import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -43,6 +44,7 @@ class UpstreamClient:
         max_wait_seconds: float,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         jitter: Callable[[], float] = lambda: random.uniform(0.5, 1.0),  # noqa: S311
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         """Wrap `client` for one Source; `max_retries` and `max_wait_seconds` come from settings."""
         self._client = client
@@ -52,28 +54,33 @@ class UpstreamClient:
         self._max_wait = max_wait_seconds
         self._sleep = sleep
         self._jitter = jitter
+        self._clock = clock
 
     async def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
-        """Return the response; raise `rate_limited`/`source_unavailable` when retries run out."""
+        """Return the response; waits at most `max_wait_seconds` in total, then raise a failure."""
+        waited = 0.0
         for attempt in range(self._max_retries + 1):
+            started = self._clock()
             await self._limiter.acquire()
+            waited += self._clock() - started
             response = await self._client.request(method, url, **kwargs)
             if response.status_code not in _RETRYABLE_STATUSES:
                 return response
             retry_after = _retry_after_seconds(response)
             backoff = _BACKOFF_BASE_SECONDS * 2**attempt * self._jitter()
             wait = retry_after if retry_after is not None else backoff
-            if attempt == self._max_retries or wait > self._max_wait:
-                raise self._failure(response, wait)
+            if attempt == self._max_retries or waited + wait > self._max_wait:
+                raise self._failure(response, retry_after)
             await self._sleep(wait)
+            waited += wait
         raise AssertionError("unreachable")  # pragma: no cover
 
-    def _failure(self, response: httpx.Response, wait: float) -> ToolFailure:
+    def _failure(self, response: httpx.Response, retry_after: float | None) -> ToolFailure:
         if response.status_code == 429:
             return rate_limited(
                 self._source,
                 f"{self._source} is rate limiting this server",
-                retry_after_seconds=wait,
+                retry_after_seconds=self._max_wait if retry_after is None else retry_after,
             )
         return ToolFailure(
             ErrorCode.SOURCE_UNAVAILABLE,

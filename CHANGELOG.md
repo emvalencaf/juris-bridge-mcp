@@ -40,4 +40,5 @@ heading when `development` is released to `master`.
   `retry_after_seconds` instead of blocking past about 5 s), 2 jittered retries
   on 429/503, and a `Cache` port with an in-memory TTL implementation. Known
   limits: the rate limit is per instance, not global, and the cache lives per
-  warm environment.
+  warm environment. The client keeps its total waiting (limiter plus backoff)
+  within the wait budget, and the cache is capped at 1024 entries.

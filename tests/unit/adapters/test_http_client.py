@@ -120,7 +120,7 @@ async def test_gives_up_after_two_retries_on_429_as_rate_limited():
 
     assert len(seen) == 3
     assert caught.value.code is ErrorCode.RATE_LIMITED
-    assert caught.value.retry_after_seconds is not None
+    assert caught.value.retry_after_seconds == 5
 
 
 async def test_honors_a_short_retry_after_header():
@@ -152,3 +152,31 @@ async def test_other_statuses_are_returned_untouched():
 
     assert response.status_code == 404
     assert len(seen) == 1
+
+
+async def test_total_wait_across_limiter_and_backoff_stays_within_the_budget():
+    now = [0.0]
+
+    class SlowLimiter:
+        async def acquire(self) -> None:
+            now[0] += 4.8
+
+    transport, seen = scripted(httpx.Response(503), httpx.Response(200))
+    rec = Recorder()
+    client = UpstreamClient(
+        build_http_client(timeout_seconds=7, transport=transport),
+        source="datajud",
+        limiter=SlowLimiter(),
+        max_retries=2,
+        max_wait_seconds=5,
+        sleep=rec.sleep,
+        jitter=lambda: 1.0,
+        clock=lambda: now[0],
+    )
+
+    with pytest.raises(ToolFailure) as caught:
+        await client.request("GET", "https://example.test/")
+
+    assert caught.value.code is ErrorCode.SOURCE_UNAVAILABLE
+    assert len(seen) == 1
+    assert rec.slept == []

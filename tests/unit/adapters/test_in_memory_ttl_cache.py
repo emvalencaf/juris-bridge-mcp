@@ -42,3 +42,39 @@ def test_set_overwrites_and_refreshes_ttl():
     clock.now += 9
 
     assert cache.get("k") == "new"
+
+
+def test_purges_expired_entries_that_were_never_read_again():
+    clock = FakeClock()
+    cache = InMemoryTtlCache(clock=clock, max_entries=2)
+    cache.set("old", 1, ttl_seconds=10)
+    cache.set("live", 2, ttl_seconds=100)
+    clock.now += 10
+
+    cache.set("new", 3, ttl_seconds=100)
+
+    assert cache.get("live") == 2
+    assert cache.get("new") == 3
+
+
+def test_evicts_the_oldest_entry_when_full_of_live_ones():
+    cache = InMemoryTtlCache(clock=FakeClock(), max_entries=2)
+    cache.set("a", 1, ttl_seconds=100)
+    cache.set("b", 2, ttl_seconds=100)
+
+    cache.set("c", 3, ttl_seconds=100)
+
+    assert cache.get("a") is None
+    assert cache.get("b") == 2
+    assert cache.get("c") == 3
+
+
+def test_overwriting_a_key_does_not_evict_when_full():
+    cache = InMemoryTtlCache(clock=FakeClock(), max_entries=2)
+    cache.set("a", 1, ttl_seconds=100)
+    cache.set("b", 2, ttl_seconds=100)
+
+    cache.set("a", 9, ttl_seconds=100)
+
+    assert cache.get("a") == 9
+    assert cache.get("b") == 2

@@ -23,6 +23,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Diagrams (#32): four overview diagrams under `docs/diagrams/` (architecture and module
+  layout, MCP request flow with the wide event, `get_legislation` text fallback chain, AWS
+  Reference deployment), each as an HTML source in `code/` and a rendered SVG in `assets/`, with
+  the official AWS Architecture Icons for the deployment one. A release PR to `master` must
+  regenerate any diagram whose module, flow or ADR changed.
 - Câmara Legin text fallback (#29): when the Planalto has no page for a norm or refuses, the
   text of `get_legislation` comes from Câmara Legin, then metadata and links only.
   `text_source` is `camara_legin` and `warnings` say that the fallback supplied the text and

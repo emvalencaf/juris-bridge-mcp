@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `search_legislation` tool (#26): locate a federal norm by `type` (`lei`,
+  `lei-complementar`, `decreto`, `decreto-lei`, `medida-provisoria`,
+  `emenda-constitucional`), `number` and `year` through the Senado open-data API; no
+  free-text search. Results carry the URN Lex, a Citation with the `normas.leg.br` URL,
+  `source`, `retrieved_at` and `content_kind: metadata`. `limit` and the Cursor behave as
+  for cases, with an offset in the same Cursor format. Adds `JURIS_BRIDGE_SENADO_*`.
 - `search_cases` tool (#25): search a Court's Cases by `case_class`, `judging_body`,
   `subject` and `filed_from`/`filed_to` (no party, judge or CPF filters). `court` is
   checked against the embedded allowlist; `limit` is 1-50 (default 10). Paging uses a

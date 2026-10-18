@@ -32,7 +32,7 @@ Layered (hexagonal) at the top of the package, with FastMCP as the inbound adapt
 | Path (under `juris_bridge_mcp/`) | Holds |
 |---|---|
 | `main.py` | Entry point: reads settings, prints the startup notice, starts the server |
-| `config/` | One settings class per concern (`server.py`, `http.py`, `datajud.py`), each with its own `JURIS_BRIDGE_<CONCERN>_` env prefix; shared base in `base.py` |
+| `config/` | One settings class per concern (`server.py`, `http.py`, `datajud.py`, `senado.py`), each with its own `JURIS_BRIDGE_<CONCERN>_` env prefix; shared base in `base.py` |
 | `domain/` | Entities, value objects, domain errors and the Error codes; pure, imports nothing else of the package |
 | `ports/` | The interfaces (`Protocol`s) the application needs or offers; one per file |
 | `application/use_cases/` | One use case per file; depends on `ports/` and `domain/` only |

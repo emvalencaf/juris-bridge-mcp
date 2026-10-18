@@ -8,10 +8,12 @@ from fastmcp import Client
 
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.http import HttpSettings
+from juris_bridge_mcp.config.senado import SenadoSettings
 from juris_bridge_mcp.config.server import ServerSettings
 from juris_bridge_mcp.infrastructure.bootstrap import build_http_app, build_server
 
 DATAJUD_FIXTURES = Path(__file__).parents[2] / "contract/providers/datajud/fixtures"
+SENADO_FIXTURES = Path(__file__).parents[2] / "contract/providers/senado/fixtures"
 
 
 def datajud_fixture(name: str) -> dict:
@@ -35,18 +37,46 @@ class FakeDatajud:
         return httpx.Response(self.status, json=self.body)
 
 
+class FakeSenado:
+    """Scripted Senado: replace `body`/`status` to change the answer; `requests` records calls."""
+
+    def __init__(self) -> None:
+        self.requests: list[httpx.Request] = []
+        self.status = 200
+        self.body: dict = self.fixture("lei_14133_2021.json")
+
+    @staticmethod
+    def fixture(name: str) -> dict:
+        return json.loads((SENADO_FIXTURES / name).read_text())
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        return httpx.Response(self.status, json=self.body)
+
+
+@pytest.fixture
+def senado() -> FakeSenado:
+    return FakeSenado()
+
+
 @pytest.fixture
 def datajud() -> FakeDatajud:
     return FakeDatajud()
 
 
 @pytest.fixture
-def server_args(datajud) -> dict:
-    """Settings and transport the root server is built with: no network, a fake DataJud."""
+def server_args(datajud, senado) -> dict:
+    """Settings and transport the root server is built with: no network, fake Sources."""
+    senado_host = httpx.URL(SenadoSettings().base_url).host
+
+    def route(request: httpx.Request) -> httpx.Response:
+        return senado(request) if request.url.host == senado_host else datajud(request)
+
     return {
         "datajud": DatajudSettings(api_key="test-key"),
         "http": HttpSettings(),
-        "transport": httpx.MockTransport(datajud),
+        "senado": SenadoSettings(),
+        "transport": httpx.MockTransport(route),
     }
 
 

@@ -39,3 +39,12 @@ def test_a_malformed_token_is_invalid_argument(token):
         Cursor.decode(token)
 
     assert caught.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+def test_a_cursor_decodes_only_for_the_scopes_it_is_asked_for():
+    token = Cursor(court="senado", position=(10, 0), filters_key="k").encode()
+
+    assert Cursor.decode(token, scopes=("senado",)).position == (10, 0)
+    with pytest.raises(ToolFailure) as caught:
+        Cursor.decode(token)
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT

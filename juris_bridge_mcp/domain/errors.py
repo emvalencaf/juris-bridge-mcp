@@ -76,3 +76,26 @@ def rate_limited(source: str, message: str, *, retry_after_seconds: float) -> To
         retry_after_seconds=math.ceil(retry_after_seconds),
         hint="Wait retry_after_seconds before calling again.",
     )
+
+
+def invalid_argument(message: str, hint: str | None = None) -> ToolFailure:
+    """Build the non-retryable `invalid_argument` failure, which names no Source."""
+    return ToolFailure(ErrorCode.INVALID_ARGUMENT, message, source=None, retryable=False, hint=hint)
+
+
+def source_failure(
+    source: str, code: ErrorCode, message: str, *, retryable: bool, hint: str | None = None
+) -> ToolFailure:
+    """Build a failure attributed to `source`."""
+    return ToolFailure(code, message, source=source, retryable=retryable, hint=hint)
+
+
+def source_changed(source: str, name: str, detail: str) -> ToolFailure:
+    """Build the `source_changed` failure for an answer `name` gave in an unknown shape."""
+    return source_failure(
+        source,
+        ErrorCode.SOURCE_CHANGED,
+        f"{name} answered in a shape this server does not understand ({detail}).",
+        retryable=False,
+        hint="Do not trust partial data; report the problem to the operator.",
+    )

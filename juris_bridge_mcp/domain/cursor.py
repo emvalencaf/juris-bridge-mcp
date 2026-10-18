@@ -23,6 +23,8 @@ def _invalid() -> ToolFailure:
 class Cursor:
     """Where a search stopped: the Court, the Source's sort position and the filters it ran with.
 
+    `court` is the scope the search ran in: a Court alias, or `senado` for a legislation search,
+    whose position is `(offset, 0)`.
     `filters_key` lets a later call notice that the filters changed under the same cursor.
     """
 
@@ -37,15 +39,15 @@ class Cursor:
         return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
     @classmethod
-    def decode(cls, token: str) -> "Cursor":
-        """Parse a token, or raise `invalid_argument` for anything this server did not issue."""
+    def decode(cls, token: str, scopes: tuple[str, ...] = DATAJUD_COURTS) -> "Cursor":
+        """Parse a token, or raise `invalid_argument` for anything outside `scopes`."""
         try:
             body = json.loads(base64.urlsafe_b64decode(token + "=" * (-len(token) % 4)))
             court, position, key = body["c"], body["p"], body["f"]
         except (ValueError, KeyError, TypeError, binascii.Error):
             raise _invalid() from None
         if (
-            court not in DATAJUD_COURTS
+            court not in scopes
             or not isinstance(key, str)
             or not isinstance(position, list)
             or len(position) != 2

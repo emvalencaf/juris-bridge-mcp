@@ -6,33 +6,19 @@ from typing import Any
 
 import httpx
 
-from juris_bridge_mcp.adapters.datajud.case_mapper import SchemaDrift, map_case
+from juris_bridge_mcp.adapters.datajud.case_mapper import map_case
 from juris_bridge_mcp.adapters.http_client import UpstreamClient
+from juris_bridge_mcp.adapters.schema_drift import SchemaDrift
 from juris_bridge_mcp.domain.case import Case, CaseRecord
 from juris_bridge_mcp.domain.case_search import CaseFilters, CasePage
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.courts import SOURCE
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, source_changed, source_failure
 
 _MAX_HITS = 10
 _NEVER = datetime.min.replace(tzinfo=UTC)
 # `@timestamp` alone ties; `id.keyword` makes the order total, so paging never skips or repeats.
 _SORT = [{"@timestamp": {"order": "asc"}}, {"id.keyword": {"order": "asc"}}]
-
-
-def _failure(
-    code: ErrorCode, message: str, *, retryable: bool, hint: str | None = None
-) -> ToolFailure:
-    return ToolFailure(code, message, source=SOURCE, retryable=retryable, hint=hint)
-
-
-def _changed(detail: str) -> ToolFailure:
-    return _failure(
-        ErrorCode.SOURCE_CHANGED,
-        f"DataJud answered in a shape this server does not understand ({detail}).",
-        retryable=False,
-        hint="Do not trust partial data; report the problem to the operator.",
-    )
 
 
 class DatajudCaseRepository:
@@ -58,7 +44,7 @@ class DatajudCaseRepository:
             cases = [map_case(s, number=number, court=court) for s in sources]
             newest = max(range(len(cases)), key=lambda i: cases[i].last_updated_at or _NEVER)
         except (SchemaDrift, KeyError, TypeError) as drift:
-            raise _changed(str(drift)) from None
+            raise source_changed(SOURCE, "DataJud", str(drift)) from None
         return CaseRecord(case=cases[newest], raw=sources[newest], matches=len(sources))
 
     async def search(
@@ -93,7 +79,7 @@ class DatajudCaseRepository:
             ):
                 raise SchemaDrift("a hit has no usable sort position")
         except (SchemaDrift, KeyError, TypeError) as drift:
-            raise _changed(str(drift)) from None
+            raise source_changed(SOURCE, "DataJud", str(drift)) from None
         return CasePage(
             cases=cases,
             total=value,
@@ -147,12 +133,16 @@ class DatajudCaseRepository:
                 },
             )
         except httpx.HTTPError:
-            raise _failure(
-                ErrorCode.SOURCE_UNAVAILABLE, "DataJud did not answer in time.", retryable=True
+            raise source_failure(
+                SOURCE,
+                ErrorCode.SOURCE_UNAVAILABLE,
+                "DataJud did not answer in time.",
+                retryable=True,
             ) from None
         status = response.status_code
         if status == 401:
-            raise _failure(
+            raise source_failure(
+                SOURCE,
                 ErrorCode.SOURCE_AUTH_FAILED,
                 "DataJud rejected the API key.",
                 retryable=False,
@@ -160,19 +150,21 @@ class DatajudCaseRepository:
                 "JURIS_BRIDGE_DATAJUD_API_KEY.",
             )
         if status >= 500:
-            raise _failure(
+            raise source_failure(
+                SOURCE,
                 ErrorCode.SOURCE_UNAVAILABLE,
                 f"DataJud is unavailable (HTTP {status}).",
                 retryable=True,
             )
         if status != 200:
-            raise _changed(f"HTTP {status}")
+            raise source_changed(SOURCE, "DataJud", f"HTTP {status}")
         try:
             body = response.json()
         except ValueError:
-            raise _changed("the body is not JSON") from None
+            raise source_changed(SOURCE, "DataJud", "the body is not JSON") from None
         if isinstance(body, dict) and body.get("timed_out") is True:
-            raise _failure(
+            raise source_failure(
+                SOURCE,
                 ErrorCode.SOURCE_UNAVAILABLE,
                 "DataJud timed out running the search.",
                 retryable=True,

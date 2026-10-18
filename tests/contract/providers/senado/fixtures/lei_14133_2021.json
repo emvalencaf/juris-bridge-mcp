@@ -1,0 +1,27 @@
+{
+  "ListaDocumento": {
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaDocumentov3.xsd",
+    "Metadados": {
+      "Versao": "18/10/2026 03:11:07",
+      "VersaoServico": "3",
+      "DataVersaoServico": "2017-02-01",
+      "DescricaoDataSet": "Obt\u00e9m a lista de Legisla\u00e7\u00e3o Federal com base nos par\u00e2metros informados."
+    },
+    "documentos": {
+      "documento": [
+        {
+          "id": "33382036",
+          "tipo": "LEI-n",
+          "descricao": "Lei Numerada",
+          "numero": "14133",
+          "norma": "LEI-14133-2021-04-01",
+          "normaNome": "Lei n\u00ba 14.133 de 01/04/2021",
+          "ementa": "Lei de Licita\u00e7\u00f5es e Contratos Administrativos.",
+          "dataassinatura": "01/04/2021",
+          "anoassinatura": "2021",
+          "apelido": "LEI-14133-2021-04-01 , Lei de Licita\u00e7\u00f5es e Contratos (2021)"
+        }
+      ]
+    }
+  }
+}

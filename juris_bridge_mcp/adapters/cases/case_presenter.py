@@ -1,8 +1,9 @@
 """Presents a `CaseResult` as the Normalized result an MCP client receives."""
 
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any
 
+from juris_bridge_mcp.adapters.presentation import iso_utc
 from juris_bridge_mcp.application.use_cases.get_case import CaseResult
 from juris_bridge_mcp.application.use_cases.search_cases import SearchResult
 from juris_bridge_mcp.domain.case import Case, CaseEvent, CodedTerm, EventComplement
@@ -13,7 +14,7 @@ def present_case(result: CaseResult) -> dict[str, Any]:
     """Return the Case with its `source`, Citation (no URL), `retrieved_at` and Content kind."""
     presented: dict[str, Any] = {
         "source": SOURCE,
-        "retrieved_at": _iso(result.retrieved_at),
+        "retrieved_at": iso_utc(result.retrieved_at),
         "content_kind": "metadata",
         **_fields(result.case),
         "events": [_event(e) for e in result.case.events],
@@ -29,7 +30,7 @@ def present_search(result: SearchResult) -> dict[str, Any]:
     """Return the page of Cases (without events) with its totals and `next_cursor`."""
     presented: dict[str, Any] = {
         "source": SOURCE,
-        "retrieved_at": _iso(result.retrieved_at),
+        "retrieved_at": iso_utc(result.retrieved_at),
         "content_kind": "metadata",
         "court": result.court,
         "items": [_fields(c) for c in result.cases],
@@ -58,14 +59,8 @@ def _fields(case: Case) -> dict[str, Any]:
         "judging_body": _term(case.judging_body),
         "secrecy_level": case.secrecy_level,
         "source_system": _term(case.source_system),
-        "last_updated_at": _iso(case.last_updated_at),
+        "last_updated_at": iso_utc(case.last_updated_at),
     }
-
-
-def _iso(moment: datetime | None) -> str | None:
-    if moment is None:
-        return None
-    return moment.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _day(day: date | None) -> str | None:
@@ -80,7 +75,7 @@ def _event(event: CaseEvent) -> dict[str, Any]:
     return {
         "code": event.term.code,
         "name": event.term.name,
-        "occurred_at": _iso(event.occurred_at),
+        "occurred_at": iso_utc(event.occurred_at),
         "judging_body": _term(event.judging_body),
         "complements": [_complement(c) for c in event.complements],
     }

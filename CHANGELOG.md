@@ -28,6 +28,11 @@ heading when `development` is released to `master`.
   Reference deployment), each as an HTML source in `code/` and a rendered SVG in `assets/`, with
   the official AWS Architecture Icons for the deployment one. A release PR to `master` must
   regenerate any diagram whose module, flow or ADR changed.
+- Licence and responsible use (#32): the Apache-2.0 `LICENSE`, `RESPONSIBLE_USE.md` (LGPD,
+  DataJud non-commercial terms, no redistribution, a shared instance needs written CNJ
+  authorization, no profiling, nothing sensitive logged, with a README-ready summary) and
+  `docs/known-limits.md` explaining the per-instance rate limit and the per-warm-environment
+  cache on Lambda.
 - Câmara Legin text fallback (#29): when the Planalto has no page for a norm or refuses, the
   text of `get_legislation` comes from Câmara Legin, then metadata and links only.
   `text_source` is `camara_legin` and `warnings` say that the fallback supplied the text and

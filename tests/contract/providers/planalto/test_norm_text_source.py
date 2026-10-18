@@ -28,7 +28,7 @@ def _page(name: str) -> bytes:
 
 
 def _parse(name: str):
-    return parse_norm_text((FIXTURES / name).read_bytes().decode("cp1252"), url="u")
+    return parse_norm_text((FIXTURES / name).read_text(encoding="utf-8"), url="u")
 
 
 def _source(handler) -> PlanaltoNormTextSource:
@@ -217,6 +217,16 @@ async def test_an_unexpected_status_is_source_changed():
         await _source(_serve(418)).fetch(LEI_14133)
 
     assert caught.value.code is ErrorCode.SOURCE_CHANGED
+
+
+async def test_decodes_the_windows_1252_pages_the_planalto_serves():
+    body = ("<html><body>" + "<p>Art. 1º Código é lei.</p>" * 20 + "</body></html>").encode(
+        "cp1252"
+    )
+
+    text = await _source(_serve(200, body)).fetch(LEI_14133)
+
+    assert "Código é lei" in text.articles[0].text
 
 
 async def test_decodes_utf8_pages_too():

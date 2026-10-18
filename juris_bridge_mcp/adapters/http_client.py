@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from juris_bridge_mcp.adapters.wide_event import record_upstream
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, rate_limited
 from juris_bridge_mcp.ports.limiter import Limiter
 
@@ -59,21 +60,33 @@ class UpstreamClient:
     async def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         """Return the response; waits at most `max_wait_seconds` in total, then raise a failure."""
         waited = 0.0
-        for attempt in range(self._max_retries + 1):
-            started = self._clock()
-            await self._limiter.acquire()
-            waited += self._clock() - started
-            response = await self._client.request(method, url, **kwargs)
-            if response.status_code not in _RETRYABLE_STATUSES:
-                return response
-            retry_after = _retry_after_seconds(response)
-            backoff = _BACKOFF_BASE_SECONDS * 2**attempt * self._jitter()
-            wait = retry_after if retry_after is not None else backoff
-            if attempt == self._max_retries or waited + wait > self._max_wait:
-                raise self._failure(response, retry_after)
-            await self._sleep(wait)
-            waited += wait
-        raise AssertionError("unreachable")  # pragma: no cover
+        began = self._clock()
+        status: int | None = None
+        attempt = 0
+        try:
+            for attempt in range(self._max_retries + 1):
+                started = self._clock()
+                await self._limiter.acquire()
+                waited += self._clock() - started
+                response = await self._client.request(method, url, **kwargs)
+                status = response.status_code
+                if status not in _RETRYABLE_STATUSES:
+                    return response
+                retry_after = _retry_after_seconds(response)
+                backoff = _BACKOFF_BASE_SECONDS * 2**attempt * self._jitter()
+                wait = retry_after if retry_after is not None else backoff
+                if attempt == self._max_retries or waited + wait > self._max_wait:
+                    raise self._failure(response, retry_after)
+                await self._sleep(wait)
+                waited += wait
+            raise AssertionError("unreachable")  # pragma: no cover
+        finally:
+            record_upstream(
+                source=self._source,
+                status=status,
+                duration_ms=(self._clock() - began) * 1000,
+                retries=attempt,
+            )
 
     def _failure(self, response: httpx.Response, retry_after: float | None) -> ToolFailure:
         if response.status_code == 429:

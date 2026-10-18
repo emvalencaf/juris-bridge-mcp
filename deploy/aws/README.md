@@ -6,6 +6,8 @@ See [ADR 0003](../../docs/adr/0003-stateless-lambda-reference-deployment.md). Th
 is the only place that knows AWS: the server and its modules never import an AWS SDK or read a
 Lambda event.
 
+![AWS Reference deployment](../../docs/diagrams/assets/04-aws-deployment.svg)
+
 ## Deploy
 
 Needs `aws` (with credentials), `terraform`, `docker` and `openssl`.

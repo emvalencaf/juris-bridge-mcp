@@ -124,3 +124,5 @@ or `infrastructure`. Tests mirror the layers: `tests/unit/<layer>/`,
 - [ ] Skill frontmatter complete; `.claude/skills` symlink present
 - [ ] No secrets, tokens or personal data
 - [ ] [CHANGELOG.md](CHANGELOG.md) updated
+- [ ] Release PR to `master` only: a module, flow or ADR illustrated by a diagram changed → regenerate it
+  ([docs/diagrams](docs/diagrams/README.md))

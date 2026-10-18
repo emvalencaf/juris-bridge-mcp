@@ -257,3 +257,84 @@ async def test_a_cursor_past_the_end_of_the_text_is_rejected():
         )
 
     assert caught.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+_NOTED = "Art. 1º Texto um. (Redação dada pela Lei nº 2)\n(Vide Decreto nº 3)\n§ 1º Dois."
+
+
+async def test_annotations_are_kept_by_default():
+    source = _TextSource(_text(full=_NOTED))
+
+    result = await get_legislation(_Repository(_record()), source, urn=URN, include_text=True)
+
+    assert result.text.text == _NOTED and result.warnings == ()
+
+
+async def test_annotations_can_be_left_out_and_the_result_says_so():
+    source = _TextSource(_text(full=_NOTED))
+
+    result = await get_legislation(
+        _Repository(_record()), source, urn=URN, include_text=True, include_annotations=False
+    )
+
+    assert result.text.text == "Art. 1º Texto um.\n§ 1º Dois."
+    assert len(result.warnings) == 1 and "include_annotations" in result.warnings[0]
+
+
+async def test_no_warning_when_there_was_nothing_to_leave_out():
+    source = _TextSource(_text(full="Art. 1º Texto um."))
+
+    result = await get_legislation(
+        _Repository(_record()), source, urn=URN, include_text=True, include_annotations=False
+    )
+
+    assert result.warnings == ()
+
+
+async def test_an_article_loses_its_annotations_but_keeps_its_flags():
+    article = Article("1", "Art. 1º Texto. (Redação dada pela Lei nº 2)", ("superseded",))
+    source = _TextSource(_text(article))
+
+    result = await get_legislation(
+        _Repository(_record()), source, urn=URN, article="1", include_annotations=False
+    )
+
+    assert result.text.text == "Art. 1º Texto."
+    assert result.text.article.flags == ("superseded",)
+
+
+async def test_slices_count_the_text_without_annotations_and_rebuild_it():
+    source = _TextSource(_text(full=_NOTED))
+    repository = _Repository(_record())
+    pieces, cursor = [], None
+    while True:
+        result = await get_legislation(
+            repository,
+            source,
+            urn=URN,
+            include_text=True,
+            include_annotations=False,
+            max_chars=7,
+            text_cursor=cursor,
+        )
+        pieces.append(result.text.text)
+        cursor = result.text.next_cursor
+        if cursor is None:
+            break
+
+    assert "".join(pieces) == "Art. 1º Texto um.\n§ 1º Dois."
+    assert all(len(piece) <= 7 for piece in pieces) and len(pieces) > 1
+
+
+async def test_a_cursor_issued_under_the_other_annotations_choice_is_rejected():
+    repository, source = _Repository(_record()), _TextSource(_text(full=_NOTED))
+    first = await get_legislation(
+        repository, source, urn=URN, include_text=True, max_chars=5, include_annotations=False
+    )
+
+    with pytest.raises(ToolFailure) as caught:
+        await get_legislation(
+            repository, source, urn=URN, include_text=True, text_cursor=first.text.next_cursor
+        )
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT

@@ -25,6 +25,25 @@ _LINE_START = re.compile(
 )
 
 
+# An Annotation opens with one of these; `Revogado` is not one, as it says the provision is no
+# longer in force. One level of nested parentheses is allowed: `(Vide Lei X (art. 2º))`.
+_ANNOTATION = re.compile(
+    r"[ \t]*\((?:redação dada|incluíd[oa]|vide|vigência|regulamento|renumerad[oa]"
+    r"|produção de efeito)(?:[^()\n]|\([^()\n]*\))*\)",
+    re.IGNORECASE,
+)
+
+
+def strip_annotations(text: str) -> str:
+    """Return `text` without its Annotations; a line left empty is dropped.
+
+    Only a parenthesised note that opens with a known prefix is removed, so an unknown one
+    stays: better a few tokens too many than legal text cut.
+    """
+    lines = (_ANNOTATION.sub("", line).rstrip() for line in text.split("\n"))
+    return "\n".join(line for line in lines if line)
+
+
 def article_key(raw: str) -> str:
     """Return the canonical key of an article reference, or raise `invalid_argument`.
 

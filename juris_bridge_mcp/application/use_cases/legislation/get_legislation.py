@@ -46,6 +46,7 @@ async def get_legislation(
     article: str | None = None,
     max_chars: int = DEFAULT_MAX_CHARS,
     text_cursor: str | None = None,
+    include_annotations: bool = True,
     relations_limit: int = DEFAULT_RELATIONS_LIMIT,
     include_raw: bool = False,
 ) -> NormResult:
@@ -53,7 +54,8 @@ async def get_legislation(
 
     Relations are counted once per (related norm, kind) and the most recent `relations_limit`
     are kept, newest first. With `include_text` or an `article`, also a slice of at most
-    `max_chars` of the plain text (or of that article); `text_cursor` continues a slice.
+    `max_chars` of the plain text (or of that article); `text_cursor` continues a slice. Without
+    `include_annotations` the Annotations are removed from the text first.
     """
     if not 1 <= relations_limit <= MAX_RELATIONS_LIMIT:
         raise invalid_argument(f"relations_limit must be between 1 and {MAX_RELATIONS_LIMIT}.")
@@ -81,7 +83,12 @@ async def get_legislation(
     text = None
     if wants_text:
         text, text_warnings = await slice_norm_text(
-            text_source, parsed, article=key, max_chars=max_chars, cursor=text_cursor
+            text_source,
+            parsed,
+            article=key,
+            max_chars=max_chars,
+            cursor=text_cursor,
+            include_annotations=include_annotations,
         )
         warnings.extend(text_warnings)
     return NormResult(

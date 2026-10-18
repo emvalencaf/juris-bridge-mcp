@@ -74,6 +74,7 @@ def build_legislation_server(
         article: str | None = None,
         max_chars: int = DEFAULT_MAX_CHARS,
         text_cursor: str | None = None,
+        include_annotations: bool = True,
         relations_limit: int = DEFAULT_RELATIONS_LIMIT,
         include_raw: bool = False,
     ) -> dict[str, Any]:
@@ -96,7 +97,12 @@ def build_legislation_server(
         `article` (for example `Art. 5º`, `121-A` or `Art. único`) only that article is
         returned, with `article.flags`: `revoked` when the Planalto notes it was repealed,
         `superseded` when its wording is struck through. An article the parser cannot
-        locate returns `not_found`, never another article. If the Planalto page cannot
+        locate returns `not_found`, never another article. The text keeps the Planalto's
+        annotations, the notes in parentheses that record legislative history (`Redação
+        dada pela ...`, `Incluído ...`, `Vide ...`); pass `include_annotations=false` to
+        save tokens. The `(Revogado ...)` note is always kept. Flags rest on the Planalto
+        markup, which older pages apply inconsistently, and an article can still carry the
+        title of the next one at its end. If the Planalto page cannot
         be located, only metadata comes back with a warning in `warnings`; a refusal is
         `source_blocked` and a page this server can no longer read is `source_changed`.
         """
@@ -109,6 +115,7 @@ def build_legislation_server(
                 article=article,
                 max_chars=max_chars,
                 text_cursor=text_cursor,
+                include_annotations=include_annotations,
                 relations_limit=relations_limit,
                 include_raw=include_raw,
             )

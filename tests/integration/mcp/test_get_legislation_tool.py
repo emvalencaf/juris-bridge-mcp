@@ -196,3 +196,22 @@ async def test_the_tool_is_listed_read_only(mcp_client):
     tools = {t.name: t for t in await mcp_client.list_tools()}
 
     assert tools["get_legislation"].annotations.read_only_hint is True
+
+
+async def test_annotations_can_be_left_out_of_the_text(mcp_client, lei_14133):
+    with_notes = await _call(mcp_client, urn=URN, include_text=True, max_chars=100_000)
+    without = await _call(
+        mcp_client, urn=URN, include_text=True, max_chars=100_000, include_annotations=False
+    )
+
+    assert "(Vide Decreto" in with_notes["text"] and "(Vide Decreto" not in without["text"]
+    assert "(Revogado" in with_notes["text"] and "(Revogado" in without["text"]
+    assert len(without["text"]) < len(with_notes["text"])
+    assert any("include_annotations" in w for w in without["warnings"])
+
+
+async def test_the_tool_describes_include_annotations(mcp_client):
+    tools = {t.name: t for t in await mcp_client.list_tools()}
+
+    assert "include_annotations" in tools["get_legislation"].input_schema["properties"]
+    assert "include_annotations=false" in tools["get_legislation"].description

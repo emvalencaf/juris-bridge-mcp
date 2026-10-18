@@ -4,9 +4,13 @@ from datetime import date
 from typing import Any
 
 from juris_bridge_mcp.adapters.presentation import iso_utc
-from juris_bridge_mcp.application.use_cases.get_legislation import NormResult
-from juris_bridge_mcp.application.use_cases.search_legislation import LegislationSearchResult
+from juris_bridge_mcp.application.use_cases.legislation.get_legislation import NormResult
+from juris_bridge_mcp.application.use_cases.legislation.norm_text_slice import TextSlice
+from juris_bridge_mcp.application.use_cases.legislation.search_legislation import (
+    LegislationSearchResult,
+)
 from juris_bridge_mcp.domain.legislation import SOURCE, Norm, Publication, Relation
+from juris_bridge_mcp.domain.legislation_text import TEXT_SOURCE
 
 
 def present_norm(result: NormResult) -> dict[str, Any]:
@@ -14,7 +18,7 @@ def present_norm(result: NormResult) -> dict[str, Any]:
     presented: dict[str, Any] = {
         "source": SOURCE,
         "retrieved_at": iso_utc(result.retrieved_at),
-        "content_kind": "metadata",
+        "content_kind": "metadata" if result.text is None else "full_text",
         **_norm(result.norm),
         "publications": [_publication(p) for p in result.publications],
         "relations": [_relation(r) for r in result.relations],
@@ -23,6 +27,8 @@ def present_norm(result: NormResult) -> dict[str, Any]:
     }
     if result.raw is not None:
         presented["raw"] = result.raw
+    if result.text is not None:
+        presented.update(_text(result.text))
     return presented
 
 
@@ -50,6 +56,19 @@ def _norm(norm: Norm) -> dict[str, Any]:
         "summary": norm.summary,
         "nickname": norm.nickname,
     }
+
+
+def _text(piece: TextSlice) -> dict[str, Any]:
+    presented: dict[str, Any] = {
+        "text": piece.text,
+        "truncated": piece.truncated,
+        "next_text_cursor": piece.next_cursor,
+        "text_source": TEXT_SOURCE,
+        "text_url": piece.url,
+    }
+    if piece.article is not None:
+        presented["article"] = {"label": piece.article.label, "flags": list(piece.article.flags)}
+    return presented
 
 
 def _publication(publication: Publication) -> dict[str, Any]:

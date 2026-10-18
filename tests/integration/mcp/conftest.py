@@ -8,12 +8,14 @@ from fastmcp import Client
 
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.http import HttpSettings
+from juris_bridge_mcp.config.planalto import PlanaltoSettings
 from juris_bridge_mcp.config.senado import SenadoSettings
 from juris_bridge_mcp.config.server import ServerSettings
 from juris_bridge_mcp.infrastructure.bootstrap import build_http_app, build_server
 
 DATAJUD_FIXTURES = Path(__file__).parents[2] / "contract/providers/datajud/fixtures"
 SENADO_FIXTURES = Path(__file__).parents[2] / "contract/providers/senado/fixtures"
+PLANALTO_FIXTURES = Path(__file__).parents[2] / "contract/providers/planalto/fixtures"
 
 
 def datajud_fixture(name: str) -> dict:
@@ -54,6 +56,36 @@ class FakeSenado:
         return httpx.Response(self.status, json=self.body)
 
 
+class FakePlanalto:
+    """Scripted Planalto: `pages` maps a path to its HTML bytes; `requests` records calls.
+
+    A path not in `pages` answers 404; set `status` to answer every request with it instead.
+    """
+
+    def __init__(self) -> None:
+        self.requests: list[httpx.Request] = []
+        self.status: int | None = None
+        self.pages: dict[str, bytes] = {}
+
+    @staticmethod
+    def fixture(name: str) -> bytes:
+        return (PLANALTO_FIXTURES / name).read_bytes()
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        if self.status is not None:
+            return httpx.Response(self.status, content=b"refused")
+        body = self.pages.get(request.url.path.removeprefix("/ccivil_03/"))
+        if body is None:
+            return httpx.Response(404, content=b"not found")
+        return httpx.Response(200, content=body, headers={"Content-Type": "text/html"})
+
+
+@pytest.fixture
+def planalto() -> FakePlanalto:
+    return FakePlanalto()
+
+
 @pytest.fixture
 def senado() -> FakeSenado:
     return FakeSenado()
@@ -65,17 +97,21 @@ def datajud() -> FakeDatajud:
 
 
 @pytest.fixture
-def server_args(datajud, senado) -> dict:
+def server_args(datajud, senado, planalto) -> dict:
     """Settings and transport the root server is built with: no network, fake Sources."""
     senado_host = httpx.URL(SenadoSettings().base_url).host
+    planalto_host = httpx.URL(PlanaltoSettings().base_url).host
 
     def route(request: httpx.Request) -> httpx.Response:
-        return senado(request) if request.url.host == senado_host else datajud(request)
+        if request.url.host == senado_host:
+            return senado(request)
+        return planalto(request) if request.url.host == planalto_host else datajud(request)
 
     return {
         "datajud": DatajudSettings(api_key="test-key"),
         "http": HttpSettings(),
         "senado": SenadoSettings(),
+        "planalto": PlanaltoSettings(),
         "transport": httpx.MockTransport(route),
     }
 

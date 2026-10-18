@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 URN = "urn:lex:br:federal:lei:2021-04-01;14133"
 
 
@@ -63,10 +65,105 @@ async def test_a_malformed_urn_is_invalid_argument(mcp_client, senado):
     assert error["code"] == "invalid_argument" and senado.requests == []
 
 
-async def test_the_text_is_not_covered_yet(mcp_client):
+PAGE = "_ato2019-2022/2021/lei/l14133.htm"
+
+
+@pytest.fixture
+def lei_14133(senado, planalto):
+    senado.body = senado.fixture("lei_14133_2021_detail.json")
+    planalto.pages[PAGE] = planalto.fixture("lei_14133_2021.htm")
+
+
+async def test_include_text_returns_the_plain_text_as_full_text(mcp_client, lei_14133, planalto):
+    norm = await _call(mcp_client, urn=URN, include_text=True, max_chars=500)
+
+    assert norm["content_kind"] == "full_text" and norm["source"] == "senado"
+    assert len(norm["text"]) == 500 and norm["truncated"] is True
+    assert norm["next_text_cursor"] and norm["text_source"] == "planalto"
+    assert norm["text_url"].endswith(PAGE) and "article" not in norm
+    assert norm["name"] == "Lei nº 14.133 de 01/04/2021"
+    assert planalto.requests[-1].url.path == "/ccivil_03/" + PAGE
+
+
+async def test_the_text_is_read_in_pieces_until_done(mcp_client, lei_14133):
+    pieces, cursor = [], None
+    while True:
+        norm = await _call(
+            mcp_client, urn=URN, include_text=True, max_chars=3000, text_cursor=cursor
+        )
+        pieces.append(norm["text"])
+        cursor = norm["next_text_cursor"]
+        if not norm["truncated"]:
+            break
+
+    whole = await _call(mcp_client, urn=URN, include_text=True, max_chars=100_000)
+    assert len(pieces) > 1 and "".join(pieces) == whole["text"] and cursor is None
+
+
+async def test_the_default_slice_is_20000_characters(mcp_client, lei_14133):
+    norm = await _call(mcp_client, urn=URN, include_text=True)
+
+    assert len(norm["text"]) <= 20_000 and norm["content_kind"] == "full_text"
+
+
+async def test_an_article_returns_that_article_only(mcp_client, lei_14133):
+    norm = await _call(mcp_client, urn=URN, article="Art. 1º")
+
+    assert norm["content_kind"] == "full_text" and norm["truncated"] is False
+    assert norm["article"] == {"label": "Art. 1º", "flags": []}
+    assert norm["text"].startswith("Art. 1º Esta Lei estabelece") and "Art. 2º" not in norm["text"]
+
+
+async def test_a_struck_article_is_flagged_and_the_repeat_is_warned(mcp_client, lei_14133):
+    norm = await _call(mcp_client, urn=URN, article="191")
+
+    assert norm["article"]["label"] == "Art. 191" and norm["article"]["flags"] == []
+    assert "3 times" in norm["warnings"][0]
+
+
+async def test_an_article_the_parser_cannot_locate_is_not_found(mcp_client, lei_14133):
+    error = await _call(mcp_client, urn=URN, article="Art. 99")
+
+    assert error["code"] == "not_found" and error["source"] == "planalto"
+    assert "Art. 99" in error["message"]
+
+
+async def test_a_norm_without_a_planalto_page_returns_metadata_and_a_warning(mcp_client, senado):
+    senado.body = senado.fixture("lei_14133_2021_detail.json")
+
+    norm = await _call(mcp_client, urn=URN, include_text=True)
+
+    assert norm["content_kind"] == "metadata" and "text" not in norm
+    assert "only metadata" in norm["warnings"][0]
+
+
+async def test_a_planalto_refusal_is_source_blocked(mcp_client, lei_14133, planalto):
+    planalto.status = 403
+
     error = await _call(mcp_client, urn=URN, include_text=True)
 
-    assert error["code"] == "not_covered"
+    assert error["code"] == "source_blocked" and error["source"] == "planalto"
+
+
+async def test_a_page_the_parser_no_longer_reads_is_source_changed(mcp_client, lei_14133, planalto):
+    planalto.pages[PAGE] = b"<html><body>" + b"<p>Portal novo.</p>" * 30 + b"</body></html>"
+
+    error = await _call(mcp_client, urn=URN, include_text=True)
+
+    assert error["code"] == "source_changed" and error["source"] == "planalto"
+
+
+async def test_the_planalto_is_not_asked_for_metadata_only(mcp_client, lei_14133, planalto):
+    await _call(mcp_client, urn=URN)
+
+    assert planalto.requests == []
+
+
+async def test_a_bad_article_or_slice_size_is_invalid_argument(mcp_client, lei_14133):
+    for arguments in ({"article": "section"}, {"include_text": True, "max_chars": 0}):
+        error = await _call(mcp_client, urn=URN, **arguments)
+
+        assert error["code"] == "invalid_argument"
 
 
 async def test_a_changed_source_is_reported(mcp_client, senado):

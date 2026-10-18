@@ -31,7 +31,7 @@ def build_server(
     *,
     datajud: DatajudSettings,
     http: HttpSettings,
-    senado: SenadoSettings | None = None,
+    senado: SenadoSettings,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> FastMCP:
     """Build the root FastMCP server with every concept mounted (no namespace).
@@ -50,7 +50,6 @@ def build_server(
         max_retries=http.max_retries,
         max_wait_seconds=http.max_wait_seconds,
     )
-    senado = senado or SenadoSettings()
     senado_upstream = UpstreamClient(
         build_http_client(timeout_seconds=senado.timeout_seconds, transport=transport),
         source=SENADO,
@@ -87,7 +86,7 @@ def build_http_app(
     *,
     datajud: DatajudSettings,
     http: HttpSettings,
-    senado: SenadoSettings | None = None,
+    senado: SenadoSettings,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> ASGIApp:
     """Build the stateless, JSON-response ASGI app: wide event outermost, then Bearer auth."""

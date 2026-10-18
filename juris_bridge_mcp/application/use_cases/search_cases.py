@@ -7,7 +7,7 @@ from juris_bridge_mcp.domain.case import Case
 from juris_bridge_mcp.domain.case_search import CaseFilters
 from juris_bridge_mcp.domain.courts import resolve_court
 from juris_bridge_mcp.domain.cursor import Cursor
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import invalid_argument
 from juris_bridge_mcp.ports.case_repository import CaseRepository
 
 DEFAULT_LIMIT = 10
@@ -25,10 +25,6 @@ class SearchResult:
     next_cursor: str | None
     retrieved_at: datetime
     hint: str | None = None
-
-
-def _invalid(message: str, hint: str | None = None) -> ToolFailure:
-    return ToolFailure(ErrorCode.INVALID_ARGUMENT, message, source=None, retryable=False, hint=hint)
 
 
 async def search_cases(
@@ -49,22 +45,24 @@ async def search_cases(
     the filters must be the ones the cursor was issued for.
     """
     if not 1 <= limit <= MAX_LIMIT:
-        raise _invalid(f"limit must be between 1 and {MAX_LIMIT}.")
+        raise invalid_argument(f"limit must be between 1 and {MAX_LIMIT}.")
     if filed_from and filed_to and filed_from > filed_to:
-        raise _invalid("filed_from is after filed_to.")
+        raise invalid_argument("filed_from is after filed_to.")
     filters = CaseFilters(case_class, judging_body, subject, filed_from, filed_to)
     after = None
     if cursor is not None:
         decoded = Cursor.decode(cursor)
         alias = resolve_court(court) if court else decoded.court
         if alias != decoded.court or decoded.filters_key != filters.key():
-            raise _invalid(
+            raise invalid_argument(
                 "The cursor was issued for a different court or different filters.",
                 hint="Repeat the same court and filters, or start again without a cursor.",
             )
         after = decoded.position
     elif court is None:
-        raise _invalid("court is required.", hint="Pass an alias such as tjsp, trf1 or stj.")
+        raise invalid_argument(
+            "court is required.", hint="Pass an alias such as tjsp, trf1 or stj."
+        )
     else:
         alias = resolve_court(court)
     page = await repository.search(alias, filters, limit=limit, after=after)

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from juris_bridge_mcp.domain.cursor import Cursor
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import invalid_argument
 from juris_bridge_mcp.domain.legislation import (
     SOURCE,
     LegislationFilters,
@@ -27,10 +27,6 @@ class LegislationSearchResult:
     retrieved_at: datetime
 
 
-def _invalid(message: str, hint: str | None = None) -> ToolFailure:
-    return ToolFailure(ErrorCode.INVALID_ARGUMENT, message, source=None, retryable=False, hint=hint)
-
-
 async def search_legislation(
     repository: LegislationRepository,
     *,
@@ -45,23 +41,25 @@ async def search_legislation(
     A `cursor` must come with the same type, number and year it was issued for.
     """
     if not 1 <= limit <= MAX_LIMIT:
-        raise _invalid(f"limit must be between 1 and {MAX_LIMIT}.")
+        raise invalid_argument(f"limit must be between 1 and {MAX_LIMIT}.")
     filters = LegislationFilters(resolve_norm_type(norm_type), number, year)
     if number is None and year is None:
-        raise _invalid("Pass number, year or both.", hint="For example number=14133, year=2021.")
+        raise invalid_argument(
+            "Pass number, year or both.", hint="For example number=14133, year=2021."
+        )
     if (number is not None and number < 1) or (year is not None and year < 1):
-        raise _invalid("number and year must be positive.")
+        raise invalid_argument("number and year must be positive.")
     offset = 0
     if cursor is not None:
         decoded = Cursor.decode(cursor, scopes=(SOURCE,))
         if decoded.filters_key != filters.key():
-            raise _invalid(
+            raise invalid_argument(
                 "The cursor was issued for a different search.",
                 hint="Repeat the same type, number and year, or start again without a cursor.",
             )
         position = decoded.position[0]
         if isinstance(position, str) or position < 0:
-            raise _invalid("The cursor is not valid.")
+            raise invalid_argument("The cursor is not valid.")
         offset = position
     page = await repository.search(filters, limit=limit, offset=offset)
     next_cursor = (

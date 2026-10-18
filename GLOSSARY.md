@@ -26,7 +26,11 @@ _Avoid_: jurisprudence
 
 **Legislation**:
 Statutes and other normative acts (_legislação_), identified by a URN Lex and catalogued by the Senado.
-_Avoid_: laws, norms
+_Avoid_: laws
+
+**Norm**:
+A single federal normative act (a law, decree, constitutional amendment...) as the Senado catalogues it, identified by its URN Lex.
+_Avoid_: law, statute (when the act may be a decree or an amendment)
 
 **Normalized result**:
 The source-independent shape returned by a tool, carrying the originating Source and a Citation.

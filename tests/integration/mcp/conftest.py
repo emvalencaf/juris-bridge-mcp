@@ -75,6 +75,7 @@ def server_args(datajud, senado) -> dict:
     return {
         "datajud": DatajudSettings(api_key="test-key"),
         "http": HttpSettings(),
+        "senado": SenadoSettings(),
         "transport": httpx.MockTransport(route),
     }
 

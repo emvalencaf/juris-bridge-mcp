@@ -74,6 +74,15 @@ async def test_an_empty_answer_is_an_empty_page():
     assert page.norms == () and page.total == 0 and page.next_offset is None
 
 
+@pytest.mark.parametrize("documentos", [None, {}], ids=["null", "empty-object"])
+async def test_other_spellings_of_nothing_found_are_an_empty_page(documentos):
+    body = {"ListaDocumento": {"documentos": documentos}}
+
+    page = await _repository(_respond(200, body)).search(LEI_14133, limit=10, offset=0)
+
+    assert page.norms == () and page.total == 0
+
+
 async def test_pages_over_the_whole_answer_by_offset():
     repository = _repository(_respond(200, _fixture("lei_2021_five.json")))
     year = LegislationFilters(norm_type="lei", year=2021)

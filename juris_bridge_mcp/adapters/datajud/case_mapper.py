@@ -9,12 +9,9 @@ not a guess. The filing date is a compact civil date and is kept as the date it 
 from datetime import date, datetime
 from typing import Any
 
+from juris_bridge_mcp.adapters.schema_drift import SchemaDrift
 from juris_bridge_mcp.domain.case import Case, CaseEvent, CodedTerm, EventComplement
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
-
-
-class SchemaDrift(Exception):  # noqa: N818 - names the situation, not an error class
-    """The upstream document no longer matches the shape this mapper expects."""
 
 
 def map_case(source: dict[str, Any], *, number: CnjNumber, court: str) -> Case:

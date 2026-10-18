@@ -1,8 +1,8 @@
 """Presents a `LegislationSearchResult` as the Normalized result an MCP client receives."""
 
-from datetime import UTC
 from typing import Any
 
+from juris_bridge_mcp.adapters.presentation import iso_utc
 from juris_bridge_mcp.application.use_cases.search_legislation import LegislationSearchResult
 from juris_bridge_mcp.domain.legislation import SOURCE, Norm
 
@@ -11,7 +11,7 @@ def present_search(result: LegislationSearchResult) -> dict[str, Any]:
     """Return the page of Norms with its `total` and `next_cursor`."""
     return {
         "source": SOURCE,
-        "retrieved_at": result.retrieved_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+        "retrieved_at": iso_utc(result.retrieved_at),
         "content_kind": "metadata",
         "items": [_norm(n) for n in result.norms],
         "total": result.total,

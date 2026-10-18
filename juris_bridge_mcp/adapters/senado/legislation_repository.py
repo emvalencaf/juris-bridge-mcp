@@ -6,7 +6,8 @@ from typing import Any
 import httpx
 
 from juris_bridge_mcp.adapters.http_client import UpstreamClient
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.adapters.schema_drift import SchemaDrift
+from juris_bridge_mcp.domain.errors import ErrorCode, source_changed, source_failure
 from juris_bridge_mcp.domain.legislation import (
     NORM_TYPES,
     SOURCE,
@@ -18,25 +19,6 @@ from juris_bridge_mcp.domain.legislation import (
 
 _SERVICE_VERSION = "3"
 _CITATION_URL = "https://normas.leg.br/?urn="
-
-
-class SchemaDrift(Exception):  # noqa: N818 - names the situation, not an error class
-    """The Senado answered in a shape this adapter does not know."""
-
-
-def _failure(
-    code: ErrorCode, message: str, *, retryable: bool, hint: str | None = None
-) -> ToolFailure:
-    return ToolFailure(code, message, source=SOURCE, retryable=retryable, hint=hint)
-
-
-def _changed(detail: str) -> ToolFailure:
-    return _failure(
-        ErrorCode.SOURCE_CHANGED,
-        f"The Senado answered in a shape this server does not understand ({detail}).",
-        retryable=False,
-        hint="Do not trust partial data; report the problem to the operator.",
-    )
 
 
 class SenadoLegislationRepository:
@@ -55,7 +37,7 @@ class SenadoLegislationRepository:
         try:
             norms = [self._norm(raw, filters.norm_type) for raw in self._documents(body)]
         except (SchemaDrift, KeyError, TypeError, ValueError) as drift:
-            raise _changed(str(drift) or type(drift).__name__) from None
+            raise source_changed(SOURCE, "The Senado", str(drift) or type(drift).__name__) from None
         end = offset + limit
         return LegislationPage(
             norms=tuple(norms[offset:end]),
@@ -65,8 +47,8 @@ class SenadoLegislationRepository:
 
     @staticmethod
     def _documents(body: Any) -> list[Any]:
-        documents = body["ListaDocumento"]["documentos"]
-        if documents == "":
+        documents = body["ListaDocumento"].get("documentos")
+        if documents in ("", None, {}):
             return []
         found = documents["documento"]
         if not isinstance(found, list):
@@ -106,22 +88,26 @@ class SenadoLegislationRepository:
                 headers={"Accept": "application/json"},
             )
         except httpx.HTTPError:
-            raise _failure(
-                ErrorCode.SOURCE_UNAVAILABLE, "The Senado did not answer in time.", retryable=True
+            raise source_failure(
+                SOURCE,
+                ErrorCode.SOURCE_UNAVAILABLE,
+                "The Senado did not answer in time.",
+                retryable=True,
             ) from None
         status = response.status_code
         if status >= 500:
-            raise _failure(
+            raise source_failure(
+                SOURCE,
                 ErrorCode.SOURCE_UNAVAILABLE,
                 f"The Senado is unavailable (HTTP {status}).",
                 retryable=True,
             )
         if status != 200:
-            raise _changed(f"HTTP {status}")
+            raise source_changed(SOURCE, "The Senado", f"HTTP {status}")
         try:
             return response.json()
         except ValueError:
-            raise _changed("the body is not JSON") from None
+            raise source_changed(SOURCE, "The Senado", "the body is not JSON") from None
 
 
 def _nickname(raw: dict[str, Any]) -> str | None:

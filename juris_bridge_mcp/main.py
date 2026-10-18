@@ -6,6 +6,8 @@ import uvicorn
 from pydantic import ValidationError
 
 from juris_bridge_mcp.adapters.wide_event import configure_logger
+from juris_bridge_mcp.config.datajud import DatajudSettings
+from juris_bridge_mcp.config.http import HttpSettings
 from juris_bridge_mcp.config.logging import LogSettings
 from juris_bridge_mcp.config.server import ServerSettings
 from juris_bridge_mcp.infrastructure.bootstrap import build_http_app
@@ -24,7 +26,12 @@ def main() -> None:
         sys.exit("JURIS_BRIDGE_SERVER_API_KEYS must hold at least one API key; refusing to start.")
     print(NOTICE, flush=True)
     configure_logger()
-    app = build_http_app(settings.keys(), LogSettings().environment())
+    app = build_http_app(
+        settings.keys(),
+        LogSettings().environment(),
+        datajud=DatajudSettings(),
+        http=HttpSettings(),
+    )
     # uvicorn's access log would add a second line per request next to the wide event.
     uvicorn.run(app, host=settings.host, port=settings.port, access_log=False)
 

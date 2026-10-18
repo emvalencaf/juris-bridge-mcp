@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `get_case` tool (#24): fetch one Case by CNJ number from DataJud. Accepts the formatted
+  or 20-digit number and validates the check digit; derives the Court from `J.TR`
+  (override with `court`); returns events honouring `events_limit`, a Citation with a
+  `null` URL and, on request, the raw payload. STF returns `not_covered`. Adds
+  `JURIS_BRIDGE_DATAJUD_CACHE_TTL_SECONDS`.
 - Wide-event logging (ADR 0004): `WideEventMiddleware` emits exactly one JSON line per
   HTTP request on stdout, with environment, request, caller (`key_id`) and upstream
   context and a never-logged list; configured by `JURIS_BRIDGE_LOG_*`. Events flag

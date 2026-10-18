@@ -1,0 +1,997 @@
+{
+  "DetalheDocumento": {
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/DetalheDocumentov3.xsd",
+    "Metadados": {
+      "Versao": "18/10/2026 03:26:40",
+      "VersaoServico": "3",
+      "DataVersaoServico": "2017-02-01",
+      "DescricaoDataSet": "Obtém detalhes de uma Norma Jurídica por meio da sua URN."
+    },
+    "documentos": {
+      "documento": [
+        {
+          "id": "33382036",
+          "identificacao": {
+            "tipo": "LEI-n",
+            "descricao": "Lei Numerada",
+            "numero": "14133",
+            "norma": "LEI-14133-2021-04-01",
+            "normaNome": "Lei nº 14.133 de 01/04/2021",
+            "dataassinatura": "01/04/2021",
+            "apelido": "LEI-14133-2021-04-01 , Lei de Licitações e Contratos (2021)",
+            "urlDocumento": "https://normas.leg.br/?urn=urn:lex:br:federal:lei:2021-04-01;14133"
+          },
+          "publicacoes": {
+            "publicacao": [
+              {
+                "id": "33382056",
+                "tipo": "PUB",
+                "fonte": "Diário Oficial da União - Edição Extra  de 01/04/2021 - nº 61-F",
+                "siglaFonte": "DOUE-2021-04-01-n-61-F",
+                "data": "01/04/2021",
+                "pagina": "1",
+                "coluna": "1",
+                "dispositivo": "Publicação Original   [Diário Oficial da União - Edição Extra  de 01/04/2021 - nº 61-F] (p. 1, col. 1)",
+                "temTexto": "S"
+              },
+              {
+                "id": "34147818",
+                "tipo": "VEP",
+                "fonte": "Diário Oficial da União  de 11/06/2021",
+                "siglaFonte": "DOU-2021-06-11",
+                "data": "11/06/2021",
+                "pagina": "2",
+                "coluna": "2",
+                "dispositivo": "Publicação de Veto Parcialmente Rejeitado   [Diário Oficial da União  de 11/06/2021] (p. 2, col. 2)",
+                "temTexto": "S"
+              }
+            ]
+          },
+          "vides": {
+            "vide": [
+              {
+                "codnormaposterior": "33382066",
+                "datAssinatura": "01/04/2021",
+                "nomeNormaPosterior": "Mensagem de Veto Parcial nº 118 de 01/04/2021",
+                "pagina": "24",
+                "coluna": "1",
+                "edicao": "33417880",
+                "tipoEdicao": "723",
+                "datapub": "01/04/2021",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 01/04/2021 - nº 61-F] (p. 24, col. 1)",
+                "comentario": "Declaração de Veto Original",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "33382066",
+                "datAssinatura": "01/04/2021",
+                "nomeNormaPosterior": "Mensagem de Veto Parcial nº 118 de 01/04/2021",
+                "pagina": "24",
+                "coluna": "1",
+                "edicao": "33417880",
+                "tipoEdicao": "723",
+                "datapub": "01/04/2021",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 01/04/2021 - nº 61-F] (p. 24, col. 1)",
+                "comentario": "Declaração de Veto Original",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "33382066",
+                "datAssinatura": "01/04/2021",
+                "nomeNormaPosterior": "Mensagem de Veto Parcial nº 118 de 01/04/2021",
+                "pagina": "24",
+                "coluna": "1",
+                "edicao": "33417880",
+                "tipoEdicao": "723",
+                "datapub": "01/04/2021",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 01/04/2021 - nº 61-F] (p. 24, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 1, § 3, Inciso 2, Alínea d ",
+                      "comentario": "Veto"
+                    },
+                    {
+                      "dispositivo": "Art. 10, § 1, Inciso 1 ",
+                      "comentario": "Veto"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "34664293",
+                "datAssinatura": "09/08/2021",
+                "nomeNormaPosterior": "Decreto nº 10.764 de 09/08/2021",
+                "pagina": "10",
+                "coluna": "2",
+                "edicao": "34664085",
+                "tipoEdicao": "750",
+                "datapub": "10/08/2021",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 10/08/2021] (p. 10, col. 2)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 174, § 1 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "34664367",
+                "datAssinatura": "09/08/2021",
+                "nomeNormaPosterior": "Medida Provisória nº 1.061 de 09/08/2021",
+                "pagina": "5",
+                "coluna": "1",
+                "edicao": "34664085",
+                "tipoEdicao": "750",
+                "datapub": "10/08/2021",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 10/08/2021] (p. 5, col. 1)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "34787000",
+                "datAssinatura": "30/08/2021",
+                "nomeNormaPosterior": "Medida Provisória nº 1.065 de 30/08/2021",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "34786975",
+                "tipoEdicao": "723",
+                "datapub": "30/08/2021",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 30/08/2021 - nº 164-A] (p. 1, col. 1)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "34952918",
+                "datAssinatura": "27/09/2021",
+                "nomeNormaPosterior": "Decreto nº 10.818 de 27/09/2021",
+                "pagina": "29",
+                "coluna": "1",
+                "edicao": "34952354",
+                "tipoEdicao": "750",
+                "datapub": "28/09/2021",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 28/09/2021] (p. 29, col. 1)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 20 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "35040976",
+                "datAssinatura": "13/10/2021",
+                "nomeNormaPosterior": "Lei nº 14.217 de 13/10/2021",
+                "pagina": "2",
+                "coluna": "2",
+                "edicao": "35040879",
+                "tipoEdicao": "750",
+                "datapub": "14/10/2021",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 14/10/2021] (p. 2, col. 2)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "35394903",
+                "datAssinatura": "30/12/2021",
+                "nomeNormaPosterior": "Decreto nº 10.922 de 30/12/2021",
+                "pagina": "1",
+                "coluna": "2",
+                "edicao": "35394686",
+                "tipoEdicao": "750",
+                "datapub": "31/12/2021",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 31/12/2021] (p. 1, col. 2)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 6, caput, Inciso 22 ",
+                      "comentario": "Dispositivo Correlato"
+                    },
+                    {
+                      "dispositivo": "Art. 37, § 2 ",
+                      "comentario": "Dispositivo Correlato"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "35460737",
+                "datAssinatura": "25/01/2022",
+                "nomeNormaPosterior": "Decreto nº 10.947 de 25/01/2022",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "35460664",
+                "tipoEdicao": "750",
+                "datapub": "26/01/2022",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 26/01/2022] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 75, caput, Inciso 6 ",
+                      "comentario": "Ressalva"
+                    },
+                    {
+                      "dispositivo": "Art. 75, caput, Inciso 7 ",
+                      "comentario": "Ressalva"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "35460737",
+                "datAssinatura": "25/01/2022",
+                "nomeNormaPosterior": "Decreto nº 10.947 de 25/01/2022",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "35460664",
+                "tipoEdicao": "750",
+                "datapub": "26/01/2022",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 26/01/2022] (p. 1, col. 1)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 12, caput, Inciso 7 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "36061880",
+                "datAssinatura": "08/07/2022",
+                "nomeNormaPosterior": "Lei Complementar nº 195 de 08/07/2022",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "36061852",
+                "tipoEdicao": "723",
+                "datapub": "08/07/2022",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 08/07/2022 - nº 128-B] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "36077824",
+                "datAssinatura": "11/07/2022",
+                "nomeNormaPosterior": "Decreto nº 11.129 de 11/07/2022",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "36077771",
+                "tipoEdicao": "750",
+                "datapub": "12/07/2022",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 12/07/2022] (p. 1, col. 1)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "36521462",
+                "datAssinatura": "27/10/2022",
+                "nomeNormaPosterior": "Decreto nº 11.246 de 27/10/2022",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "36521439",
+                "tipoEdicao": "750",
+                "datapub": "31/10/2022",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 31/10/2022] (p. 1, col. 1)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 9 ",
+                      "comentario": "Dispositivo Correlato"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "36521462",
+                "datAssinatura": "27/10/2022",
+                "nomeNormaPosterior": "Decreto nº 11.246 de 27/10/2022",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "36521439",
+                "tipoEdicao": "750",
+                "datapub": "31/10/2022",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 31/10/2022] (p. 1, col. 1)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 8, § 3 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "36695616",
+                "datAssinatura": "29/12/2022",
+                "nomeNormaPosterior": "Decreto nº 11.317 de 29/12/2022",
+                "pagina": "11",
+                "coluna": "2",
+                "edicao": "36695319",
+                "tipoEdicao": "750",
+                "datapub": "30/12/2022",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 30/12/2022] (p. 11, col. 2)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 6, caput, Inciso 22 ",
+                      "comentario": "Dispositivo Correlato"
+                    },
+                    {
+                      "dispositivo": "Art. 37, § 2 ",
+                      "comentario": "Dispositivo Correlato"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "36878881",
+                "datAssinatura": "08/03/2023",
+                "nomeNormaPosterior": "Decreto nº 11.430 de 08/03/2023",
+                "pagina": "4",
+                "coluna": "2",
+                "edicao": "36878858",
+                "tipoEdicao": "750",
+                "datapub": "09/03/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 09/03/2023] (p. 4, col. 2)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 25, § 9, Inciso 1 ",
+                      "comentario": "Regulamentado"
+                    },
+                    {
+                      "dispositivo": "Art. 60, caput, Inciso 3 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "36910668",
+                "datAssinatura": "22/03/2023",
+                "nomeNormaPosterior": "Medida Provisória nº 1.166 de 22/03/2023",
+                "pagina": "2",
+                "coluna": "1",
+                "edicao": "36910645",
+                "tipoEdicao": "750",
+                "datapub": "23/03/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 23/03/2023] (p. 2, col. 1)",
+                "comentario": "Declaração de Alteração Provisória",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "36936738",
+                "datAssinatura": "31/03/2023",
+                "nomeNormaPosterior": "Medida Provisória nº 1.167 de 31/03/2023",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "36936713",
+                "tipoEdicao": "723",
+                "datapub": "31/03/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 31/03/2023 - nº 63-C] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Provisória",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 191, caput ",
+                      "comentario": "Alteração"
+                    },
+                    {
+                      "dispositivo": "Art. 191, caput, Inciso 1 ",
+                      "comentario": "Acréscimo"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "36936774",
+                "datAssinatura": "31/03/2023",
+                "nomeNormaPosterior": "Decreto nº 11.461 de 31/03/2023",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "36936713",
+                "tipoEdicao": "723",
+                "datapub": "31/03/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 31/03/2023 - nº 63-C] (p. 1, col. 1)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 31 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "36936810",
+                "datAssinatura": "31/03/2023",
+                "nomeNormaPosterior": "Decreto nº 11.462 de 31/03/2023",
+                "pagina": "3",
+                "coluna": "1",
+                "edicao": "36936713",
+                "tipoEdicao": "723",
+                "datapub": "31/03/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 31/03/2023 - nº 63-C] (p. 3, col. 1)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 82 ",
+                      "comentario": "Regulamentado"
+                    },
+                    {
+                      "dispositivo": "Art. 83 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "37049341",
+                "datAssinatura": "16/05/2023",
+                "nomeNormaPosterior": "Decreto nº 11.531 de 16/05/2023",
+                "pagina": "7",
+                "coluna": "1",
+                "edicao": "37047312",
+                "tipoEdicao": "750",
+                "datapub": "17/05/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 17/05/2023] (p. 7, col. 1)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 184 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "37337802",
+                "datAssinatura": "28/06/2023",
+                "nomeNormaPosterior": "Lei Complementar nº 198 de 28/06/2023",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "37336333",
+                "tipoEdicao": "723",
+                "datapub": "28/06/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 28/06/2023 - nº 121-C] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "37377355",
+                "datAssinatura": "13/07/2023",
+                "nomeNormaPosterior": "Lei nº 14.620 de 13/07/2023",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "37377332",
+                "tipoEdicao": "750",
+                "datapub": "14/07/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 14/07/2023] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 75, caput, Inciso 18 ",
+                      "comentario": "Acréscimo Vetado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "37410428",
+                "datAssinatura": "20/07/2023",
+                "nomeNormaPosterior": "Lei nº 14.628 de 20/07/2023",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "37410405",
+                "tipoEdicao": "750",
+                "datapub": "21/07/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 21/07/2023] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 75, caput, Inciso 16 ",
+                      "comentario": "Alteração"
+                    },
+                    {
+                      "dispositivo": "Art. 75, caput, Inciso 17 ",
+                      "comentario": "Acréscimo"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "37454730",
+                "datAssinatura": "03/08/2023",
+                "nomeNormaPosterior": "Ato do Presidente do Congresso Nacional nº 50 de 03/08/2023",
+                "pagina": "1",
+                "coluna": "2",
+                "edicao": "37454126",
+                "tipoEdicao": "750",
+                "datapub": "04/08/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 04/08/2023] (p. 1, col. 2)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "37454841",
+                "datAssinatura": "03/08/2023",
+                "nomeNormaPosterior": "Ato do Presidente do Congresso Nacional nº 51 de 03/08/2023",
+                "pagina": "1",
+                "coluna": "2",
+                "edicao": "37454126",
+                "tipoEdicao": "750",
+                "datapub": "04/08/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 04/08/2023] (p. 1, col. 2)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "37640201",
+                "datAssinatura": "20/09/2023",
+                "nomeNormaPosterior": "Lei nº 14.682 de 20/09/2023",
+                "pagina": "4",
+                "coluna": "2",
+                "edicao": "37640221",
+                "tipoEdicao": "750",
+                "datapub": "21/09/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 21/09/2023] (p. 4, col. 2)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 60, caput, Inciso 3 ",
+                      "comentario": "Dispositivo Correlato"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "38020880",
+                "datAssinatura": "22/12/2023",
+                "nomeNormaPosterior": "Lei nº 14.770 de 22/12/2023",
+                "pagina": "3",
+                "coluna": "2",
+                "edicao": "38019579",
+                "tipoEdicao": "723",
+                "datapub": "22/12/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 22/12/2023 - nº 243-C] (p. 3, col. 2)",
+                "comentario": "Declaração de Alteração Vetada",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "38020880",
+                "datAssinatura": "22/12/2023",
+                "nomeNormaPosterior": "Lei nº 14.770 de 22/12/2023",
+                "pagina": "3",
+                "coluna": "2",
+                "edicao": "38019579",
+                "tipoEdicao": "723",
+                "datapub": "22/12/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 22/12/2023 - nº 243-C] (p. 3, col. 2)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "38020880",
+                "datAssinatura": "22/12/2023",
+                "nomeNormaPosterior": "Lei nº 14.770 de 22/12/2023",
+                "pagina": "3",
+                "coluna": "2",
+                "edicao": "38019579",
+                "tipoEdicao": "723",
+                "datapub": "22/12/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 22/12/2023 - nº 243-C] (p. 3, col. 2)",
+                "comentario": "Declaração de Acréscimo Vetado",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "38066175",
+                "datAssinatura": "29/12/2023",
+                "nomeNormaPosterior": "Decreto nº 11.871 de 29/12/2023",
+                "pagina": "13",
+                "coluna": "1",
+                "edicao": "38066002",
+                "tipoEdicao": "723",
+                "datapub": "29/12/2023",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 29/12/2023 - nº 247-D] (p. 13, col. 1)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "38147746",
+                "datAssinatura": "09/01/2024",
+                "nomeNormaPosterior": "Decreto nº 11.878 de 09/01/2024",
+                "pagina": "2",
+                "coluna": "1",
+                "edicao": "38147629",
+                "tipoEdicao": "750",
+                "datapub": "10/01/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 10/01/2024] (p. 2, col. 1)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 79 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "38179497",
+                "datAssinatura": "22/01/2024",
+                "nomeNormaPosterior": "Decreto nº 11.890 de 22/01/2024",
+                "pagina": "9",
+                "coluna": "2",
+                "edicao": "38179316",
+                "tipoEdicao": "750",
+                "datapub": "23/01/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 23/01/2024] (p. 9, col. 2)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 26 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "38299941",
+                "datAssinatura": "04/04/2024",
+                "nomeNormaPosterior": "Lei nº 14.835 de 04/04/2024",
+                "pagina": "9",
+                "coluna": "1",
+                "edicao": "38299898",
+                "tipoEdicao": "750",
+                "datapub": "05/04/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 05/04/2024] (p. 9, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "38518333",
+                "datAssinatura": "17/05/2024",
+                "nomeNormaPosterior": "Medida Provisória nº 1.221 de 17/05/2024",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "38518338",
+                "tipoEdicao": "723",
+                "datapub": "17/05/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 17/05/2024 - nº 95-B] (p. 1, col. 1)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "38518333",
+                "datAssinatura": "17/05/2024",
+                "nomeNormaPosterior": "Medida Provisória nº 1.221 de 17/05/2024",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "38518338",
+                "tipoEdicao": "723",
+                "datapub": "17/05/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União - Edição Extra  de 17/05/2024 - nº 95-B] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Provisória",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 55 ",
+                      "comentario": "Ressalva"
+                    },
+                    {
+                      "dispositivo": "Art. 75, § 3 ",
+                      "comentario": "Ressalva"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "38654051",
+                "datAssinatura": "27/06/2024",
+                "nomeNormaPosterior": "Lei nº 14.903 de 27/06/2024",
+                "pagina": "5",
+                "coluna": "1",
+                "edicao": "38653989",
+                "tipoEdicao": "750",
+                "datapub": "28/06/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 28/06/2024] (p. 5, col. 1)",
+                "comentario": "Declaração de Ressalva Permanente da Norma no todo",
+                "itens": ""
+              },
+              {
+                "codnormaposterior": "38654051",
+                "datAssinatura": "27/06/2024",
+                "nomeNormaPosterior": "Lei nº 14.903 de 27/06/2024",
+                "pagina": "5",
+                "coluna": "1",
+                "edicao": "38653989",
+                "tipoEdicao": "750",
+                "datapub": "28/06/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 28/06/2024] (p. 5, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 184 ",
+                      "comentario": "Ressalva"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "39624564",
+                "datAssinatura": "06/09/2024",
+                "nomeNormaPosterior": "Acórdão da Ação Direta de Inconstitucionalidade nº 6.890 de 06/09/2024",
+                "pagina": "2",
+                "coluna": "1",
+                "edicao": "39623738",
+                "tipoEdicao": "750",
+                "datapub": "16/09/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 16/09/2024] (p. 2, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 75, caput, Inciso 8 ",
+                      "comentario": "Declaração de Interpretação conforme a Constituição"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "39601490",
+                "datAssinatura": "11/09/2024",
+                "nomeNormaPosterior": "Decreto nº 12.174 de 11/09/2024",
+                "pagina": "6",
+                "coluna": "2",
+                "edicao": "39600131",
+                "tipoEdicao": "750",
+                "datapub": "12/09/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 12/09/2024] (p. 6, col. 2)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 121, § 3 ",
+                      "comentario": "Dispositivo Correlato"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "39686235",
+                "datAssinatura": "20/09/2024",
+                "nomeNormaPosterior": "Lei nº 14.981 de 20/09/2024",
+                "pagina": "2",
+                "coluna": "2",
+                "edicao": "39686056",
+                "tipoEdicao": "750",
+                "datapub": "23/09/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 23/09/2024] (p. 2, col. 2)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 55 ",
+                      "comentario": "Ressalva"
+                    },
+                    {
+                      "dispositivo": "Art. 75, § 3 ",
+                      "comentario": "Ressalva"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "39893763",
+                "datAssinatura": "09/12/2024",
+                "nomeNormaPosterior": "Decreto nº 12.304 de 09/12/2024",
+                "pagina": "9",
+                "coluna": "1",
+                "edicao": "39893327",
+                "tipoEdicao": "750",
+                "datapub": "10/12/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 10/12/2024] (p. 9, col. 1)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 25, § 4 ",
+                      "comentario": "Regulamentado"
+                    },
+                    {
+                      "dispositivo": "Art. 60, caput, Inciso 4 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "40035473",
+                "datAssinatura": "30/12/2024",
+                "nomeNormaPosterior": "Decreto nº 12.343 de 30/12/2024",
+                "pagina": "869",
+                "coluna": "2",
+                "edicao": "40034935",
+                "tipoEdicao": "750",
+                "datapub": "31/12/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 31/12/2024] (p. 869, col. 2)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 6, caput, Inciso 22 ",
+                      "comentario": "Dispositivo Correlato"
+                    },
+                    {
+                      "dispositivo": "Art. 37, § 2 ",
+                      "comentario": "Dispositivo Correlato"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "41462395",
+                "datAssinatura": "16/09/2025",
+                "nomeNormaPosterior": "Lei nº 15.210 de 16/09/2025",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "41463352",
+                "tipoEdicao": "750",
+                "datapub": "17/09/2025",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 17/09/2025] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 44-A, caput ",
+                      "comentario": "Acréscimo"
+                    },
+                    {
+                      "dispositivo": "Art. 44-A, § 1 ",
+                      "comentario": "Acréscimo"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "41716387",
+                "datAssinatura": "21/11/2025",
+                "nomeNormaPosterior": "Lei nº 15.266 de 21/11/2025",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "41716579",
+                "tipoEdicao": "750",
+                "datapub": "24/11/2025",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 24/11/2025] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 79, caput, Inciso 4 ",
+                      "comentario": "Acréscimo"
+                    },
+                    {
+                      "dispositivo": "Art. 79, § 1, Inciso 7 ",
+                      "comentario": "Acréscimo"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "41891323",
+                "datAssinatura": "29/12/2025",
+                "nomeNormaPosterior": "Decreto nº 12.807 de 29/12/2025",
+                "pagina": "17",
+                "coluna": "1",
+                "edicao": "41891264",
+                "tipoEdicao": "750",
+                "datapub": "30/12/2025",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 30/12/2025] (p. 17, col. 1)",
+                "comentario": "Declaração de Legislação Correlata",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 6, caput, Inciso 22 ",
+                      "comentario": "Dispositivo Correlato"
+                    },
+                    {
+                      "dispositivo": "Art. 37, § 2 ",
+                      "comentario": "Dispositivo Correlato"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "43414568",
+                "datAssinatura": "17/06/2026",
+                "nomeNormaPosterior": "Decreto nº 13.031 de 17/06/2026",
+                "pagina": "4",
+                "coluna": "2",
+                "edicao": "43414508",
+                "tipoEdicao": "750",
+                "datapub": "18/06/2026",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 18/06/2026] (p. 4, col. 2)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 91, § 3 ",
+                      "comentario": "Regulamentado"
+                    },
+                    {
+                      "dispositivo": "Art. 92, caput, Inciso 18 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "43573921",
+                "datAssinatura": "20/07/2026",
+                "nomeNormaPosterior": "Lei nº 15.471 de 20/07/2026",
+                "pagina": "1",
+                "coluna": "1",
+                "edicao": "43573745",
+                "tipoEdicao": "750",
+                "datapub": "21/07/2026",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 21/07/2026] (p. 1, col. 1)",
+                "comentario": "Declaração de Alteração Permanente",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 75, caput, Inciso 16 ",
+                      "comentario": "Alteração"
+                    }
+                  ]
+                }
+              },
+              {
+                "codnormaposterior": "43704405",
+                "datAssinatura": "24/08/2026",
+                "nomeNormaPosterior": "Decreto nº 13.106 de 24/08/2026",
+                "pagina": "10",
+                "coluna": "2",
+                "edicao": "43699709",
+                "tipoEdicao": "750",
+                "datapub": "25/08/2026",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 25/08/2026] (p. 10, col. 2)",
+                "comentario": "Declaração de Regulamentação Permanente de Norma",
+                "itens": {
+                  "item": [
+                    {
+                      "dispositivo": "Art. 79, caput, Inciso 4 ",
+                      "comentario": "Regulamentado"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "ementa": "Lei de Licitações e Contratos Administrativos."
+        }
+      ]
+    }
+  }
+}

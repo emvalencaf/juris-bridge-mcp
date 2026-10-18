@@ -8,7 +8,7 @@ import pytest
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
 from juris_bridge_mcp.adapters.senado.legislation_repository import SenadoLegislationRepository
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
-from juris_bridge_mcp.domain.legislation import LegislationFilters
+from juris_bridge_mcp.domain.legislation import LegislationFilters, Urn
 
 FIXTURES = Path(__file__).parent / "fixtures"
 LEI_14133 = LegislationFilters(norm_type="lei", number=14133, year=2021)
@@ -161,3 +161,89 @@ async def test_an_unexpected_status_is_source_changed():
         await _repository(_respond(404, {})).search(LEI_14133, limit=10, offset=0)
 
     assert caught.value.code is ErrorCode.SOURCE_CHANGED
+
+
+URN = Urn.parse("urn:lex:br:federal:lei:2021-04-01;14133")
+
+
+async def test_finds_a_norm_by_urn_with_publications_and_relations():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json=_fixture("lei_14133_2021_detail.json"))
+
+    record = await _repository(handler).find_by_urn(URN)
+
+    request = seen[0]
+    assert request.url.path == "/dadosabertos/legislacao/urn"
+    assert dict(request.url.params) == {"urn": URN.text}
+    assert request.headers["accept"] == "application/json"
+    norm = record.norm
+    assert norm.urn == URN.text and (norm.norm_type, norm.number, norm.year) == ("lei", 14133, 2021)
+    assert norm.signed_on == date(2021, 4, 1) and norm.name == "Lei nº 14.133 de 01/04/2021"
+    assert norm.summary == "Lei de Licitações e Contratos Administrativos."
+    assert norm.nickname == "Lei de Licitações e Contratos (2021)"
+    assert norm.citation_url == "https://normas.leg.br/?urn=" + URN.text
+    original = record.publications[0]
+    assert original.kind == "PUB" and original.published_on == date(2021, 4, 1)
+    assert original.edition == "Diário Oficial da União - Edição Extra de 01/04/2021 - nº 61-F"
+    assert (original.page, original.column) == ("1", "1")
+    assert len(record.publications) == 2
+    first = record.relations[0]
+    assert first.kind == "Declaração de Veto Original" and first.norm_id == "33382066"
+    assert first.name == "Mensagem de Veto Parcial nº 118 de 01/04/2021"
+    assert first.signed_on == date(2021, 4, 1)
+    assert len(record.relations) == 50
+    assert record.raw["DetalheDocumento"]["documentos"]["documento"][0]["id"] == "33382036"
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        _fixture("detail_not_found.json"),
+        {"DetalheDocumento": {"documentos": ""}},
+        {"DetalheDocumento": {"documentos": None}},
+    ],
+    ids=["recorded-without-documentos", "empty-string", "null"],
+)
+async def test_an_unknown_urn_is_none(body):
+    assert await _repository(_respond(200, body)).find_by_urn(URN) is None
+
+
+async def test_a_norm_without_publications_or_relations_has_none():
+    body = _fixture("lei_14133_2021_detail.json")
+    document = body["DetalheDocumento"]["documentos"]["documento"][0]
+    document["publicacoes"] = ""
+    del document["vides"]
+
+    record = await _repository(_respond(200, body)).find_by_urn(URN)
+
+    assert record.publications == () and record.relations == ()
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda d: d.pop("identificacao"),
+        lambda d: d["identificacao"].update(dataassinatura="soon"),
+        lambda d: d.update(vides={"vide": "nope"}),
+        lambda d: d.update(vides={"vide": [{"comentario": "x"}]}),
+    ],
+    ids=["no-identificacao", "bad-date", "vide-not-a-list", "vide-missing-fields"],
+)
+async def test_find_with_an_unexpected_shape_is_source_changed(mutate):
+    body = _fixture("lei_14133_2021_detail.json")
+    mutate(body["DetalheDocumento"]["documentos"]["documento"][0])
+
+    with pytest.raises(ToolFailure) as caught:
+        await _repository(_respond(200, body)).find_by_urn(URN)
+
+    assert caught.value.code is ErrorCode.SOURCE_CHANGED
+
+
+async def test_find_reports_an_unavailable_source():
+    with pytest.raises(ToolFailure) as caught:
+        await _repository(_respond(503, {})).find_by_urn(URN)
+
+    assert caught.value.code is ErrorCode.SOURCE_UNAVAILABLE and caught.value.retryable is True

@@ -2,10 +2,11 @@ from datetime import UTC, datetime
 
 import pytest
 
-from juris_bridge_mcp.application.use_cases.get_case import MAX_RAW_BYTES, get_case
+from juris_bridge_mcp.application.use_cases.get_case import get_case
 from juris_bridge_mcp.domain.case import Case, CaseEvent, CaseRecord, CodedTerm
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.raw_payload import MAX_RAW_BYTES
 
 DIGITS = "00008323520184013202"
 NUMBER = CnjNumber.parse(DIGITS)

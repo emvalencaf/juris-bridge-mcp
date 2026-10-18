@@ -1,6 +1,7 @@
-"""The Senado open-data API as the Source of Norms: one `legislacao/lista` call per search."""
+"""The Senado open-data API as the Source of Norms: `legislacao/lista` to search, `urn` to fetch."""
 
-from datetime import datetime
+import re
+from datetime import date, datetime
 from typing import Any
 
 import httpx
@@ -14,6 +15,10 @@ from juris_bridge_mcp.domain.legislation import (
     LegislationFilters,
     LegislationPage,
     Norm,
+    NormRecord,
+    Publication,
+    Relation,
+    Urn,
     norm_urn,
 )
 
@@ -33,7 +38,7 @@ class SenadoLegislationRepository:
         self, filters: LegislationFilters, *, limit: int, offset: int = 0
     ) -> LegislationPage:
         """Ask for every match, then slice: the service has no paging of its own."""
-        body = await self._get(filters)
+        body = await self._get("lista", self._params(filters))
         try:
             norms = [self._norm(raw, filters.norm_type) for raw in self._documents(body)]
         except (SchemaDrift, KeyError, TypeError, ValueError) as drift:
@@ -44,6 +49,58 @@ class SenadoLegislationRepository:
             total=len(norms),
             next_offset=end if end < len(norms) else None,
         )
+
+    async def find_by_urn(self, urn: Urn) -> NormRecord | None:
+        """Fetch the detail of one Norm; the Senado answers an unknown URN with no `documentos`."""
+        body = await self._get("urn", {"urn": urn.text})
+        try:
+            documents = body["DetalheDocumento"].get("documentos")
+            if documents in ("", None, {}):
+                return None
+            found = documents["documento"]
+            if not isinstance(found, list) or not isinstance(found[0], dict):
+                raise SchemaDrift("documentos.documento is not a list of objects")
+            return self._record(found[0], urn, body)
+        except (SchemaDrift, KeyError, TypeError, ValueError, IndexError) as drift:
+            raise source_changed(SOURCE, "The Senado", str(drift) or type(drift).__name__) from None
+
+    @staticmethod
+    def _record(raw: dict[str, Any], urn: Urn, body: Any) -> NormRecord:
+        identity = raw["identificacao"]
+        if not isinstance(identity, dict):
+            raise SchemaDrift("identificacao is not an object")
+        signed = _day(identity["dataassinatura"])
+        norm = Norm(
+            urn=urn.text,
+            norm_type=urn.norm_type,
+            number=int(identity["numero"]),
+            year=signed.year if signed else urn.signed_on.year,
+            signed_on=signed or urn.signed_on,
+            name=str(identity["normaNome"]),
+            summary=raw.get("ementa") or None,
+            nickname=_nickname(identity),
+            citation_url=_CITATION_URL + urn.text,
+        )
+        publications = tuple(
+            Publication(
+                kind=str(p["tipo"]),
+                edition=_squash(p["fonte"]),
+                published_on=_day(p["data"]),
+                page=p.get("pagina") or None,
+                column=p.get("coluna") or None,
+            )
+            for p in _listed(raw.get("publicacoes"), "publicacao")
+        )
+        relations = tuple(
+            Relation(
+                kind=str(v["comentario"]),
+                name=_squash(v["nomeNormaPosterior"]),
+                signed_on=_day(v["datAssinatura"]),
+                norm_id=str(v["codnormaposterior"]),
+            )
+            for v in _listed(raw.get("vides"), "vide")
+        )
+        return NormRecord(norm, publications, relations, body)
 
     @staticmethod
     def _documents(body: Any) -> list[Any]:
@@ -74,16 +131,20 @@ class SenadoLegislationRepository:
             citation_url=_CITATION_URL + urn,
         )
 
-    async def _get(self, filters: LegislationFilters) -> Any:
+    @staticmethod
+    def _params(filters: LegislationFilters) -> dict[str, str]:
         params = {"tipo": NORM_TYPES[filters.norm_type][0], "v": _SERVICE_VERSION}
         if filters.number is not None:
             params["numero"] = str(filters.number)
         if filters.year is not None:
             params["ano"] = str(filters.year)
+        return params
+
+    async def _get(self, service: str, params: dict[str, str]) -> Any:
         try:
             response = await self._client.request(
                 "GET",
-                f"{self._base_url}/legislacao/lista",
+                f"{self._base_url}/legislacao/{service}",
                 params=params,
                 headers={"Accept": "application/json"},
             )
@@ -115,3 +176,22 @@ def _nickname(raw: dict[str, Any]) -> str | None:
     parts = [p.strip() for p in str(raw.get("apelido") or "").split(" , ")]
     names = [p for p in parts if p and p != raw.get("norma")]
     return " , ".join(names) or None
+
+
+def _squash(text: Any) -> str:
+    """Collapse the runs of spaces the Senado pads its labels with."""
+    return re.sub(r"\s+", " ", str(text)).strip()
+
+
+def _day(raw: Any) -> date | None:
+    return datetime.strptime(raw, "%d/%m/%Y").date() if raw else None
+
+
+def _listed(container: Any, key: str) -> list[Any]:
+    """Return the entries under `container[key]`; the Senado sends `""` when there are none."""
+    if container in ("", None, {}):
+        return []
+    found = container[key]
+    if not isinstance(found, list) or not all(isinstance(e, dict) for e in found):
+        raise SchemaDrift(f"{key} is not a list of objects")
+    return found

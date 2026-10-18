@@ -8,13 +8,16 @@ import httpx
 
 from juris_bridge_mcp.adapters.datajud.case_mapper import SchemaDrift, map_case
 from juris_bridge_mcp.adapters.http_client import UpstreamClient
-from juris_bridge_mcp.domain.case import CaseRecord
+from juris_bridge_mcp.domain.case import Case, CaseRecord
+from juris_bridge_mcp.domain.case_search import CaseFilters, CasePage
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.courts import SOURCE
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
 _MAX_HITS = 10
 _NEVER = datetime.min.replace(tzinfo=UTC)
+# `@timestamp` alone ties; `id.keyword` makes the order total, so paging never skips or repeats.
+_SORT = [{"@timestamp": {"order": "asc"}}, {"id.keyword": {"order": "asc"}}]
 
 
 def _failure(
@@ -43,7 +46,8 @@ class DatajudCaseRepository:
 
     async def find(self, number: CnjNumber, court: str) -> CaseRecord | None:
         """Look the number up in the Court's index; keep the most recently updated instance."""
-        body = await self._search(number, court)
+        query = {"size": _MAX_HITS, "query": {"match": {"numeroProcesso": number.digits}}}
+        body = await self._search(court, query)
         try:
             hits = self._hits(body)
             if not hits:
@@ -57,9 +61,81 @@ class DatajudCaseRepository:
             raise _changed(str(drift)) from None
         return CaseRecord(case=cases[newest], raw=sources[newest], matches=len(sources))
 
-    async def _search(self, number: CnjNumber, court: str) -> Any:
+    async def search(
+        self,
+        court: str,
+        filters: CaseFilters,
+        *,
+        limit: int,
+        after: tuple[int | str, int | str] | None = None,
+    ) -> CasePage:
+        """Run the filters on the Court's index, one extra hit telling if another page follows."""
+        query: dict[str, Any] = {
+            "size": limit + 1,
+            "query": {"bool": {"filter": self._clauses(filters)}},
+            "sort": _SORT,
+        }
+        if after is not None:
+            query["search_after"] = list(after)
+        body = await self._search(court, query)
+        try:
+            hits = self._hits(body)
+            total = body["hits"]["total"]
+            value, relation = total["value"], total["relation"]
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise SchemaDrift("hits.total.value is not a number")
+            more = len(hits) > limit
+            page = hits[:limit]
+            cases = tuple(self._case(hit, court) for hit in page)
+            position = tuple(page[-1]["sort"]) if more else None
+            if position is not None and (
+                len(position) != 2 or not all(isinstance(p, int | str) for p in position)
+            ):
+                raise SchemaDrift("a hit has no usable sort position")
+        except (SchemaDrift, KeyError, TypeError) as drift:
+            raise _changed(str(drift)) from None
+        return CasePage(
+            cases=cases,
+            total=value,
+            total_is_lower_bound=relation == "gte",
+            next_position=position,
+        )
+
+    @staticmethod
+    def _clauses(filters: CaseFilters) -> list[dict[str, Any]]:
+        clauses: list[dict[str, Any]] = []
+        for field, value in (
+            ("classe.codigo", filters.case_class),
+            ("orgaoJulgador.codigo", filters.judging_body),
+            ("assuntos.codigo", filters.subject),
+        ):
+            if value is not None:
+                clauses.append({"term": {field: value}})
+        # Compact civil timestamps, compared as DataJud stores them. An explicit `format`
+        # makes the index answer nothing, and no time zone shifts the day (checked live).
+        bounds: dict[str, str] = {}
+        if filters.filed_from:
+            bounds["gte"] = f"{filters.filed_from:%Y%m%d}000000"
+        if filters.filed_to:
+            bounds["lte"] = f"{filters.filed_to:%Y%m%d}235959"
+        if bounds:
+            clauses.append({"range": {"dataAjuizamento": bounds}})
+        return clauses or [{"match_all": {}}]
+
+    @staticmethod
+    def _case(hit: Any, court: str) -> Case:
+        source = hit["_source"]
+        if not isinstance(source, dict):
+            raise SchemaDrift("a hit has no _source object")
+        digits = source.get("numeroProcesso")
+        try:
+            number = CnjNumber.parse(str(digits))
+        except ToolFailure:
+            raise SchemaDrift("a hit has no valid numeroProcesso") from None
+        return map_case(source, number=number, court=court)
+
+    async def _search(self, court: str, query: dict[str, Any]) -> Any:
         url = f"{self._base_url}/api_publica_{court}/_search"
-        query = {"size": _MAX_HITS, "query": {"match": {"numeroProcesso": number.digits}}}
         try:
             response = await self._client.request(
                 "POST",

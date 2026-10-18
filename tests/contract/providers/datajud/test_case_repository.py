@@ -196,3 +196,50 @@ async def test_the_newest_record_is_chosen_by_instant_not_by_text():
     record = await _repository(_respond(200, body)).find(NUMBER, "trf1")
 
     assert record.case.instance == "G2"
+
+
+def _hits_body(count: int, relation: str = "eq") -> dict:
+    source = _fixture("trf1_hit.json")["hits"]["hits"][0]["_source"]
+    hits = [{"_source": source, "sort": [1000 + i, f"id-{i}"]} for i in range(count)]
+    return {"hits": {"total": {"value": count, "relation": relation}, "hits": hits}}
+
+
+async def test_search_keeps_a_page_and_reports_the_next_position():
+    from juris_bridge_mcp.domain.case_search import CaseFilters
+
+    page = await _repository(_respond(200, _hits_body(3))).search("trf1", CaseFilters(), limit=2)
+
+    assert len(page.cases) == 2 and page.cases[0].number == NUMBER
+    assert page.next_position == (1001, "id-1")
+    assert (page.total, page.total_is_lower_bound) == (3, False)
+
+
+async def test_search_on_the_last_page_has_no_next_position():
+    from juris_bridge_mcp.domain.case_search import CaseFilters
+
+    page = await _repository(_respond(200, _hits_body(2, "gte"))).search(
+        "trf1", CaseFilters(), limit=2
+    )
+
+    assert page.next_position is None and page.total_is_lower_bound is True
+
+
+@pytest.mark.parametrize("break_it", ["no_sort", "no_total", "bad_number"])
+async def test_search_drift_is_source_changed(break_it):
+    from juris_bridge_mcp.domain.case_search import CaseFilters
+
+    body = _hits_body(2)
+    if break_it == "no_sort":
+        del body["hits"]["hits"][0]["sort"]
+    elif break_it == "no_total":
+        del body["hits"]["total"]
+    else:
+        body["hits"]["hits"][0]["_source"] = {
+            **body["hits"]["hits"][0]["_source"],
+            "numeroProcesso": "1",
+        }
+
+    with pytest.raises(ToolFailure) as caught:
+        await _repository(_respond(200, body)).search("trf1", CaseFilters(), limit=1)
+
+    assert caught.value.code is ErrorCode.SOURCE_CHANGED

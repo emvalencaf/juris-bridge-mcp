@@ -29,7 +29,7 @@ def _auth(key: str) -> dict[str, str]:
 async def test_tools_are_exposed_and_read_only(mcp_client):
     tools = await mcp_client.list_tools()
 
-    assert sorted(t.name for t in tools) == ["get_case", "list_coverage"]
+    assert sorted(t.name for t in tools) == ["get_case", "list_coverage", "search_cases"]
     assert all(t.annotations.read_only_hint is True for t in tools)
 
 

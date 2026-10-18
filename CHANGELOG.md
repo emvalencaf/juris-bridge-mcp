@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `search_cases` tool (#25): search a Court's Cases by `case_class`, `judging_body`,
+  `subject` and `filed_from`/`filed_to` (no party, judge or CPF filters). `court` is
+  checked against the embedded allowlist; `limit` is 1-50 (default 10). Paging uses a
+  stateless opaque Cursor that carries the Court alias, over a `[@timestamp,
+  id.keyword]` sort so no item is skipped or repeated. The envelope has `total`,
+  `total_is_lower_bound` and a narrowing `hint` at DataJud's 10,000-hit cap.
 - `get_case` tool (#24): fetch one Case by CNJ number from DataJud. Accepts the formatted
   or 20-digit number and validates the check digit; derives the Court from `J.TR`
   (override with `court`); returns events honouring `events_limit`, a Citation with a

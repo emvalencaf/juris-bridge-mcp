@@ -9,8 +9,8 @@ from starlette.middleware import Middleware
 from starlette.types import ASGIApp
 
 from juris_bridge_mcp.adapters.bearer_auth import BearerAuthMiddleware
-from juris_bridge_mcp.adapters.cached_case_repository import CachedCaseRepository
-from juris_bridge_mcp.adapters.cases_mcp_tools import build_cases_server
+from juris_bridge_mcp.adapters.cases.cached_case_repository import CachedCaseRepository
+from juris_bridge_mcp.adapters.cases.cases_mcp_tools import build_cases_server
 from juris_bridge_mcp.adapters.coverage_mcp_tools import build_coverage_server
 from juris_bridge_mcp.adapters.datajud.case_repository import DatajudCaseRepository
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client

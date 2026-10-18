@@ -9,7 +9,7 @@ from juris_bridge_mcp.config.base import EnvSettings
 class ServerSettings(EnvSettings):
     """`JURIS_BRIDGE_SERVER_*`: bind address and the accepted API keys."""
 
-    model_config = SettingsConfigDict(env_prefix="JURIS_BRIDGE_SERVER_", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="JURIS_BRIDGE_SERVER_")
 
     host: str = "0.0.0.0"  # noqa: S104 - container-first: bind all interfaces
     port: int = 8000

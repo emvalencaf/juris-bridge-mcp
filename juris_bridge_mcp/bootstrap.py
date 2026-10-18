@@ -4,7 +4,6 @@ from fastmcp import FastMCP
 from starlette.middleware import Middleware
 from starlette.types import ASGIApp
 
-from juris_bridge_mcp.config.server import ServerSettings
 from juris_bridge_mcp.modules.coverage.infrastructure import container as coverage
 from juris_bridge_mcp.shared.auth import BearerAuthMiddleware
 
@@ -16,11 +15,11 @@ def build_server() -> FastMCP:
     return app
 
 
-def build_http_app(settings: ServerSettings) -> ASGIApp:
+def build_http_app(keys: tuple[str, ...]) -> ASGIApp:
     """Build the stateless, JSON-response ASGI app guarded by Bearer auth."""
     return build_server().http_app(
         path="/mcp",
         stateless_http=True,
         json_response=True,
-        middleware=[Middleware(BearerAuthMiddleware, keys=settings.keys())],
+        middleware=[Middleware(BearerAuthMiddleware, keys=keys)],
     )

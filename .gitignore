@@ -16,7 +16,7 @@ node_modules/
 __pycache__/
 dist/
 build/
-coverage/
+/coverage/
 
 # Agent local state
 .claude/settings.local.json

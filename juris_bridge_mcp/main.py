@@ -21,7 +21,7 @@ def main() -> None:
     except ValidationError:
         sys.exit("JURIS_BRIDGE_SERVER_API_KEYS must hold at least one API key; refusing to start.")
     print(NOTICE, flush=True)
-    uvicorn.run(build_http_app(settings), host=settings.host, port=settings.port)
+    uvicorn.run(build_http_app(settings.keys()), host=settings.host, port=settings.port)
 
 
 if __name__ == "__main__":

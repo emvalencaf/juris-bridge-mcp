@@ -113,6 +113,18 @@ def test_the_rubric_of_the_next_article_does_not_trail_the_previous_one():
     assert articles["6"].startswith("Art. 6º")
 
 
+def test_a_rubric_followed_by_an_annotation_is_still_a_rubric():
+    html = _page_of(
+        "Art. 5º Aplica-se a lei brasileira ao crime cometido no território nacional.",
+        "Lugar do crime (Redação dada pela Lei nº 7.209, de 1984)",
+        "Art. 6º Considera-se praticado o crime no lugar da ação.",
+    )
+
+    fifth = parse_norm_text(html, url="u").articles[0].text
+
+    assert "Lugar do crime" not in fifth and fifth.endswith("território nacional.")
+
+
 def test_a_provision_without_closing_punctuation_is_not_taken_for_a_rubric():
     html = _page_of(
         "Art. 7º Ficam sujeitos à lei brasileira:",

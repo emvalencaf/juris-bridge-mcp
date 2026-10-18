@@ -125,3 +125,10 @@ def test_strip_annotations_knows_each_prefix_in_any_case(note):
 )
 def test_strip_annotations_keeps_revoked_and_unknown_parentheses(line):
     assert strip_annotations(line) == line
+
+
+def test_strip_annotations_takes_the_vigencia_link_text_that_trails_a_note():
+    text = "§ 1º Na mesma pena. (Incluído pela Lei nº 12.737, de 2012) Vigência"
+
+    assert strip_annotations(text) == "§ 1º Na mesma pena."
+    assert strip_annotations("Art. 9º Vigência") == "Art. 9º Vigência"

@@ -26,10 +26,11 @@ _LINE_START = re.compile(
 
 
 # An Annotation opens with one of these; `Revogado` is not one, as it says the provision is no
-# longer in force. One level of nested parentheses is allowed: `(Vide Lei X (art. 2º))`.
+# longer in force. The Planalto may trail a note with the word `Vigência`, the text of a link,
+# which goes with it. One level of nested parentheses is allowed: `(Vide Lei X (art. 2º))`.
 _ANNOTATION = re.compile(
     r"[ \t]*\((?:redação dada|incluíd[oa]|vide|vigência|regulamento|renumerad[oa]"
-    r"|produção de efeito)(?:[^()\n]|\([^()\n]*\))*\)",
+    r"|produção de efeito)(?:[^()\n]|\([^()\n]*\))*\)(?:[ \t]+Vigência\b)?",
     re.IGNORECASE,
 )
 

@@ -10,6 +10,7 @@ from juris_bridge_mcp.domain.legislation_text import (
     Article,
     NormText,
     article_start,
+    strip_annotations,
 )
 
 _BREAKS = frozenset({"p", "br", "div", "tr", "li", "table", "h1", "h2", "h3", "h4", "h5", "h6"})
@@ -109,8 +110,11 @@ def parse_norm_text(html: str, *, url: str) -> NormText:
 
 
 def _is_rubric(line: str) -> bool:
+    """Tell a rubric from a provision line; a rubric may carry an Annotation after its title."""
+    line = strip_annotations(line)
     return (
-        len(line) <= _MAX_RUBRIC_CHARS
+        bool(line)
+        and len(line) <= _MAX_RUBRIC_CHARS
         and line[0].isupper()
         and line[-1] not in ".;:,)"
         and _PROVISION_PART.match(line) is None

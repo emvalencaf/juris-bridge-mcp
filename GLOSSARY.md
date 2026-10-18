@@ -48,6 +48,10 @@ _Avoid_: production, hosted instance
 The human-readable reference to an item plus, when the Source offers a stable one, its URL; present on every Normalized result.
 _Avoid_: reference, link
 
+**Annotation**:
+A note the Source adds to a provision of a Norm to record its legislative history (wording given, inclusion, cross-reference), as opposed to the mark that the provision was revoked.
+_Avoid_: footnote, amendment note
+
 **Content kind**:
 Whether an item carries only descriptive data (`metadata`) or the full document text (`full_text`), so an empty text is never mistaken for absence.
 _Avoid_: type, mode

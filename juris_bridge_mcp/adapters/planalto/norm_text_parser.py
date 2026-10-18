@@ -10,14 +10,26 @@ from juris_bridge_mcp.domain.legislation_text import (
     Article,
     NormText,
     article_start,
+    strip_annotations,
 )
 
 _BREAKS = frozenset({"p", "br", "div", "tr", "li", "table", "h1", "h2", "h3", "h4", "h5", "h6"})
 _VOID = frozenset({"br", "hr", "img", "meta", "link", "input", "col", "area", "base", "param"})
 _SKIPPED = frozenset({"script", "style", "head"})
 _STRUCK = frozenset({"strike", "s", "del"})
-_HEADING = re.compile(r"(parte|livro|título|capítulo|seção|subseção|anexo)\b", re.IGNORECASE)
+# Some pages drop the accents (`TITULO`, `CAPITULO`).
+_HEADING = re.compile(
+    r"(parte|livro|t[ií]tulo|subt[ií]tulo|cap[ií]tulo|se[cç][ãa]o|subse[cç][ãa]o|anexo)\b",
+    re.IGNORECASE,
+)
+_MIN_SHOUTED_CHARS = 4
 _MAX_HEADING_CHARS = 150
+# A rubric is the short title of the next article ("Lugar do crime"): it has no closing
+# punctuation and does not open like a provision part (§, inciso, alínea, Parágrafo, Pena).
+_MAX_RUBRIC_CHARS = 100
+_PROVISION_PART = re.compile(
+    r"(§|parágrafo|pena\b|[ivxlcdm]+\s*[-\u2013\u2014]|[a-z]\)|\d)", re.IGNORECASE
+)
 _MIN_TEXT_CHARS = 200
 
 
@@ -71,7 +83,9 @@ def parse_norm_text(html: str, *, url: str) -> NormText:
     """Return the plain text of the page at `url`, or raise `SchemaDrift` if it has no articles.
 
     A line that opens with `Art.` starts an article, which runs to the next article, to a
-    heading (`CAPÍTULO`, `Seção`...) or to the closing `Brasília, ...` line.
+    heading (`CAPÍTULO`, `Seção`, or a line in capitals) or to the closing `Brasília, ...` line.
+    The rubric title of the next article (`Lugar do crime`) that trails an article is left
+    out of it.
     """
     reader = _Lines()
     reader.feed(html)
@@ -85,6 +99,8 @@ def parse_norm_text(html: str, *, url: str) -> NormText:
     for line, struck in lines:
         key = article_start(line)
         if key is not None:
+            if current is not None:
+                _drop_trailing_rubrics(current)
             current = [(line, struck)]
             blocks.append((key, current))
         elif _closes_article(line):
@@ -99,9 +115,36 @@ def parse_norm_text(html: str, *, url: str) -> NormText:
     return NormText(text=text, articles=articles, url=url)
 
 
+def _is_rubric(line: str) -> bool:
+    """Tell a rubric from a provision line; a rubric may carry an Annotation after its title."""
+    line = strip_annotations(line)
+    return (
+        bool(line)
+        and len(line) <= _MAX_RUBRIC_CHARS
+        and line[0].isupper()
+        and line[-1] not in ".;:,)"
+        and _PROVISION_PART.match(line) is None
+    )
+
+
+def _drop_trailing_rubrics(block: list[tuple[str, bool]]) -> None:
+    """Drop the rubric titles of the next article that trail `block`, never its first line."""
+    while len(block) > 1 and _is_rubric(block[-1][0]):
+        block.pop()
+
+
 def _closes_article(line: str) -> bool:
     return line.startswith("Brasília,") or (
-        len(line) <= _MAX_HEADING_CHARS and _HEADING.match(line) is not None
+        len(line) <= _MAX_HEADING_CHARS and (_HEADING.match(line) is not None or _is_shouted(line))
+    )
+
+
+def _is_shouted(line: str) -> bool:
+    """Tell a heading in capitals (`DAS PENALIDADES`) from a provision like `I - (VETADO);`."""
+    return (
+        len(line) >= _MIN_SHOUTED_CHARS
+        and line.isupper()
+        and all(char.isalpha() or char in " .,'" for char in line)
     )
 
 

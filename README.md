@@ -101,6 +101,14 @@ The AWS Reference deployment (Lambda + Function URL, Terraform) lives in
   several instances can together exceed a Source's limit (DataJud: 120 req/min).
 - The in-memory cache is **per warm environment**: it is lost on cold start and
   not shared between instances.
+- The `revoked` and `superseded` flags of a norm article rest on the Planalto markup (a
+  `(Revogado ...)` note, or a struck-through opening line). Older pages mark them
+  inconsistently, so a revoked article can be missed or a current one flagged.
+- An article runs to the next article or heading. A rubric the parser does not recognise as a
+  title can still trail an article in older norms.
+- Planalto page paths are built by convention, as there is no index by URN. Norms without a
+  convention (a `mensagem`, old provisional measures) and some pre-2004 layouts return metadata
+  and a warning, not the text.
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

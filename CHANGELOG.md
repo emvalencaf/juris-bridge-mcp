@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Changed
 
+- Planalto norm text (#43): the rubric title of the next article (e.g. `Lugar do crime`) no
+  longer trails the previous article, and a heading without accents (`TITULO`), a `SUBTÍTULO` or a
+  line in capitals (`DAS PENALIDADES`) now ends the article before it. Known limits of the flags,
+  article boundaries and page paths are documented in the README and the `get_legislation`
+  description.
 - Cursor (#40): `Cursor.court` is now the neutral `scope`, and the position is whatever the
   search needs, validated by the use case that issued it (a sort position for Cases, an offset
   for Legislation). `Cursor.decode` now requires the `scopes` it accepts.
@@ -18,6 +23,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `include_annotations` on `get_legislation` (#49): `false` leaves the Annotations (`Redação
+  dada ...`, `Incluído ...`, `Vide ...`, `Vigência`, `Regulamento`, `Renumerado ...`, `Produção
+  de efeito`) out of the norm text to save tokens; `(Revogado ...)` is always kept. The default
+  `true` changes nothing. `max_chars` and the text cursor count the text after removal, and a
+  cursor is tied to the value, so one issued under the other is `invalid_argument`. A warning
+  says when notes were omitted. **Break:** norm-text cursors issued before this change are
+  rejected as `invalid_argument`; repeat the call without a cursor.
 - Container and AWS Reference deployment (#30): a small, Playwright-free image that starts
   without resolving or writing anything (`python` from the venv), and `deploy/aws/` with the
   Lambda Web Adapter image (`buffered`), Terraform (Lambda, Function URL with auth `NONE`,

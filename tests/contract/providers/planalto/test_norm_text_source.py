@@ -93,6 +93,80 @@ def test_an_article_repealed_by_note_is_flagged_revoked():
     assert text.find_article("185")[0].text.startswith("Art. 185 -")
 
 
+def _page_of(*lines: str) -> str:
+    filler = "<p>Esta lei dispõe sobre assuntos diversos para o teste do analisador.</p>" * 4
+    return "<html><body>" + filler + "".join(f"<p>{line}</p>" for line in lines) + "</body></html>"
+
+
+def test_the_rubric_of_the_next_article_does_not_trail_the_previous_one():
+    html = _page_of(
+        "Art. 5º Aplica-se a lei brasileira ao crime cometido no território nacional.",
+        "§ 1º Para os efeitos penais, consideram-se como extensão do território",
+        "Lugar do crime",
+        "Art. 6º Considera-se praticado o crime no lugar da ação.",
+    )
+
+    articles = {a.key: a.text for a in parse_norm_text(html, url="u").articles}
+
+    assert articles["5"].endswith("extensão do território")
+    assert "Lugar do crime" not in articles["5"]
+    assert articles["6"].startswith("Art. 6º")
+
+
+def test_a_rubric_followed_by_an_annotation_is_still_a_rubric():
+    html = _page_of(
+        "Art. 5º Aplica-se a lei brasileira ao crime cometido no território nacional.",
+        "Lugar do crime (Redação dada pela Lei nº 7.209, de 1984)",
+        "Art. 6º Considera-se praticado o crime no lugar da ação.",
+    )
+
+    fifth = parse_norm_text(html, url="u").articles[0].text
+
+    assert "Lugar do crime" not in fifth and fifth.endswith("território nacional.")
+
+
+def test_a_provision_without_closing_punctuation_is_not_taken_for_a_rubric():
+    html = _page_of(
+        "Art. 7º Ficam sujeitos à lei brasileira:",
+        "I - os crimes contra a vida",
+        "Pena - detenção de um a dois anos",
+        "Art. 8º Texto seguinte para o teste.",
+    )
+
+    seventh = parse_norm_text(html, url="u").articles[0].text
+
+    assert seventh.endswith("Pena - detenção de um a dois anos") and "I - os crimes" in seventh
+
+
+@pytest.mark.parametrize(
+    "heading", ["SUBTÍTULO II", "TITULO III", "CAPITULO I", "Seção VIII", "DAS PENALIDADES"]
+)
+def test_a_heading_closes_the_article_before_it(heading):
+    html = _page_of(
+        "Art. 9º A sociedade adquire personalidade jurídica com a inscrição.",
+        heading,
+        "Da Sociedade Não Personificada",
+        "Art. 10. Texto seguinte para o teste.",
+    )
+
+    ninth = parse_norm_text(html, url="u").articles[0].text
+
+    assert ninth == "Art. 9º A sociedade adquire personalidade jurídica com a inscrição."
+
+
+def test_a_vetoed_provision_in_capitals_does_not_close_the_article():
+    html = _page_of(
+        "Art. 11. O agente poderá:",
+        "I - (VETADO);",
+        "II - provas da prática de atos ilícitos.",
+        "Art. 12. Texto seguinte para o teste.",
+    )
+
+    eleventh = parse_norm_text(html, url="u").articles[0].text
+
+    assert "I - (VETADO);" in eleventh and "II - provas" in eleventh
+
+
 def test_the_text_is_plain_and_decoded():
     text = _parse("lei_14133_2021.htm").text
 

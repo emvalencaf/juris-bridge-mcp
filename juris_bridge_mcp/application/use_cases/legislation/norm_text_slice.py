@@ -5,8 +5,19 @@ from dataclasses import dataclass
 from juris_bridge_mcp.domain.cursor import Cursor
 from juris_bridge_mcp.domain.errors import invalid_argument, not_found
 from juris_bridge_mcp.domain.legislation import SOURCE, Urn
-from juris_bridge_mcp.domain.legislation_text import TEXT_SOURCE, Article, NormText, article_label
+from juris_bridge_mcp.domain.legislation_text import (
+    TEXT_SOURCE,
+    Article,
+    NormText,
+    article_label,
+    strip_annotations,
+)
 from juris_bridge_mcp.ports.norm_text_source import NormTextSource
+
+_ANNOTATIONS_OMITTED = (
+    "Annotations (legislative-history notes) were omitted; pass include_annotations=true "
+    "to read them."
+)
 
 
 @dataclass(frozen=True)
@@ -30,14 +41,16 @@ async def slice_norm_text(
     article: str | None,
     max_chars: int,
     cursor: str | None,
+    include_annotations: bool = True,
 ) -> tuple[TextSlice | None, tuple[str, ...]]:
     """Return the slice and the warnings about it; no slice when the Source has no text page.
 
-    `article` is a key from `article_key`. A `cursor` must come with the same urn and article
-    it was issued for.
+    `article` is a key from `article_key`. Without `include_annotations` the text is sliced after
+    its Annotations are removed. A `cursor` must come with the same urn, article and
+    `include_annotations` it was issued for.
     """
     warnings: list[str] = []
-    scope = f"{urn.text}|{article or ''}"
+    scope = f"{urn.text}|{article or ''}|{int(include_annotations)}"
     offset = _offset(cursor, scope)
     source_text = await text_source.fetch(urn)
     if source_text is None:
@@ -48,6 +61,11 @@ async def slice_norm_text(
         return None, tuple(warnings)
     chosen = _find_article(source_text, article, urn, warnings) if article is not None else None
     body = chosen.text if chosen is not None else source_text.text
+    if not include_annotations:
+        plain = strip_annotations(body)
+        if plain != body:
+            warnings.append(_ANNOTATIONS_OMITTED)
+        body = plain
     if offset > 0 and offset >= len(body):
         raise invalid_argument("The cursor is not valid.")
     end = offset + max_chars
@@ -64,7 +82,10 @@ def _offset(cursor: str | None, scope: str) -> int:
     if decoded.filters_key != scope:
         raise invalid_argument(
             "The cursor was issued for a different norm or article.",
-            hint="Repeat the same urn and article, or start again without a cursor.",
+            hint=(
+                "Repeat the same urn, article and include_annotations, "
+                "or start again without a cursor."
+            ),
         )
     return decoded.offset()
 

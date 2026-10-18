@@ -7,6 +7,7 @@ from juris_bridge_mcp.domain.legislation_text import (
     article_key,
     article_label,
     article_start,
+    strip_annotations,
 )
 
 
@@ -82,3 +83,52 @@ def test_find_article_falls_back_to_the_first_when_all_are_flagged():
     text = NormText("", (Article("2", "a", ("revoked",)), Article("2", "b", ("superseded",))), "u")
 
     assert text.find_article("2")[0].text == "a"
+
+
+def test_strip_annotations_removes_a_trailing_note_and_the_space_before_it():
+    text = "Art. 5º Todos são iguais. (Redação dada pela Lei nº 1, de 2001)"
+
+    assert strip_annotations(text) == "Art. 5º Todos são iguais."
+
+
+def test_strip_annotations_drops_a_line_made_only_of_a_note():
+    text = "Art. 1º Texto.\n(Vide Decreto nº 12.174, de 2024)\n§ 1º Outro."
+
+    assert strip_annotations(text) == "Art. 1º Texto.\n§ 1º Outro."
+
+
+@pytest.mark.parametrize(
+    "note",
+    [
+        "(Incluído pela Lei X)",
+        "(Incluída pela Lei X)",
+        "(Vigência)",
+        "(Regulamento)",
+        "(Renumerado pela Lei X)",
+        "(Produção de efeito)",
+        "(Vide Lei X (art. 2º))",
+    ],
+)
+def test_strip_annotations_knows_each_prefix_in_any_case(note):
+    assert strip_annotations(f"Art. 2º Texto. {note.upper()}") == "Art. 2º Texto."
+    assert strip_annotations(f"Art. 2º Texto. {note}") == "Art. 2º Texto."
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Art. 184. (Revogado pela Lei nº 10.695, de 2003)",
+        "Art. 3º Texto (vetado).",
+        "I - a (b)",
+        "Art. 4º Veja (inciso II) deste artigo.",
+    ],
+)
+def test_strip_annotations_keeps_revoked_and_unknown_parentheses(line):
+    assert strip_annotations(line) == line
+
+
+def test_strip_annotations_takes_the_vigencia_link_text_that_trails_a_note():
+    text = "§ 1º Na mesma pena. (Incluído pela Lei nº 12.737, de 2012) Vigência"
+
+    assert strip_annotations(text) == "§ 1º Na mesma pena."
+    assert strip_annotations("Art. 9º Vigência") == "Art. 9º Vigência"

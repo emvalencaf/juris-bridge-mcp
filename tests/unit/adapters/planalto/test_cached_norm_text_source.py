@@ -1,5 +1,10 @@
+import pytest
+
+from juris_bridge_mcp.adapters import wide_event
 from juris_bridge_mcp.adapters.in_memory_ttl_cache import InMemoryTtlCache
 from juris_bridge_mcp.adapters.planalto.cached_norm_text_source import CachedNormTextSource
+from juris_bridge_mcp.adapters.wide_event import WideEvent
+from juris_bridge_mcp.domain.errors import ErrorCode, source_failure
 from juris_bridge_mcp.domain.legislation import Urn
 from juris_bridge_mcp.domain.legislation_text import NormText
 
@@ -53,3 +58,34 @@ async def test_an_expired_entry_is_fetched_again():
     await source.fetch(LEI)
 
     assert inner.calls == 2
+
+
+async def test_an_inner_error_propagates_and_is_not_cached():
+    class _Failing:
+        calls = 0
+
+        async def fetch(self, urn):
+            self.calls += 1
+            raise source_failure("planalto", ErrorCode.SOURCE_UNAVAILABLE, "down", retryable=True)
+
+    inner = _Failing()
+    source = CachedNormTextSource(inner, InMemoryTtlCache(), ttl_seconds=60)
+
+    for _ in range(2):
+        with pytest.raises(Exception, match="down"):
+            await source.fetch(LEI)
+
+    assert inner.calls == 2
+
+
+async def test_hit_and_miss_are_recorded_on_the_wide_event():
+    event = WideEvent({}, "r")
+    token = wide_event.start(event)
+    try:
+        source = CachedNormTextSource(_Source(_text()), InMemoryTtlCache(), ttl_seconds=60)
+        await source.fetch(LEI)
+        assert event.fields["cache"] == "miss"
+        await source.fetch(LEI)
+        assert event.fields["cache"] == "hit"
+    finally:
+        wide_event.stop(token)

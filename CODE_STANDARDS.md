@@ -40,7 +40,7 @@ Layered (hexagonal) at the top of the package, with FastMCP as the inbound adapt
 | `infrastructure/` | Technical wiring: `bootstrap.py`, the composition root that builds adapters, injects them into use cases and mounts one FastMCP sub-server per concept on the root server |
 
 Any layer folder may contain subdirectories that group related files by
-sub-concept, e.g. `adapters/datajud/`, `adapters/legislation/` or
+sub-concept, e.g. `adapters/cases/`, `adapters/datajud/` or
 `application/use_cases/cases/`. Rules: create one when about three or more files
 share a sub-concept (not before), name it after the sub-concept (never `misc`,
 `utils` or `shared`), and keep it to one level unless a second one clearly pays

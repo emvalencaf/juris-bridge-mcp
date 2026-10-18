@@ -1,4 +1,4 @@
-from juris_bridge_mcp.adapters.cached_case_repository import CachedCaseRepository
+from juris_bridge_mcp.adapters.cases.cached_case_repository import CachedCaseRepository
 from juris_bridge_mcp.adapters.in_memory_ttl_cache import InMemoryTtlCache
 from juris_bridge_mcp.domain.case import Case, CaseRecord
 from juris_bridge_mcp.domain.cnj_number import CnjNumber

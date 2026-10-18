@@ -6,7 +6,7 @@ from typing import Any
 from fastmcp import FastMCP
 
 from juris_bridge_mcp.adapters import wide_event
-from juris_bridge_mcp.adapters.case_presenter import present_case, present_search
+from juris_bridge_mcp.adapters.cases.case_presenter import present_case, present_search
 from juris_bridge_mcp.application.use_cases.get_case import (
     DEFAULT_EVENTS_LIMIT,
     get_case,

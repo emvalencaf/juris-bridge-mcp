@@ -1,4 +1,4 @@
-"""The Courts DataJud publishes, by alias."""
+"""The Courts DataJud publishes, by alias, and how a CNJ number's `J.TR` segments name them."""
 
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
@@ -9,17 +9,24 @@ SOURCE = "datajud"
 NOT_PUBLISHED = "stf"
 
 
-def _datajud_courts() -> tuple[str, ...]:
-    superior = ("tst", "tse", "stj", "stm")
-    federal = tuple(f"trf{n}" for n in range(1, 7))
-    state = tuple("tjdft" if uf == "df" else f"tj{uf}" for uf in UFS)
-    labor = tuple(f"trt{n}" for n in range(1, 25))
-    electoral = tuple(f"tre-{uf}" for uf in UFS)
-    military = ("tjmmg", "tjmrs", "tjmsp")
-    return superior + federal + state + labor + electoral + military
+def _court_by_segment() -> dict[tuple[int, int], str]:
+    """Map `(J, TR)` to an alias for the Courts whose number identifies them (CNJ Res. 65/2008)."""
+    table = {(7, 0): "stm"}
+    table |= {(4, n): f"trf{n}" for n in range(1, 7)}
+    table |= {(5, n): f"trt{n}" for n in range(1, 25)}
+    for n, uf in enumerate(UFS, start=1):
+        table[(6, n)] = f"tre-{uf}"
+        table[(8, n)] = "tjdft" if uf == "df" else f"tj{uf}"
+    table |= {(9, 13): "tjmmg", (9, 21): "tjmrs", (9, 26): "tjmsp"}
+    return table
 
 
-DATAJUD_COURTS = _datajud_courts()
+COURT_BY_SEGMENT = _court_by_segment()
+
+# Superior courts whose numbers hold origin cases, so they are only reachable by alias.
+_SUPERIOR_BY_ALIAS_ONLY = ("tst", "tse", "stj")
+
+DATAJUD_COURTS = _SUPERIOR_BY_ALIAS_ONLY + tuple(COURT_BY_SEGMENT.values())
 
 # DataJud's wiki lists the electoral court of the Federal District as `tre-dft`, but
 # its index is `api_publica_tre-df` (the other name answers 404).

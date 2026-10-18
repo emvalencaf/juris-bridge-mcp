@@ -3,11 +3,14 @@
 import re
 from dataclasses import dataclass
 
-from juris_bridge_mcp.domain.courts import UFS, stf_not_covered
+from juris_bridge_mcp.domain.courts import COURT_BY_SEGMENT, stf_not_covered
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
 _FORMATTED = re.compile(r"^(\d{7})-(\d{2})\.(\d{4})\.(\d)\.(\d{2})\.(\d{4})$")
 _DIGITS = re.compile(r"^\d{20}$")
+
+# The `J` digit of the Supremo Tribunal Federal.
+STF_SEGMENT = 1
 
 
 def _invalid(message: str) -> ToolFailure:
@@ -56,32 +59,16 @@ class CnjNumber:
         return int(self.digits[14:16])
 
 
-_MILITARY_STATE = {13: "tjmmg", 21: "tjmrs", 26: "tjmsp"}
-
-
 def derive_court(number: CnjNumber) -> str:
     """Map the `J.TR` segments to a Court alias (TRF, TRT, TRE, TJ, TJM; `J=7` is `stm`)."""
-    j, tr = number.segment, number.tribunal
-    alias: str | None = None
-    if j == 1:
+    if number.segment == STF_SEGMENT:
         raise stf_not_covered()
-    if j == 4 and 1 <= tr <= 6:
-        alias = f"trf{tr}"
-    elif j == 5 and 1 <= tr <= 24:
-        alias = f"trt{tr}"
-    elif j == 6 and 1 <= tr <= len(UFS):
-        alias = f"tre-{UFS[tr - 1]}"
-    elif j == 7 and tr == 0:
-        alias = "stm"
-    elif j == 8 and 1 <= tr <= len(UFS):
-        uf = UFS[tr - 1]
-        alias = "tjdft" if uf == "df" else f"tj{uf}"
-    elif j == 9:
-        alias = _MILITARY_STATE.get(tr)
+    alias = COURT_BY_SEGMENT.get((number.segment, number.tribunal))
     if alias is None:
         raise ToolFailure(
             ErrorCode.INVALID_ARGUMENT,
-            f"The Court cannot be derived from segments J={j}, TR={tr:02d}.",
+            f"The Court cannot be derived from segments J={number.segment}, "
+            f"TR={number.tribunal:02d}.",
             source=None,
             retryable=False,
             hint="Pass the court argument (an alias such as tjsp or stj).",

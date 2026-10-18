@@ -1,11 +1,12 @@
 """DataJud as the Source of Cases: one Elasticsearch `_search` per lookup."""
 
 import json
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
 
-from juris_bridge_mcp.adapters.datajud_case_mapper import SchemaDrift, map_case
+from juris_bridge_mcp.adapters.datajud.case_mapper import SchemaDrift, map_case
 from juris_bridge_mcp.adapters.http_client import UpstreamClient
 from juris_bridge_mcp.domain.case import CaseRecord
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
@@ -13,6 +14,7 @@ from juris_bridge_mcp.domain.courts import SOURCE
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
 _MAX_HITS = 10
+_NEVER = datetime.min.replace(tzinfo=UTC)
 
 
 def _failure(
@@ -49,11 +51,11 @@ class DatajudCaseRepository:
             sources = [hit["_source"] for hit in hits]
             if not all(isinstance(s, dict) for s in sources):
                 raise SchemaDrift("a hit has no _source object")
-            latest = max(sources, key=lambda s: str(s.get("dataHoraUltimaAtualizacao") or ""))
-            case = map_case(latest, number=number, court=court)
+            cases = [map_case(s, number=number, court=court) for s in sources]
+            newest = max(range(len(cases)), key=lambda i: cases[i].last_updated_at or _NEVER)
         except (SchemaDrift, KeyError, TypeError) as drift:
             raise _changed(str(drift)) from None
-        return CaseRecord(case=case, raw=latest, matches=len(sources))
+        return CaseRecord(case=cases[newest], raw=sources[newest], matches=len(sources))
 
     async def _search(self, number: CnjNumber, court: str) -> Any:
         url = f"{self._base_url}/api_publica_{court}/_search"

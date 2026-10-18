@@ -5,7 +5,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from juris_bridge_mcp.adapters.datajud_case_repository import DatajudCaseRepository
+from juris_bridge_mcp.adapters.datajud.case_repository import DatajudCaseRepository
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
@@ -56,10 +56,13 @@ async def test_maps_the_recorded_case():
     assert case.last_updated_at == datetime(2026, 6, 8, 14, 55, 23, 378000, tzinfo=UTC)
     assert len(case.events) == 43
     first = case.events[0]
-    assert (first.code, first.name) == (26, "Distribuição")
+    assert (first.term.code, first.term.name) == (26, "Distribuição")
     assert first.occurred_at == datetime(2018, 10, 30, 14, 6, 24, tzinfo=UTC)
     assert first.judging_body.code == 16403
-    assert (first.complements[0].code, first.complements[0].name) == (2, "competência exclusiva")
+    assert (first.complements[0].term.code, first.complements[0].term.name) == (
+        2,
+        "competência exclusiva",
+    )
     assert first.complements[0].kind == "tipo_de_distribuicao_redistribuicao"
     assert record.raw["numeroProcesso"] == NUMBER.digits
 
@@ -164,6 +167,8 @@ def _drift(mutate):
         lambda s, b: s.pop("numeroProcesso"),
         lambda s, b: s["movimentos"][0].update(dataHora="yesterday"),
         lambda s, b: s.update(nivelSigilo="high"),
+        lambda s, b: s.update(dataHoraUltimaAtualizacao="2026-06-08T14:55:23"),
+        lambda s, b: s["movimentos"][0].update(dataHora="2018-10-30T14:06:24"),
     ],
 )
 async def test_unexpected_shape_is_source_changed(mutate):
@@ -178,3 +183,16 @@ async def test_non_json_body_is_source_changed():
         await _repository(lambda r: httpx.Response(200, text="<html>")).find(NUMBER, "trf1")
 
     assert caught.value.code is ErrorCode.SOURCE_CHANGED
+
+
+async def test_the_newest_record_is_chosen_by_instant_not_by_text():
+    body = _fixture("trf1_hit.json")
+    other = json.loads(json.dumps(body["hits"]["hits"][0]))
+    other["_source"]["grau"] = "G2"
+    # Later instant, but earlier as text because of the UTC offset.
+    other["_source"]["dataHoraUltimaAtualizacao"] = "2026-06-08T12:00:00-03:00"
+    body["hits"]["hits"].append(other)
+
+    record = await _repository(_respond(200, body)).find(NUMBER, "trf1")
+
+    assert record.case.instance == "G2"

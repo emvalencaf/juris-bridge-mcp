@@ -19,8 +19,7 @@ class CodedTerm:
 class EventComplement:
     """A tabulated detail of a movement, such as the kind of hearing."""
 
-    code: int | None
-    name: str | None
+    term: CodedTerm
     kind: str | None
     value: int | str | None
 
@@ -29,8 +28,7 @@ class EventComplement:
 class CaseEvent:
     """One movement (_movimento_) in the Case timeline."""
 
-    code: int | None
-    name: str | None
+    term: CodedTerm
     occurred_at: datetime | None
     judging_body: CodedTerm | None = None
     complements: tuple[EventComplement, ...] = ()

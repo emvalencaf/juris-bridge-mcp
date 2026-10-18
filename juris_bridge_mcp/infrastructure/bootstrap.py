@@ -12,7 +12,7 @@ from juris_bridge_mcp.adapters.bearer_auth import BearerAuthMiddleware
 from juris_bridge_mcp.adapters.cached_case_repository import CachedCaseRepository
 from juris_bridge_mcp.adapters.cases_mcp_tools import build_cases_server
 from juris_bridge_mcp.adapters.coverage_mcp_tools import build_coverage_server
-from juris_bridge_mcp.adapters.datajud_case_repository import DatajudCaseRepository
+from juris_bridge_mcp.adapters.datajud.case_repository import DatajudCaseRepository
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
 from juris_bridge_mcp.adapters.in_memory_ttl_cache import InMemoryTtlCache
 from juris_bridge_mcp.adapters.rate_limiter import RateLimiter

@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 
 from juris_bridge_mcp.application.use_cases.get_case import MAX_RAW_BYTES, get_case
-from juris_bridge_mcp.domain.case import Case, CaseEvent, CaseRecord
+from juris_bridge_mcp.domain.case import Case, CaseEvent, CaseRecord, CodedTerm
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
@@ -22,7 +22,7 @@ class _Repository:
 
 
 def _event(day: int) -> CaseEvent:
-    return CaseEvent(code=day, name=f"e{day}", occurred_at=datetime(2024, 1, day, tzinfo=UTC))
+    return CaseEvent(term=CodedTerm(day, f"e{day}"), occurred_at=datetime(2024, 1, day, tzinfo=UTC))
 
 
 def _record(**kwargs) -> CaseRecord:
@@ -33,8 +33,8 @@ def _record(**kwargs) -> CaseRecord:
 async def test_events_are_the_latest_n_in_chronological_order():
     result = await get_case(_Repository(_record()), number=DIGITS, events_limit=2)
 
-    assert [e["code"] for e in result["events"]] == [2, 3]
-    assert result["events_total"] == 3
+    assert [e.term.code for e in result.case.events] == [2, 3]
+    assert result.events_total == 3
 
 
 async def test_retrieved_at_comes_from_the_record():
@@ -42,7 +42,7 @@ async def test_retrieved_at_comes_from_the_record():
 
     result = await get_case(_Repository(_record(retrieved_at=moment)), number=DIGITS)
 
-    assert result["retrieved_at"] == "2024-05-01T12:30:00Z"
+    assert result.retrieved_at == moment
 
 
 @pytest.mark.parametrize("limit", [0, 101])
@@ -76,12 +76,12 @@ async def test_raw_is_attached_unless_over_the_cap():
     huge = {"blob": "x" * MAX_RAW_BYTES}
     large = await get_case(_Repository(_record(raw=huge)), number=DIGITS, include_raw=True)
 
-    assert small["raw"] == {"unstable": True, "payload": {"a": 1}}
-    assert "raw" not in large
-    assert any("raw payload omitted" in w for w in large["warnings"])
+    assert small.raw == {"unstable": True, "payload": {"a": 1}}
+    assert large.raw is None
+    assert any("raw payload omitted" in w for w in large.warnings)
 
 
 async def test_several_instances_add_a_warning():
     result = await get_case(_Repository(_record(matches=2)), number=DIGITS)
 
-    assert any("2 records" in w for w in result["warnings"])
+    assert any("2 records" in w for w in result.warnings)

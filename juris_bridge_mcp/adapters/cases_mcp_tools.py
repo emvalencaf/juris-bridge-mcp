@@ -5,10 +5,12 @@ from typing import Any
 from fastmcp import FastMCP
 
 from juris_bridge_mcp.adapters import wide_event
+from juris_bridge_mcp.adapters.case_presenter import present_case
 from juris_bridge_mcp.application.use_cases.get_case import (
     DEFAULT_EVENTS_LIMIT,
     get_case,
 )
+from juris_bridge_mcp.domain.courts import SOURCE
 from juris_bridge_mcp.domain.errors import ToolFailure, to_tool_error
 from juris_bridge_mcp.ports.case_repository import CaseRepository
 
@@ -44,7 +46,7 @@ def build_cases_server(repository: CaseRepository) -> FastMCP:
         DataJud document, whose shape is unstable; it is left out if too large.
         """
         try:
-            result = await get_case(
+            outcome = await get_case(
                 repository,
                 number=number,
                 court=court,
@@ -55,11 +57,11 @@ def build_cases_server(repository: CaseRepository) -> FastMCP:
             wide_event.record_failure(failure)
             raise to_tool_error(failure) from None
         wide_event.annotate(
-            source=result["source"],
-            court=result["court"],
+            source=SOURCE,
+            court=outcome.case.court,
             result_count=1,
-            call_shape={"court_alias": result["court"], "limit": events_limit},
+            call_shape={"court_alias": outcome.case.court, "limit": events_limit},
         )
-        return result
+        return present_case(outcome)
 
     return server

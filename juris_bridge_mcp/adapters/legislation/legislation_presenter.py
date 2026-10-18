@@ -10,7 +10,6 @@ from juris_bridge_mcp.application.use_cases.legislation.search_legislation impor
     LegislationSearchResult,
 )
 from juris_bridge_mcp.domain.legislation import SOURCE, Norm, Publication, Relation
-from juris_bridge_mcp.domain.legislation_text import TEXT_SOURCE
 
 
 def present_norm(result: NormResult) -> dict[str, Any]:
@@ -63,7 +62,7 @@ def _text(piece: TextSlice) -> dict[str, Any]:
         "text": piece.text,
         "truncated": piece.truncated,
         "next_text_cursor": piece.next_cursor,
-        "text_source": TEXT_SOURCE,
+        "text_source": piece.source,
         "text_url": piece.url,
     }
     if piece.article is not None:

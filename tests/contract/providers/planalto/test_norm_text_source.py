@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
-from juris_bridge_mcp.adapters.planalto.norm_text_parser import parse_norm_text
+from juris_bridge_mcp.adapters.legislation.norm_text_parser import parse_norm_text
 from juris_bridge_mcp.adapters.planalto.norm_text_source import (
     PlanaltoNormTextSource,
     candidate_paths,

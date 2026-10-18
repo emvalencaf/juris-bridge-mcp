@@ -91,8 +91,10 @@ def build_legislation_server(
         upstream Senado document, whose shape is unstable; it is left out if too large.
 
         By default `content_kind` is `metadata`. With `include_text` the norm text comes
-        from the Planalto as plain text (`content_kind: full_text`), in slices of at most
-        `max_chars` (1-100000, default 20000): when `truncated` is true, pass
+        from the Planalto as plain text (`content_kind: full_text`; when the Planalto has
+        no page or refuses, from Câmara Legin, named in `text_source`, with a `warnings`
+        entry saying so), in slices of at most `max_chars` (1-100000, default 20000): when
+        `truncated` is true, pass
         `next_text_cursor` back as `text_cursor` with the same urn to read on. With
         `article` (for example `Art. 5º`, `121-A` or `Art. único`) only that article is
         returned, with `article.flags`: `revoked` when the Planalto notes it was repealed,
@@ -102,9 +104,11 @@ def build_legislation_server(
         dada pela ...`, `Incluído ...`, `Vide ...`); pass `include_annotations=false` to
         save tokens. The `(Revogado ...)` note is always kept. Flags rest on the Planalto
         markup, which older pages apply inconsistently, and an article can still carry the
-        title of the next one at its end. If the Planalto page cannot
-        be located, only metadata comes back with a warning in `warnings`; a refusal is
-        `source_blocked` and a page this server can no longer read is `source_changed`.
+        title of the next one at its end. The Câmara Legin text carries few Annotations; its
+        `warnings` list the later norms the Câmara data sheet says amend the norm, as hints
+        only. If neither Source has a page, only metadata comes back with a warning in
+        `warnings`; when both refuse, the Planalto's `source_blocked` is returned, and a page
+        this server can no longer read is `source_changed`.
         """
         try:
             outcome = await get_legislation(

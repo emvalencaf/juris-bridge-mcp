@@ -23,6 +23,17 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Câmara Legin text fallback (#29): when the Planalto has no page for a norm or refuses, the
+  text of `get_legislation` comes from Câmara Legin, then metadata and links only.
+  `text_source` is `camara_legin` and `warnings` say that the fallback supplied the text and
+  why, give the amending norms and the remark of the Câmara data sheet as hints, and flag
+  jumps in the article numbers. The Legin URL is resolved through the LexML URN page and the
+  data sheet (`JURIS_BRIDGE_LEGIN_*`); a portal challenge is `source_blocked`, never solved,
+  and a gateway error served with status 200 is `source_unavailable`. When the Planalto
+  failed and Legin has nothing, the Planalto failure is returned. Range stubs such as
+  `Arts. 757 a 777. (Revogados ...)` now open one revoked article per number, in both Sources,
+  instead of trailing the article before them. **Break:** `build_server` and `build_http_app`
+  take a `legin` settings argument.
 - `include_annotations` on `get_legislation` (#49): `false` leaves the Annotations (`Redação
   dada ...`, `Incluído ...`, `Vide ...`, `Vigência`, `Regulamento`, `Renumerado ...`, `Produção
   de efeito`) out of the norm text to save tokens; `(Revogado ...)` is always kept. The default

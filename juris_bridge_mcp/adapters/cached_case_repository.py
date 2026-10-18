@@ -2,6 +2,7 @@
 
 from juris_bridge_mcp.adapters import wide_event
 from juris_bridge_mcp.domain.case import CaseRecord
+from juris_bridge_mcp.domain.case_search import CaseFilters, CasePage
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.ports.cache import Cache
 from juris_bridge_mcp.ports.case_repository import CaseRepository
@@ -28,3 +29,14 @@ class CachedCaseRepository:
         if record is not None:
             self._cache.set(key, record, ttl_seconds=self._ttl)
         return record
+
+    async def search(
+        self,
+        court: str,
+        filters: CaseFilters,
+        *,
+        limit: int,
+        after: tuple[int | str, int | str] | None = None,
+    ) -> CasePage:
+        """Pass searches through: a page is cheap to ask again and goes stale fast."""
+        return await self._inner.search(court, filters, limit=limit, after=after)

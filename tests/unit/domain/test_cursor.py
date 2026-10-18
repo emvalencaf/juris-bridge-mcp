@@ -1,0 +1,41 @@
+import base64
+import json
+
+import pytest
+
+from juris_bridge_mcp.domain.cursor import Cursor
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+
+
+def test_round_trips_court_position_and_filters():
+    cursor = Cursor(court="tjsp", position=(1717858523378, "TJSP_G1_1"), filters_key="abc")
+
+    assert Cursor.decode(cursor.encode()) == cursor
+
+
+def test_token_is_opaque_url_safe_text():
+    token = Cursor(court="trf1", position=(1, "x"), filters_key="k").encode()
+
+    assert token.isascii() and "=" not in token and "trf1" not in token
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        "",
+        "not a cursor",
+        base64.urlsafe_b64encode(b"[1, 2]").decode(),
+        base64.urlsafe_b64encode(json.dumps({"c": "tjsp"}).encode()).decode(),
+        base64.urlsafe_b64encode(
+            json.dumps({"c": "tjsp", "p": [True, "x"], "f": "k"}).encode()
+        ).decode(),
+        base64.urlsafe_b64encode(
+            json.dumps({"c": "nope", "p": [1, "x"], "f": "k"}).encode()
+        ).decode(),
+    ],
+)
+def test_a_malformed_token_is_invalid_argument(token):
+    with pytest.raises(ToolFailure) as caught:
+        Cursor.decode(token)
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT

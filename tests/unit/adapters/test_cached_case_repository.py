@@ -53,3 +53,24 @@ async def test_an_expired_entry_is_fetched_again():
     await repository.find(NUMBER, "trf1")
 
     assert inner.calls == 2
+
+
+async def test_searches_are_not_cached():
+    from juris_bridge_mcp.domain.case_search import CaseFilters, CasePage
+
+    page = CasePage(cases=(), total=0, total_is_lower_bound=False)
+
+    class _Searching:
+        calls = 0
+
+        async def search(self, court, filters, *, limit, after=None):
+            self.calls += 1
+            return page
+
+    inner = _Searching()
+    repository = CachedCaseRepository(inner, InMemoryTtlCache(), ttl_seconds=60)
+
+    assert await repository.search("trf1", CaseFilters(), limit=5) is page
+    await repository.search("trf1", CaseFilters(), limit=5)
+
+    assert inner.calls == 2

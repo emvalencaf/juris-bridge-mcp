@@ -4,21 +4,50 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from juris_bridge_mcp.application.use_cases.get_case import CaseResult
-from juris_bridge_mcp.domain.case import CaseEvent, CodedTerm, EventComplement
+from juris_bridge_mcp.application.use_cases.search_cases import SearchResult
+from juris_bridge_mcp.domain.case import Case, CaseEvent, CodedTerm, EventComplement
 from juris_bridge_mcp.domain.courts import SOURCE
 
 
 def present_case(result: CaseResult) -> dict[str, Any]:
     """Return the Case with its `source`, Citation (no URL), `retrieved_at` and Content kind."""
-    case = result.case
     presented: dict[str, Any] = {
         "source": SOURCE,
+        "retrieved_at": _iso(result.retrieved_at),
+        "content_kind": "metadata",
+        **_fields(result.case),
+        "events": [_event(e) for e in result.case.events],
+        "events_total": result.events_total,
+        "warnings": list(result.warnings),
+    }
+    if result.raw is not None:
+        presented["raw"] = result.raw
+    return presented
+
+
+def present_search(result: SearchResult) -> dict[str, Any]:
+    """Return the page of Cases (without events) with its totals and `next_cursor`."""
+    presented: dict[str, Any] = {
+        "source": SOURCE,
+        "retrieved_at": _iso(result.retrieved_at),
+        "content_kind": "metadata",
+        "court": result.court,
+        "items": [_fields(c) for c in result.cases],
+        "total": result.total,
+        "total_is_lower_bound": result.total_is_lower_bound,
+        "next_cursor": result.next_cursor,
+    }
+    if result.hint is not None:
+        presented["hint"] = result.hint
+    return presented
+
+
+def _fields(case: Case) -> dict[str, Any]:
+    return {
         "citation": {
             "text": f"DataJud · {case.court.upper()} · {case.number.formatted}",
             "url": None,
         },
-        "retrieved_at": _iso(result.retrieved_at),
-        "content_kind": "metadata",
         "number": case.number.formatted,
         "number_digits": case.number.digits,
         "court": case.court,
@@ -30,13 +59,7 @@ def present_case(result: CaseResult) -> dict[str, Any]:
         "secrecy_level": case.secrecy_level,
         "source_system": _term(case.source_system),
         "last_updated_at": _iso(case.last_updated_at),
-        "events": [_event(e) for e in case.events],
-        "events_total": result.events_total,
-        "warnings": list(result.warnings),
     }
-    if result.raw is not None:
-        presented["raw"] = result.raw
-    return presented
 
 
 def _iso(moment: datetime | None) -> str | None:

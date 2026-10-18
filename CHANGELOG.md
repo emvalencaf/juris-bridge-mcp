@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Container and AWS Reference deployment (#30): a small, Playwright-free image that starts
+  without resolving or writing anything (`python` from the venv), and `deploy/aws/` with the
+  Lambda Web Adapter image (`buffered`), Terraform (Lambda, Function URL with auth `NONE`,
+  30-day log group, saved Logs Insights queries, secrets as sensitive variables) and a guided
+  `deploy.sh`. A test guards that the package never imports an AWS SDK.
 - Legislation search cache (#39): a Senado search is kept per filters (default 5 minutes, 64
   searches; `JURIS_BRIDGE_SENADO_CACHE_TTL_SECONDS`, `JURIS_BRIDGE_SENADO_CACHE_MAX_ENTRIES`), so
   every page of it costs one upstream request. `retrieved_at` is when the Senado was asked.

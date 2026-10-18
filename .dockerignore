@@ -1,0 +1,13 @@
+.git
+.venv
+.env
+.env.*
+!.env.example
+**/__pycache__
+tests
+docs
+deploy
+.agents
+.claude
+.wiki
+graphify-out

@@ -1,5 +1,7 @@
 # Vertical slices with layers inside, composed through FastMCP
 
+> Superseded by [ADR 0005](0005-layers-at-the-top.md).
+
 The server is split into one self-contained module per concept
 (`modules/<concept>`). Each module has five sibling folders: `domain`, `ports`,
 `application/use_cases`, `adapters` (port implementations and the MCP inbound

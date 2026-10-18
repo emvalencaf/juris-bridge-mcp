@@ -14,3 +14,6 @@ class SenadoSettings(EnvSettings):
     timeout_seconds: float = 20
     # The Senado answers 429 above 10 requests per second; stay well under it.
     requests_per_minute: int = 300
+    # Seconds a search is kept in memory so its pages cost one request, and how many at most.
+    cache_ttl_seconds: float = 300
+    cache_max_entries: int = 64

@@ -9,6 +9,9 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Legislation search cache (#39): a Senado search is kept per filters (default 5 minutes, 64
+  searches; `JURIS_BRIDGE_SENADO_CACHE_TTL_SECONDS`, `JURIS_BRIDGE_SENADO_CACHE_MAX_ENTRIES`), so
+  every page of it costs one upstream request. `retrieved_at` is when the Senado was asked.
 - Norm text cache (#42): the parsed Planalto text is kept per URN (default 1 hour, 16 norms;
   `JURIS_BRIDGE_PLANALTO_CACHE_TTL_SECONDS`, `JURIS_BRIDGE_PLANALTO_CACHE_MAX_ENTRIES`), so
   paging a long norm or asking for several articles fetches the page once and skips the

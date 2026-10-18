@@ -19,6 +19,9 @@ from juris_bridge_mcp.adapters.legislation.legislation_mcp_tools import build_le
 from juris_bridge_mcp.adapters.planalto.cached_norm_text_source import CachedNormTextSource
 from juris_bridge_mcp.adapters.planalto.norm_text_source import PlanaltoNormTextSource
 from juris_bridge_mcp.adapters.rate_limiter import RateLimiter
+from juris_bridge_mcp.adapters.senado.cached_legislation_repository import (
+    CachedLegislationRepository,
+)
 from juris_bridge_mcp.adapters.senado.legislation_repository import SenadoLegislationRepository
 from juris_bridge_mcp.adapters.static_coverage_catalog import StaticCoverageCatalog
 from juris_bridge_mcp.adapters.wide_event_middleware import WideEventMiddleware
@@ -87,7 +90,11 @@ def build_server(
     app.mount(build_cases_server(cases))
     app.mount(
         build_legislation_server(
-            SenadoLegislationRepository(senado_upstream, base_url=senado.base_url),
+            CachedLegislationRepository(
+                SenadoLegislationRepository(senado_upstream, base_url=senado.base_url),
+                InMemoryTtlCache(max_entries=senado.cache_max_entries),
+                ttl_seconds=senado.cache_ttl_seconds,
+            ),
             CachedNormTextSource(
                 PlanaltoNormTextSource(planalto_upstream, base_url=planalto.base_url),
                 InMemoryTtlCache(max_entries=planalto.cache_max_entries),

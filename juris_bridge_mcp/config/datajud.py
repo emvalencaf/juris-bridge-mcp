@@ -13,3 +13,5 @@ class DatajudSettings(EnvSettings):
 
     base_url: str = "https://api-publica.datajud.cnj.jus.br"
     api_key: SecretStr = SecretStr("")
+    timeout_seconds: float = 20
+    requests_per_minute: int = 120

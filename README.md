@@ -79,6 +79,13 @@ A remote, extensible and testable MCP server that gives AI agents access to Braz
 
 ## Usage
 
+### Known limits
+
+- The rate limiter is **per instance**: each warm environment counts on its own, so
+  several instances can together exceed a Source's limit (DataJud: 120 req/min).
+- The in-memory cache is **per warm environment**: it is lost on cold start and
+  not shared between instances.
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

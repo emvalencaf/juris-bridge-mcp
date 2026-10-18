@@ -35,3 +35,10 @@ heading when `development` is released to `master`.
   `.env.example`, and in-memory MCP and ASGI test harnesses.
 - ADR 0005: layers at the top of the package instead of one module per concept,
   superseding ADR 0001.
+- Shared upstream HTTP client (honest Mozilla-compatible User-Agent, configurable
+  timeout, DataJud default 20 s), per-instance rate limiter (`rate_limited` with
+  `retry_after_seconds` instead of blocking past about 5 s), 2 jittered retries
+  on 429/503, and a `Cache` port with an in-memory TTL implementation. Known
+  limits: the rate limit is per instance, not global, and the cache lives per
+  warm environment. The client keeps its total waiting (limiter plus backoff)
+  within the wait budget, and the cache is capped at 1024 entries.

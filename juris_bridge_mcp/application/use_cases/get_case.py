@@ -1,6 +1,5 @@
 """Use case: fetch one Case by CNJ number."""
 
-import json
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import Any
@@ -9,11 +8,11 @@ from juris_bridge_mcp.domain.case import Case
 from juris_bridge_mcp.domain.cnj_number import CnjNumber, derive_court
 from juris_bridge_mcp.domain.courts import SOURCE, resolve_court
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.raw_payload import bounded_raw
 from juris_bridge_mcp.ports.case_repository import CaseRepository
 
 DEFAULT_EVENTS_LIMIT = 20
 MAX_EVENTS_LIMIT = 100
-MAX_RAW_BYTES = 256 * 1024
 
 
 @dataclass(frozen=True)
@@ -68,10 +67,9 @@ async def get_case(
         )
     raw = None
     if include_raw:
-        raw = {"unstable": True, "payload": record.raw}
-        if len(json.dumps(raw, ensure_ascii=False)) > MAX_RAW_BYTES:
-            warnings.append(f"raw payload omitted: larger than {MAX_RAW_BYTES // 1024} KiB.")
-            raw = None
+        raw, omitted = bounded_raw(record.raw)
+        if omitted:
+            warnings.append(omitted)
     events = sorted(case.events, key=lambda e: e.occurred_at or datetime.min.replace(tzinfo=UTC))
     return CaseResult(
         case=replace(case, events=tuple(events[-events_limit:])),

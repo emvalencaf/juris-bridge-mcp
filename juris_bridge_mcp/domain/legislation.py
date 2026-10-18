@@ -1,11 +1,15 @@
 """A federal norm as the Senado catalogues it, and what a search for one asks for."""
 
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
+from typing import Any
 
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, invalid_argument
 
 SOURCE = "senado"
+
+_URN = re.compile(r"urn:lex:br:federal:([a-z.]+):(\d{4}-\d{2}-\d{2});(\d+)")
 
 # Agent-facing type -> (Senado `tipo` sigla, URN Lex type).
 NORM_TYPES = {
@@ -37,6 +41,27 @@ def norm_urn(norm_type: str, signed_on: date, number: int) -> str:
     return f"urn:lex:br:federal:{NORM_TYPES[norm_type][1]}:{signed_on.isoformat()};{number}"
 
 
+def parse_urn(urn: str) -> tuple[str, date, int]:
+    """Split a federal URN Lex into (type key, signature date, number), or raise `invalid_argument`.
+
+    The type key is the agent-facing one when the URN type is a searchable type, else the raw
+    URN type (the Senado also catalogues acts such as `mensagem`).
+    """
+    match = _URN.fullmatch(urn.strip())
+    if match is None:
+        raise invalid_argument(
+            f"'{urn}' is not a federal URN Lex.",
+            hint="Use a urn from search_legislation, e.g. urn:lex:br:federal:lei:2021-04-01;1.",
+        )
+    urn_type, day, number = match.groups()
+    try:
+        signed_on = date.fromisoformat(day)
+    except ValueError:
+        raise invalid_argument(f"'{urn}' has an impossible date.") from None
+    keys = {lex: key for key, (_, lex) in NORM_TYPES.items()}
+    return keys.get(urn_type, urn_type), signed_on, int(number)
+
+
 @dataclass(frozen=True)
 class LegislationFilters:
     """The only filters a search offers; the Senado has no free-text search."""
@@ -65,6 +90,38 @@ class Norm:
     summary: str | None = None
     nickname: str | None = None
     citation_url: str | None = None
+
+
+@dataclass(frozen=True)
+class Publication:
+    """Where a norm was published (the Diário Oficial edition, page and column)."""
+
+    kind: str
+    source: str
+    published_on: date | None
+    page: str | None = None
+    column: str | None = None
+
+
+@dataclass(frozen=True)
+class Relation:
+    """A later norm that acts on this one: amends, regulates, vetoes or relates to it."""
+
+    kind: str
+    name: str
+    signed_on: date | None
+    norm_id: str
+
+
+@dataclass(frozen=True)
+class NormRecord:
+    """A Norm with its publications and every relation, plus the unstable upstream payload."""
+
+    norm: Norm
+    publications: tuple[Publication, ...]
+    relations: tuple[Relation, ...]
+    raw: dict[str, Any]
+    retrieved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass(frozen=True)

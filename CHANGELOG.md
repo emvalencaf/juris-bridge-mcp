@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `get_legislation` tool (#27): fetch a federal norm by URN Lex from the Senado `legislacao/urn`
+  service: type, number, year, signature date, name, nickname, ementa, Citation,
+  `publications` and `relations`. Relations are collapsed per related norm and kind, sorted
+  newest first and cut to `relations_limit` (default 25, max 100) with `relations_total`.
+  Content is `metadata`; `include_text` returns `not_covered` until the text slice lands (#28).
+  An unknown URN returns `not_found`; `include_raw` works as in `get_case`.
 - `search_legislation` tool (#26): locate a federal norm by `type` (`lei`,
   `lei-complementar`, `decreto`, `decreto-lei`, `medida-provisoria`,
   `emenda-constitucional`), `number` and `year` through the Senado open-data API; no

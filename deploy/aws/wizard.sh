@@ -22,8 +22,9 @@ say "1/6 Prerequisites"
 for tool in aws terraform docker openssl; do
   command -v "$tool" >/dev/null || { echo "missing: $tool"; exit 1; }
 done
-echo "AWS identity: $(aws sts get-caller-identity --query Arn --output text)" \
+IDENTITY="$(aws sts get-caller-identity --query Arn --output text)" \
   || { echo "No AWS credentials. Run 'aws configure' or 'aws sso login', then re-run."; exit 1; }
+echo "AWS identity: $IDENTITY"
 
 say "2/6 Settings"
 tfvar() { grep "^$1 " "$TFVARS" | cut -d'"' -f2; } # read a string value back from terraform.tfvars

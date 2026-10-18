@@ -13,18 +13,23 @@ needs no streaming. The adapter image builds and the server starts under it.
 
 ## Cold start and source reachability from us-east-1
 
-**Not yet measured.** No AWS credentials were available when this was implemented, so these
-two checks are open. To close them, run `deploy/aws/wizard.sh` (its smoke test prints the first
-`initialize` time; the `cold-starts` Logs Insights query shows `duration_ms` for
-`cold_start = 1`) and call each Source once through the deployed server:
+**Measured live on 2026-10-18** against the deployed function (arm64, 512 MB, Function URL),
+through the MCP endpoint. Init and billed durations come from the Lambda `REPORT` lines.
 
 | Check | Result |
 |---|---|
-| Cold start, `initialize` (arm64, 512 MB) | _to record_ |
-| `search_cases` reaches DataJud from us-east-1 | _to record_ |
-| `search_legislation` reaches the Senado from us-east-1 | _to record_ |
-| `get_legislation` with `include_text` reaches the Planalto from us-east-1 | _to record_ |
-| The same three Sources from `sa-east-1` (only if any us-east-1 check fails) | _to record_ |
+| Cold start | Init Duration 5.6 s (first request, billed 5.6 s); warm requests answer in 0.4 to 0.5 s end to end |
+| Max memory used | 137 MB of 512 MB |
+| No key / `GET /mcp` / `initialize` | 401 / 405 / 200 `application/json`, no `Mcp-Session-Id` |
+| `list_coverage`, `tools/list` | 200 |
+| `search_legislation` reaches the Senado | 200 in 0.2 to 0.6 s |
+| `get_legislation` with `include_text` reaches the Planalto | 200 in 5.6 s (three 404 probes for the consolidated name, then 200 in 2.3 s) |
+| `search_cases` reaches DataJud (`tjsp`, limit 1) | reachable but slow: first call timed out at the 20 s limit (`source_unavailable`), the next answered in 18.4 s |
+| DataJud from a Brazilian connection (same query) | 200 in 6.6 s and 9.7 s |
 
-If a Source answers 403 or times out from `us-east-1`, set `region = "sa-east-1"` and re-check;
-record the outcome here.
+Conclusions: none of the three Sources is blocked from `us-east-1`, so `sa-east-1` is not
+needed. DataJud is slow from everywhere (about 7 to 10 s from Brazil, about 18 s or more from
+`us-east-1`), and its default 20 s timeout is too tight from `us-east-1`; raising
+`JURIS_BRIDGE_DATAJUD_TIMEOUT_SECONDS` (through `extra_environment`) is the follow-up. The
+5.6 s cold start is dominated by importing FastMCP and building the app; it only applies to
+the first request after an idle period.

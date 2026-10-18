@@ -24,6 +24,10 @@ _Avoid_: provider (reserved for the code module that talks to a Source)
 Published court decisions (_jurisprudência_), including rulings (_acórdãos_) and their summaries (_ementas_).
 _Avoid_: jurisprudence
 
+**Publication**:
+A decision or ruling (_decisão_, _acórdão_) as released in a Diário da Justiça Eletrônico, with its release date and text; distinct from the Case it belongs to.
+_Avoid_: intimação, notice, case law (when a single released item is meant)
+
 **Legislation**:
 Statutes and other normative acts (_legislação_), identified by a URN Lex and catalogued by the Senado.
 _Avoid_: laws

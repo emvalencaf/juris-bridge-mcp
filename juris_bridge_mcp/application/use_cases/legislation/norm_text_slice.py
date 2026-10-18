@@ -52,7 +52,7 @@ async def slice_norm_text(
         raise invalid_argument("The cursor is not valid.")
     end = offset + max_chars
     truncated = end < len(body)
-    next_cursor = Cursor(SOURCE, (end, 0), scope).encode() if truncated else None
+    next_cursor = Cursor(SOURCE, (end,), scope).encode() if truncated else None
     piece = TextSlice(body[offset:end], truncated, next_cursor, source_text.url, chosen)
     return piece, tuple(warnings)
 
@@ -61,13 +61,12 @@ def _offset(cursor: str | None, scope: str) -> int:
     if cursor is None:
         return 0
     decoded = Cursor.decode(cursor, scopes=(SOURCE,))
-    position = decoded.position[0]
-    if decoded.filters_key != scope or isinstance(position, str) or position < 0:
+    if decoded.filters_key != scope:
         raise invalid_argument(
             "The cursor was issued for a different norm or article.",
             hint="Repeat the same urn and article, or start again without a cursor.",
         )
-    return position
+    return decoded.offset()
 
 
 def _find_article(text: NormText, key: str, urn: Urn, warnings: list[str]) -> Article:

@@ -5,7 +5,7 @@ from datetime import date, datetime
 
 from juris_bridge_mcp.domain.case import Case
 from juris_bridge_mcp.domain.case_search import CaseFilters
-from juris_bridge_mcp.domain.courts import resolve_court
+from juris_bridge_mcp.domain.courts import DATAJUD_COURTS, resolve_court
 from juris_bridge_mcp.domain.cursor import Cursor
 from juris_bridge_mcp.domain.errors import invalid_argument
 from juris_bridge_mcp.ports.case_repository import CaseRepository
@@ -51,14 +51,14 @@ async def search_cases(
     filters = CaseFilters(case_class, judging_body, subject, filed_from, filed_to)
     after = None
     if cursor is not None:
-        decoded = Cursor.decode(cursor)
-        alias = resolve_court(court) if court else decoded.court
-        if alias != decoded.court or decoded.filters_key != filters.key():
+        decoded = Cursor.decode(cursor, scopes=DATAJUD_COURTS)
+        alias = resolve_court(court) if court else decoded.scope
+        if alias != decoded.scope or decoded.filters_key != filters.key():
             raise invalid_argument(
                 "The cursor was issued for a different court or different filters.",
                 hint="Repeat the same court and filters, or start again without a cursor.",
             )
-        after = decoded.position
+        after = decoded.sort_position()
     elif court is None:
         raise invalid_argument(
             "court is required.", hint="Pass an alias such as tjsp, trf1 or stj."

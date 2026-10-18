@@ -7,6 +7,15 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Changed
+
+- Cursor (#40): `Cursor.court` is now the neutral `scope`, and the position is whatever the
+  search needs, validated by the use case that issued it (a sort position for Cases, an offset
+  for Legislation). `Cursor.decode` now requires the `scopes` it accepts.
+  **Break:** legislation search and norm-text cursors issued before this change (position
+  `[offset, 0]`) are rejected as `invalid_argument`; repeat the call without a cursor. Case
+  cursors keep their format, and one with a malformed position is now also rejected.
+
 ### Added
 
 - Container and AWS Reference deployment (#30): a small, Playwright-free image that starts

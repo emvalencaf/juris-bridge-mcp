@@ -36,6 +36,7 @@ class WideEvent:
         }
         _cold_start = False
         self.upstream: list[dict[str, Any]] = []
+        self.upstream_truncated = False
 
     def finish(self, *, status: int, duration_ms: float) -> dict[str, Any]:
         """Return the complete event, with the outcome derived from what was recorded."""
@@ -45,6 +46,8 @@ class WideEvent:
         event["duration_ms"] = round(duration_ms, 1)
         if self.upstream:
             event["upstream"] = list(self.upstream)
+        if self.upstream_truncated:
+            event["upstream_truncated"] = True
         return event
 
 
@@ -85,6 +88,11 @@ def annotate_request(*, method: str, user_agent: str | None) -> None:
     event = _current.get()
     if event is not None and user_agent:
         event.fields["user_agent"] = user_agent[:256]
+
+
+def mark_body_oversized() -> None:
+    """Flag that the request body was too large to read the MCP method from."""
+    _merge("mcp", body_oversized=True)
 
 
 def annotate_mcp(*, method: str | None, tool: str | None) -> None:
@@ -138,7 +146,11 @@ def record_failure(failure: ToolFailure) -> None:
 def record_upstream(*, source: str, status: int | None, duration_ms: float, retries: int) -> None:
     """Add one upstream call to the event's short `upstream` list."""
     event = _current.get()
-    if event is not None and len(event.upstream) < MAX_UPSTREAM_ENTRIES:
+    if event is None:
+        return
+    if len(event.upstream) >= MAX_UPSTREAM_ENTRIES:
+        event.upstream_truncated = True
+    else:
         event.upstream.append(
             {
                 "source": source,

@@ -11,7 +11,8 @@ heading when `development` is released to `master`.
 
 - Wide-event logging (ADR 0004): `WideEventMiddleware` emits exactly one JSON line per
   HTTP request on stdout, with environment, request, caller (`key_id`) and upstream
-  context and a never-logged list; configured by `JURIS_BRIDGE_LOG_*`.
+  context and a never-logged list; configured by `JURIS_BRIDGE_LOG_*`. Events flag
+  `upstream_truncated` and `mcp.body_oversized` when they had to cut.
 - Architecture convention: layers at the top of the package (`domain`, `ports`,
   `application/use_cases`, `adapters`, `infrastructure`) with concepts mounted as
   FastMCP sub-servers (see `CODE_STANDARDS.md` and ADR 0005), plus `.env.example`,

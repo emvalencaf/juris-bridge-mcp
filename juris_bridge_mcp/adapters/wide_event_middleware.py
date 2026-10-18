@@ -60,7 +60,10 @@ class WideEventMiddleware:
 
     @staticmethod
     def _annotate_mcp(scope: Scope, body: bytes) -> None:
-        if scope["method"] != "POST" or not body or len(body) > _MAX_BODY_BYTES:
+        if scope["method"] != "POST" or not body:
+            return
+        if len(body) > _MAX_BODY_BYTES:
+            wide_event.mark_body_oversized()
             return
         try:
             message = json.loads(body)

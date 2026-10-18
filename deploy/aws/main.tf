@@ -20,6 +20,8 @@ locals {
 
 resource "aws_ecr_repository" "image" {
   name = local.function_name
+  # Lets `terraform destroy` remove the repository together with its images.
+  force_delete = true
 }
 
 resource "aws_cloudwatch_log_group" "function" {

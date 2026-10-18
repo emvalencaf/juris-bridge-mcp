@@ -31,6 +31,19 @@ first (`terraform apply -target=aws_ecr_repository.image`), push the image, then
 The region defaults to `us-east-1`; set `region` to change it. For prices use the
 [AWS Pricing Calculator](https://calculator.aws/).
 
+## Destroy
+
+```bash
+deploy/aws/destroy.sh
+```
+
+It lists what will be removed, asks you to type the deployment name to confirm, then runs
+`terraform destroy`: the Lambda, Function URL, permissions, IAM role, log group (and its logs),
+saved queries and the ECR repository with its images. Run it from the same checkout that
+deployed: the Terraform state is the local `terraform.tfstate` here, and without it Terraform
+cannot find what to delete. Keep `terraform.tfstate` and `terraform.tfvars` until it finishes.
+Afterwards the Function URL is gone and the API keys are useless.
+
 ## Verification
 
 Cold start, reachability of the Brazilian government sources from `us-east-1` and the

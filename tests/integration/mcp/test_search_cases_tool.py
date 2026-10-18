@@ -128,7 +128,6 @@ async def test_filters_become_a_filter_query(paging, mcp_client):
             "dataAjuizamento": {
                 "gte": "20181001000000",
                 "lte": "20181031235959",
-                "format": "yyyyMMddHHmmss",
             }
         }
     } in clauses

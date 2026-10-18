@@ -18,7 +18,6 @@ _MAX_HITS = 10
 _NEVER = datetime.min.replace(tzinfo=UTC)
 # `@timestamp` alone ties; `id.keyword` makes the order total, so paging never skips or repeats.
 _SORT = [{"@timestamp": {"order": "asc"}}, {"id.keyword": {"order": "asc"}}]
-_FILED_FORMAT = "yyyyMMddHHmmss"
 
 
 def _failure(
@@ -112,13 +111,15 @@ class DatajudCaseRepository:
         ):
             if value is not None:
                 clauses.append({"term": {field: value}})
+        # Compact civil timestamps, compared as DataJud stores them. An explicit `format`
+        # makes the index answer nothing, and no time zone shifts the day (checked live).
         bounds: dict[str, str] = {}
         if filters.filed_from:
             bounds["gte"] = f"{filters.filed_from:%Y%m%d}000000"
         if filters.filed_to:
             bounds["lte"] = f"{filters.filed_to:%Y%m%d}235959"
         if bounds:
-            clauses.append({"range": {"dataAjuizamento": {**bounds, "format": _FILED_FORMAT}}})
+            clauses.append({"range": {"dataAjuizamento": bounds}})
         return clauses or [{"match_all": {}}]
 
     @staticmethod

@@ -49,3 +49,15 @@ def test_a_cursor_decodes_only_for_the_scopes_it_is_asked_for():
     with pytest.raises(ToolFailure) as caught:
         Cursor.decode(token, scopes=("tjsp",))
     assert caught.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+@pytest.mark.parametrize("position", [(), (1, 2), ("x",), (-1,)])
+def test_a_position_that_is_not_one_offset_is_invalid_argument(position):
+    with pytest.raises(ToolFailure) as caught:
+        Cursor(scope="senado", position=position, filters_key="k").offset()
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+def test_a_single_non_negative_position_is_an_offset():
+    assert Cursor(scope="senado", position=(7,), filters_key="k").offset() == 7

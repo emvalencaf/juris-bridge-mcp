@@ -66,11 +66,7 @@ def _offset(cursor: str | None, scope: str) -> int:
             "The cursor was issued for a different norm or article.",
             hint="Repeat the same urn and article, or start again without a cursor.",
         )
-    match decoded.position:
-        case (int() as offset,) if offset >= 0:
-            return offset
-        case _:
-            raise invalid_argument("The cursor is not valid.")
+    return decoded.offset()
 
 
 def _find_article(text: NormText, key: str, urn: Urn, warnings: list[str]) -> Article:

@@ -57,11 +57,7 @@ async def search_legislation(
                 "The cursor was issued for a different search.",
                 hint="Repeat the same type, number and year, or start again without a cursor.",
             )
-        match decoded.position:
-            case (int() as offset,) if offset >= 0:
-                pass
-            case _:
-                raise invalid_argument("The cursor is not valid.")
+        offset = decoded.offset()
     page = await repository.search(filters, limit=limit, offset=offset)
     next_cursor = (
         Cursor(SOURCE, (page.next_offset,), filters.key()).encode()

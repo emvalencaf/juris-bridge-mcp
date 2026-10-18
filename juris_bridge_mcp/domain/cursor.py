@@ -37,6 +37,14 @@ class Cursor:
         raw = json.dumps(body, separators=(",", ":")).encode()
         return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
+    def offset(self) -> int:
+        """Return the position as a single non-negative offset, or raise `invalid_argument`."""
+        match self.position:
+            case (int() as offset,) if offset >= 0:
+                return offset
+            case _:
+                raise _invalid()
+
     @classmethod
     def decode(cls, token: str, scopes: tuple[str, ...]) -> "Cursor":
         """Parse a token, or raise `invalid_argument` for anything outside `scopes`."""

@@ -15,3 +15,4 @@ class DatajudSettings(EnvSettings):
     api_key: SecretStr = SecretStr("")
     timeout_seconds: float = 20
     requests_per_minute: int = 120
+    cache_ttl_seconds: float = 300

@@ -35,5 +35,5 @@ def test_covers_the_documented_datajud_aliases():
     aliases = {c["alias"] for c in datajud["courts"] if c["supported"]}
 
     assert {"tst", "tse", "stj", "stm", "trf1", "trf6", "tjsp", "tjdft", "trt24"} <= aliases
-    assert {"tre-sp", "tre-dft", "tjmmg", "tjmrs", "tjmsp"} <= aliases
+    assert {"tre-sp", "tre-df", "tjmmg", "tjmrs", "tjmsp"} <= aliases
     assert len(aliases) == 91

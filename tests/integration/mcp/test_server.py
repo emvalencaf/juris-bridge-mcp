@@ -26,11 +26,11 @@ def _auth(key: str) -> dict[str, str]:
     return {**HEADERS, "Authorization": f"Bearer {key}"}
 
 
-async def test_only_list_coverage_is_exposed_and_read_only(mcp_client):
+async def test_tools_are_exposed_and_read_only(mcp_client):
     tools = await mcp_client.list_tools()
 
-    assert [t.name for t in tools] == ["list_coverage"]
-    assert tools[0].annotations.read_only_hint is True
+    assert sorted(t.name for t in tools) == ["get_case", "list_coverage"]
+    assert all(t.annotations.read_only_hint is True for t in tools)
 
 
 async def test_list_coverage_reports_sources(mcp_client):

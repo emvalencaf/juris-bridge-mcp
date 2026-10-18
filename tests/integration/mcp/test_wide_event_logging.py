@@ -230,8 +230,8 @@ async def test_unhandled_exception_still_emits_one_error_event(events, caplog):
     ]
 
 
-async def test_real_bootstrap_app_emits_the_event_for_list_coverage(events):
-    app = build_http_app(("key-one",), ENVIRONMENT)
+async def test_real_bootstrap_app_emits_the_event_for_list_coverage(events, server_args):
+    app = build_http_app(("key-one",), ENVIRONMENT, **server_args)
     async with _client(app) as client:
         await client.post("/mcp", json=_call("list_coverage", {}), headers=_auth())
 

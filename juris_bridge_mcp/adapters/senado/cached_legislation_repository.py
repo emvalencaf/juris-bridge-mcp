@@ -30,6 +30,7 @@ class CachedLegislationRepository:
         everything = self._cache.get(key)
         if everything is None:
             wide_event.annotate(cache="miss")
+            # The Senado ignores paging, so an unbounded limit asks for every match.
             everything = await self._inner.search(filters, limit=sys.maxsize)
             self._cache.set(key, everything, ttl_seconds=self._ttl)
         else:

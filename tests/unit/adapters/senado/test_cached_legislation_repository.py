@@ -23,15 +23,17 @@ class _Repository:
         self.norms = tuple(_norm(n) for n in range(1, count + 1))
         self.calls = 0
         self.urn_calls = 0
+        self.asked_at = None
 
     async def search(self, filters, *, limit, offset=0):
         self.calls += 1
+        self.asked_at = datetime.now(UTC)
         end = offset + limit
         return LegislationPage(
             norms=self.norms[offset:end],
             total=len(self.norms),
             next_offset=end if end < len(self.norms) else None,
-            retrieved_at=datetime.now(UTC),
+            retrieved_at=self.asked_at,
         )
 
     async def find_by_urn(self, urn):
@@ -83,7 +85,8 @@ async def test_retrieved_at_reports_when_the_source_was_asked():
     first = await repository.search(FILTERS, limit=2)
     second = await repository.search(FILTERS, limit=2, offset=2)
 
-    assert second.retrieved_at == first.retrieved_at
+    assert first.retrieved_at == inner.asked_at
+    assert second.retrieved_at == inner.asked_at
 
 
 async def test_an_expired_entry_is_fetched_again():

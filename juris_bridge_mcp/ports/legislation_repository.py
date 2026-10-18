@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from juris_bridge_mcp.domain.legislation import LegislationFilters, LegislationPage, NormRecord
+from juris_bridge_mcp.domain.legislation import LegislationFilters, LegislationPage, NormRecord, Urn
 
 
 class LegislationRepository(Protocol):
@@ -14,6 +14,6 @@ class LegislationRepository(Protocol):
         """Return up to `limit` Norms in a stable order, skipping the first `offset`."""
         ...
 
-    async def find(self, urn: str) -> NormRecord | None:
+    async def find_by_urn(self, urn: Urn) -> NormRecord | None:
         """Return the Norm with its publications and relations, or `None` when unknown."""
         ...

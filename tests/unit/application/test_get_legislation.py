@@ -19,8 +19,8 @@ class _Repository:
         self.record = record
         self.asked: list[str] = []
 
-    async def find(self, urn):
-        self.asked.append(urn)
+    async def find_by_urn(self, urn):
+        self.asked.append(urn.text)
         return self.record
 
 

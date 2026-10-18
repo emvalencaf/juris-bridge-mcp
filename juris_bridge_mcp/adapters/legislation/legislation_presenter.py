@@ -55,7 +55,7 @@ def _norm(norm: Norm) -> dict[str, Any]:
 def _publication(publication: Publication) -> dict[str, Any]:
     return {
         "kind": publication.kind,
-        "source": publication.source,
+        "edition": publication.edition,
         "published_on": _day(publication.published_on),
         "page": publication.page,
         "column": publication.column,

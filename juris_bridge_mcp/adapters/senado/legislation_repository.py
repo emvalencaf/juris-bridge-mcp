@@ -18,8 +18,8 @@ from juris_bridge_mcp.domain.legislation import (
     NormRecord,
     Publication,
     Relation,
+    Urn,
     norm_urn,
-    parse_urn,
 )
 
 _SERVICE_VERSION = "3"
@@ -50,9 +50,9 @@ class SenadoLegislationRepository:
             next_offset=end if end < len(norms) else None,
         )
 
-    async def find(self, urn: str) -> NormRecord | None:
+    async def find_by_urn(self, urn: Urn) -> NormRecord | None:
         """Fetch the detail of one Norm; the Senado answers an unknown URN with no `documentos`."""
-        body = await self._get("urn", {"urn": urn})
+        body = await self._get("urn", {"urn": urn.text})
         try:
             documents = body["DetalheDocumento"].get("documentos")
             if documents in ("", None, {}):
@@ -65,27 +65,26 @@ class SenadoLegislationRepository:
             raise source_changed(SOURCE, "The Senado", str(drift) or type(drift).__name__) from None
 
     @staticmethod
-    def _record(raw: dict[str, Any], urn: str, body: Any) -> NormRecord:
-        norm_type, signed_on, _ = parse_urn(urn)
+    def _record(raw: dict[str, Any], urn: Urn, body: Any) -> NormRecord:
         identity = raw["identificacao"]
         if not isinstance(identity, dict):
             raise SchemaDrift("identificacao is not an object")
         signed = _day(identity["dataassinatura"])
         norm = Norm(
-            urn=urn,
-            norm_type=norm_type,
+            urn=urn.text,
+            norm_type=urn.norm_type,
             number=int(identity["numero"]),
-            year=signed.year if signed else signed_on.year,
-            signed_on=signed or signed_on,
+            year=signed.year if signed else urn.signed_on.year,
+            signed_on=signed or urn.signed_on,
             name=str(identity["normaNome"]),
             summary=raw.get("ementa") or None,
             nickname=_nickname(identity),
-            citation_url=_CITATION_URL + urn,
+            citation_url=_CITATION_URL + urn.text,
         )
         publications = tuple(
             Publication(
                 kind=str(p["tipo"]),
-                source=_squash(p["fonte"]),
+                edition=_squash(p["fonte"]),
                 published_on=_day(p["data"]),
                 page=p.get("pagina") or None,
                 column=p.get("coluna") or None,

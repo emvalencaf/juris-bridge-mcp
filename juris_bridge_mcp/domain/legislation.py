@@ -41,25 +41,36 @@ def norm_urn(norm_type: str, signed_on: date, number: int) -> str:
     return f"urn:lex:br:federal:{NORM_TYPES[norm_type][1]}:{signed_on.isoformat()};{number}"
 
 
-def parse_urn(urn: str) -> tuple[str, date, int]:
-    """Split a federal URN Lex into (type key, signature date, number), or raise `invalid_argument`.
+@dataclass(frozen=True)
+class Urn:
+    """The URN Lex of a federal norm, split into the parts it is built from."""
 
-    The type key is the agent-facing one when the URN type is a searchable type, else the raw
-    URN type (the Senado also catalogues acts such as `mensagem`).
-    """
-    match = _URN.fullmatch(urn.strip())
-    if match is None:
-        raise invalid_argument(
-            f"'{urn}' is not a federal URN Lex.",
-            hint="Use a urn from search_legislation, e.g. urn:lex:br:federal:lei:2021-04-01;1.",
-        )
-    urn_type, day, number = match.groups()
-    try:
-        signed_on = date.fromisoformat(day)
-    except ValueError:
-        raise invalid_argument(f"'{urn}' has an impossible date.") from None
-    keys = {lex: key for key, (_, lex) in NORM_TYPES.items()}
-    return keys.get(urn_type, urn_type), signed_on, int(number)
+    text: str
+    norm_type: str
+    signed_on: date
+    number: int
+
+    @classmethod
+    def parse(cls, raw: str) -> "Urn":
+        """Parse `raw`, or raise `invalid_argument`.
+
+        `norm_type` is the agent-facing key when the URN type is a searchable one, else the raw
+        URN type (the Senado also catalogues acts such as `mensagem`).
+        """
+        text = raw.strip()
+        match = _URN.fullmatch(text)
+        if match is None:
+            raise invalid_argument(
+                f"'{raw}' is not a federal URN Lex.",
+                hint="Use a urn from search_legislation, e.g. urn:lex:br:federal:lei:2021-04-01;1.",
+            )
+        urn_type, day, number = match.groups()
+        try:
+            signed_on = date.fromisoformat(day)
+        except ValueError:
+            raise invalid_argument(f"'{raw}' has an impossible date.") from None
+        keys = {lex: key for key, (_, lex) in NORM_TYPES.items()}
+        return cls(text, keys.get(urn_type, urn_type), signed_on, int(number))
 
 
 @dataclass(frozen=True)
@@ -97,7 +108,7 @@ class Publication:
     """Where a norm was published (the Diário Oficial edition, page and column)."""
 
     kind: str
-    source: str
+    edition: str
     published_on: date | None
     page: str | None = None
     column: str | None = None
@@ -122,6 +133,14 @@ class NormRecord:
     relations: tuple[Relation, ...]
     raw: dict[str, Any]
     retrieved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def latest_relations(self) -> tuple[Relation, ...]:
+        """Return each related norm once per kind, newest first.
+
+        The Senado repeats a relation once per affected provision; those collapse here.
+        """
+        distinct = {(r.norm_id, r.kind): r for r in self.relations}.values()
+        return tuple(sorted(distinct, key=lambda r: r.signed_on or date.min, reverse=True))
 
 
 @dataclass(frozen=True)

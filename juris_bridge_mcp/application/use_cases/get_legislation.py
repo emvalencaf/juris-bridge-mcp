@@ -1,11 +1,11 @@
 """Use case: fetch one federal Norm by URN Lex."""
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any
 
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, invalid_argument
-from juris_bridge_mcp.domain.legislation import SOURCE, Norm, Publication, Relation, parse_urn
+from juris_bridge_mcp.domain.legislation import SOURCE, Norm, Publication, Relation, Urn
 from juris_bridge_mcp.domain.raw_payload import bounded_raw
 from juris_bridge_mcp.ports.legislation_repository import LegislationRepository
 
@@ -44,8 +44,7 @@ async def get_legislation(
     """
     if not 1 <= relations_limit <= MAX_RELATIONS_LIMIT:
         raise invalid_argument(f"relations_limit must be between 1 and {MAX_RELATIONS_LIMIT}.")
-    urn = urn.strip()
-    parse_urn(urn)
+    parsed = Urn.parse(urn)
     if include_text:
         raise ToolFailure(
             ErrorCode.NOT_COVERED,
@@ -54,17 +53,16 @@ async def get_legislation(
             retryable=False,
             hint="Call again without include_text for the norm's metadata.",
         )
-    record = await repository.find(urn)
+    record = await repository.find_by_urn(parsed)
     if record is None:
         raise ToolFailure(
             ErrorCode.NOT_FOUND,
-            f"No norm {urn} in the Senado catalogue.",
+            f"No norm {parsed.text} in the Senado catalogue.",
             source=SOURCE,
             retryable=False,
             hint="Check the urn, or locate the norm with search_legislation.",
         )
-    distinct = {(r.norm_id, r.kind): r for r in record.relations}.values()
-    newest_first = sorted(distinct, key=lambda r: r.signed_on or date.min, reverse=True)
+    relations = record.latest_relations()
     warnings: list[str] = []
     raw = None
     if include_raw:
@@ -74,8 +72,8 @@ async def get_legislation(
     return NormResult(
         norm=record.norm,
         publications=record.publications,
-        relations=tuple(newest_first[:relations_limit]),
-        relations_total=len(newest_first),
+        relations=relations[:relations_limit],
+        relations_total=len(relations),
         retrieved_at=record.retrieved_at,
         warnings=tuple(warnings),
         raw=raw,

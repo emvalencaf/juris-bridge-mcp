@@ -121,14 +121,29 @@ async def test_fetches_and_parses_the_norm_page():
     seen = []
 
     def handler(request):
-        seen.append(request)
+        seen.append(request.url.path)
+        if request.url.path.endswith("/l14133.htm"):
+            return httpx.Response(200, content=_page("lei_14133_2021.htm"))
+        return httpx.Response(404)
+
+    text = await _source(handler).fetch(LEI_14133)
+
+    assert seen[0] == "/ccivil_03/_ato2019-2022/2021/lei/l14133compilado.htm"
+    assert seen[-1] == "/ccivil_03/_ato2019-2022/2021/lei/l14133.htm"
+    assert text.url == f"{BASE}/_ato2019-2022/2021/lei/l14133.htm"
+    assert text.articles[0].key == "1"
+
+
+async def test_the_consolidated_page_wins_over_the_text_as_first_published():
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.path)
         return httpx.Response(200, content=_page("lei_14133_2021.htm"))
 
     text = await _source(handler).fetch(LEI_14133)
 
-    assert seen[0].url.path == "/ccivil_03/_ato2019-2022/2021/lei/l14133.htm"
-    assert text.url == f"{BASE}/_ato2019-2022/2021/lei/l14133.htm"
-    assert text.articles[0].key == "1"
+    assert len(seen) == 1 and text.url.endswith("/l14133compilado.htm")
 
 
 async def test_tries_the_next_candidate_after_a_404():
@@ -213,18 +228,30 @@ async def test_decodes_utf8_pages_too():
 
 
 @pytest.mark.parametrize(
+    ("urn", "first", "plain"),
+    [
+        ("urn:lex:br:federal:lei:2021-04-01;14133", "_ato2019-2022/2021/lei/l14133", True),
+        ("urn:lex:br:federal:lei:2024-01-02;15000", "_ato2023-2026/2024/lei/l15000", True),
+        ("urn:lex:br:federal:lei:2005-02-09;11101", "_ato2004-2006/2005/lei/l11101", True),
+        ("urn:lex:br:federal:lei:2002-01-10;10406", "leis/2002/l10406", True),
+        ("urn:lex:br:federal:decreto:2022-01-01;11129", "_ato2019-2022/2022/decreto/d11129", True),
+        ("urn:lex:br:federal:decreto.lei:1940-12-07;2848", "decreto-lei/del2848", True),
+    ],
+)
+def test_candidate_paths_prefer_the_consolidated_page(urn, first, plain):
+    paths = candidate_paths(Urn.parse(urn))
+
+    assert paths[:3] == [f"{first}{s}.htm" for s in ("compilado", "compilada", "cons")]
+    assert paths[3] == f"{first}.htm" and plain
+
+
+@pytest.mark.parametrize(
     ("urn", "first"),
     [
-        ("urn:lex:br:federal:lei:2021-04-01;14133", "_ato2019-2022/2021/lei/l14133.htm"),
-        ("urn:lex:br:federal:lei:2024-01-02;15000", "_ato2023-2026/2024/lei/l15000.htm"),
-        ("urn:lex:br:federal:lei:2005-02-09;11101", "_ato2004-2006/2005/lei/l11101.htm"),
-        ("urn:lex:br:federal:lei:2002-01-10;10406", "leis/2002/l10406.htm"),
-        ("urn:lex:br:federal:decreto:2022-01-01;11129", "_ato2019-2022/2022/decreto/d11129.htm"),
         (
             "urn:lex:br:federal:medida.provisoria:2019-01-01;870",
             "_ato2019-2022/2019/mpv/mpv870.htm",
         ),
-        ("urn:lex:br:federal:decreto.lei:1940-12-07;2848", "decreto-lei/del2848.htm"),
         ("urn:lex:br:federal:lei.complementar:2019-04-08;166", "leis/lcp/lcp166.htm"),
         (
             "urn:lex:br:federal:emenda.constitucional:2022-01-01;132",
@@ -232,5 +259,5 @@ async def test_decodes_utf8_pages_too():
         ),
     ],
 )
-def test_candidate_paths_follow_the_planalto_layout(urn, first):
+def test_candidate_paths_for_norms_without_a_consolidated_page(urn, first):
     assert candidate_paths(Urn.parse(urn))[0] == first

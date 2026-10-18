@@ -6,11 +6,11 @@ from fastmcp import FastMCP
 
 from juris_bridge_mcp.adapters import wide_event
 from juris_bridge_mcp.adapters.legislation.legislation_presenter import present_norm, present_search
-from juris_bridge_mcp.application.use_cases.get_legislation import (
+from juris_bridge_mcp.application.use_cases.legislation.get_legislation import (
     DEFAULT_RELATIONS_LIMIT,
     get_legislation,
 )
-from juris_bridge_mcp.application.use_cases.search_legislation import (
+from juris_bridge_mcp.application.use_cases.legislation.search_legislation import (
     DEFAULT_LIMIT,
     search_legislation,
 )

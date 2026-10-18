@@ -83,6 +83,11 @@ def invalid_argument(message: str, hint: str | None = None) -> ToolFailure:
     return ToolFailure(ErrorCode.INVALID_ARGUMENT, message, source=None, retryable=False, hint=hint)
 
 
+def not_found(source: str, message: str, hint: str) -> ToolFailure:
+    """Build the non-retryable `not_found` failure, with a hint on how to find the item."""
+    return source_failure(source, ErrorCode.NOT_FOUND, message, retryable=False, hint=hint)
+
+
 def source_failure(
     source: str, code: ErrorCode, message: str, *, retryable: bool, hint: str | None = None
 ) -> ToolFailure:

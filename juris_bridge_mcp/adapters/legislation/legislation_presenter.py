@@ -4,8 +4,11 @@ from datetime import date
 from typing import Any
 
 from juris_bridge_mcp.adapters.presentation import iso_utc
-from juris_bridge_mcp.application.use_cases.get_legislation import NormResult, TextSlice
-from juris_bridge_mcp.application.use_cases.search_legislation import LegislationSearchResult
+from juris_bridge_mcp.application.use_cases.legislation.get_legislation import NormResult
+from juris_bridge_mcp.application.use_cases.legislation.norm_text_slice import TextSlice
+from juris_bridge_mcp.application.use_cases.legislation.search_legislation import (
+    LegislationSearchResult,
+)
 from juris_bridge_mcp.domain.legislation import SOURCE, Norm, Publication, Relation
 from juris_bridge_mcp.domain.legislation_text import TEXT_SOURCE
 

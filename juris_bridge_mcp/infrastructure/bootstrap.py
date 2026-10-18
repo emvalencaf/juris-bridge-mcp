@@ -42,41 +42,37 @@ def build_server(
 
     `transport` replaces the network for tests; production leaves it `None`.
     """
-    upstream = UpstreamClient(
-        build_http_client(timeout_seconds=datajud.timeout_seconds, transport=transport),
-        source=DATAJUD,
-        limiter=RateLimiter(
-            DATAJUD,
-            max_requests=datajud.requests_per_minute,
-            window_seconds=60,
+
+    def upstream_for(
+        source: str, *, timeout_seconds: float, requests_per_minute: int
+    ) -> UpstreamClient:
+        return UpstreamClient(
+            build_http_client(timeout_seconds=timeout_seconds, transport=transport),
+            source=source,
+            limiter=RateLimiter(
+                source,
+                max_requests=requests_per_minute,
+                window_seconds=60,
+                max_wait_seconds=http.max_wait_seconds,
+            ),
+            max_retries=http.max_retries,
             max_wait_seconds=http.max_wait_seconds,
-        ),
-        max_retries=http.max_retries,
-        max_wait_seconds=http.max_wait_seconds,
+        )
+
+    upstream = upstream_for(
+        DATAJUD,
+        timeout_seconds=datajud.timeout_seconds,
+        requests_per_minute=datajud.requests_per_minute,
     )
-    senado_upstream = UpstreamClient(
-        build_http_client(timeout_seconds=senado.timeout_seconds, transport=transport),
-        source=SENADO,
-        limiter=RateLimiter(
-            SENADO,
-            max_requests=senado.requests_per_minute,
-            window_seconds=60,
-            max_wait_seconds=http.max_wait_seconds,
-        ),
-        max_retries=http.max_retries,
-        max_wait_seconds=http.max_wait_seconds,
+    senado_upstream = upstream_for(
+        SENADO,
+        timeout_seconds=senado.timeout_seconds,
+        requests_per_minute=senado.requests_per_minute,
     )
-    planalto_upstream = UpstreamClient(
-        build_http_client(timeout_seconds=planalto.timeout_seconds, transport=transport),
-        source=PLANALTO,
-        limiter=RateLimiter(
-            PLANALTO,
-            max_requests=planalto.requests_per_minute,
-            window_seconds=60,
-            max_wait_seconds=http.max_wait_seconds,
-        ),
-        max_retries=http.max_retries,
-        max_wait_seconds=http.max_wait_seconds,
+    planalto_upstream = upstream_for(
+        PLANALTO,
+        timeout_seconds=planalto.timeout_seconds,
+        requests_per_minute=planalto.requests_per_minute,
     )
     cases = CachedCaseRepository(
         DatajudCaseRepository(

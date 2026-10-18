@@ -82,7 +82,7 @@ async def test_include_text_returns_the_plain_text_as_full_text(mcp_client, lei_
     assert norm["next_text_cursor"] and norm["text_source"] == "planalto"
     assert norm["text_url"].endswith(PAGE) and "article" not in norm
     assert norm["name"] == "Lei nº 14.133 de 01/04/2021"
-    assert planalto.requests[0].url.path == "/ccivil_03/" + PAGE
+    assert planalto.requests[-1].url.path == "/ccivil_03/" + PAGE
 
 
 async def test_the_text_is_read_in_pieces_until_done(mcp_client, lei_14133):

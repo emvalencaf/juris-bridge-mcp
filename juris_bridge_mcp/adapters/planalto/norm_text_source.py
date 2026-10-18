@@ -4,50 +4,13 @@ import httpx
 
 from juris_bridge_mcp.adapters.http_client import UpstreamClient
 from juris_bridge_mcp.adapters.planalto.norm_text_parser import parse_norm_text
+from juris_bridge_mcp.adapters.planalto.planalto_paths import candidate_paths
 from juris_bridge_mcp.adapters.schema_drift import SchemaDrift
 from juris_bridge_mcp.domain.errors import ErrorCode, source_changed, source_failure
 from juris_bridge_mcp.domain.legislation import Urn
 from juris_bridge_mcp.domain.legislation_text import TEXT_SOURCE, NormText
 
-# Planalto groups acts by presidential term from 2004 on; the first year of each range.
-_ERA_STARTS = (2023, 2019, 2015, 2011, 2007, 2004)
-
-# Norm type -> (directory, file prefix) under the term folder; the file is `<prefix><number>.htm`.
-_TERM_FOLDERS = {
-    "lei": ("lei", "l"),
-    "decreto": ("decreto", "d"),
-    "medida-provisoria": ("mpv", "mpv"),
-}
 _BLOCKED_STATUSES = frozenset({401, 403, 406, 451})
-
-
-def candidate_paths(urn: Urn) -> list[str]:
-    """Return the page paths (under `ccivil_03`) a norm may live at, most likely first.
-
-    Planalto has no index by URN, so paths are built by convention. The folder names are
-    case-insensitive and the server redirects a wrong file-name case.
-    """
-    number, year = urn.number, urn.signed_on.year
-    paths: list[str] = []
-    if urn.norm_type in _TERM_FOLDERS and year >= _ERA_STARTS[-1]:
-        start = next(s for s in _ERA_STARTS if year >= s)
-        end = start + 3 if start != 2004 else 2006
-        folder, prefix = _TERM_FOLDERS[urn.norm_type]
-        paths.append(f"_ato{start}-{end}/{year}/{folder}/{prefix}{number}.htm")
-    elif urn.norm_type == "lei":
-        paths += [f"leis/{year}/l{number}.htm", f"leis/l{number}.htm"]
-    elif urn.norm_type == "decreto":
-        paths.append(f"decreto/d{number}.htm")
-    elif urn.norm_type == "lei-complementar":
-        paths.append(f"leis/lcp/lcp{number}.htm")
-    elif urn.norm_type == "decreto-lei":
-        paths.append(f"decreto-lei/del{number:04d}.htm")
-    elif urn.norm_type == "emenda-constitucional":
-        paths += [
-            f"constituicao/emendas/emc/emc{number}.htm",
-            f"constituicao/emendas/emc/emc{number:02d}.htm",
-        ]
-    return list(dict.fromkeys(paths))
 
 
 class PlanaltoNormTextSource:

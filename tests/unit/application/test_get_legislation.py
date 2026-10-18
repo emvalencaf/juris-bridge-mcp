@@ -3,7 +3,7 @@ from datetime import date
 
 import pytest
 
-from juris_bridge_mcp.application.use_cases.get_legislation import (
+from juris_bridge_mcp.application.use_cases.legislation.get_legislation import (
     DEFAULT_RELATIONS_LIMIT,
     get_legislation,
 )
@@ -244,3 +244,16 @@ async def test_raw_larger_than_the_cap_is_dropped_with_a_warning():
 
     assert result.raw is None and "raw payload omitted" in result.warnings[0]
     assert len(json.dumps(record.raw)) > 256 * 1024
+
+
+async def test_a_cursor_past_the_end_of_the_text_is_rejected():
+    repository, source = _Repository(_record()), _TextSource(_text(full="abcdef"))
+    first = await get_legislation(repository, source, urn=URN, include_text=True, max_chars=3)
+    shorter = _TextSource(_text(full="abc"))
+
+    with pytest.raises(ToolFailure) as caught:
+        await get_legislation(
+            repository, shorter, urn=URN, include_text=True, text_cursor=first.text.next_cursor
+        )
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT

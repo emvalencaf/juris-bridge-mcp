@@ -7,7 +7,7 @@ from typing import Any
 from juris_bridge_mcp.domain.case import Case
 from juris_bridge_mcp.domain.cnj_number import CnjNumber, derive_court
 from juris_bridge_mcp.domain.courts import SOURCE, resolve_court
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, not_found
 from juris_bridge_mcp.domain.raw_payload import bounded_raw
 from juris_bridge_mcp.ports.case_repository import CaseRepository
 
@@ -52,12 +52,10 @@ async def get_case(
     alias = resolve_court(court) if court else derive_court(cnj)
     record = await repository.find(cnj, alias)
     if record is None:
-        raise ToolFailure(
-            ErrorCode.NOT_FOUND,
+        raise not_found(
+            SOURCE,
             f"No case {cnj.formatted} in {alias.upper()}.",
-            source=SOURCE,
-            retryable=False,
-            hint="Check the number, or pass court if the case is held by another Court.",
+            "Check the number, or pass court if the case is held by another Court.",
         )
     case, warnings = record.case, []
     if record.matches > 1:

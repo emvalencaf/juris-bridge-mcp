@@ -1,6 +1,6 @@
 import pytest
 
-from juris_bridge_mcp.application.use_cases.search_legislation import search_legislation
+from juris_bridge_mcp.application.use_cases.legislation.search_legislation import search_legislation
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 from juris_bridge_mcp.domain.legislation import LegislationFilters, LegislationPage
 

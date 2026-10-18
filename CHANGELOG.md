@@ -15,7 +15,9 @@ heading when `development` is released to `master`.
   `flags` `revoked` and `superseded` when the page marks them). An article the parser cannot
   locate returns `not_found`; a Planalto refusal returns `source_blocked` and a page the
   parser no longer reads returns `source_changed`. A norm with no locatable page returns
-  metadata and a warning. Adds `JURIS_BRIDGE_PLANALTO_*`.
+  metadata and a warning. For laws, decrees and decree-laws the consolidated Planalto page
+  (the law in force) is preferred over the text as first published. Adds
+  `JURIS_BRIDGE_PLANALTO_*`. `scripts/try_legislation.py` calls the tool live, guided or by flags.
 - `get_legislation` tool (#27): fetch a federal norm by URN Lex from the Senado `legislacao/urn`
   service: type, number, year, signature date, name, nickname, ementa, Citation,
   `publications` (Diário Oficial `edition`, page, column) and `relations`. Relations are

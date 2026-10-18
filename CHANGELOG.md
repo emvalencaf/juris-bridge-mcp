@@ -24,3 +24,12 @@ heading when `development` is released to `master`.
 - ADR 0004: one wide event per request as JSON on stdout for observability.
 - `GLOSSARY.md`: Citation, Content kind, Cursor, Coverage and Error code, and
   the MVP source set (Senado API) in the Source and Legislation entries.
+- Server skeleton: stateless FastMCP over streamable HTTP with JSON responses
+  (GET answers 405, no `Mcp-Session-Id`), Bearer API-key auth (several
+  comma-separated keys, constant-time compare, 401 otherwise) and a refusal to
+  start without a key, plus a one-line responsible-use notice at startup.
+- `list_coverage` read-only tool stating the supported Sources and Courts, with
+  a per-court `citation_url` flag (all `false`) and no network call.
+- Shared closed set of 8 Error codes and the MCP error shape.
+- Per-concern settings classes (`server`, `http`, `datajud`) documented in
+  `.env.example`, and in-memory MCP and ASGI test harnesses.

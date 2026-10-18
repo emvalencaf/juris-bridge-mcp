@@ -7,7 +7,7 @@ import pytest
 from fastmcp import Client, FastMCP
 
 from juris_bridge_mcp import main as entrypoint
-from juris_bridge_mcp.shared.errors import ErrorCode, ToolFailure, to_tool_error
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, to_tool_error
 
 INIT = {
     "jsonrpc": "2.0",

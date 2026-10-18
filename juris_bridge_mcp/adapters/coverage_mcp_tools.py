@@ -4,8 +4,8 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from juris_bridge_mcp.modules.coverage.application.use_cases.list_coverage import list_coverage
-from juris_bridge_mcp.modules.coverage.ports.coverage_catalog import CoverageCatalog
+from juris_bridge_mcp.application.use_cases.list_coverage import list_coverage
+from juris_bridge_mcp.ports.coverage_catalog import CoverageCatalog
 
 
 def build_coverage_server(catalog: CoverageCatalog) -> FastMCP:

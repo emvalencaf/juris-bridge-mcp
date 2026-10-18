@@ -4,8 +4,8 @@ import httpx
 import pytest
 from fastmcp import Client
 
-from juris_bridge_mcp.bootstrap import build_http_app, build_server
 from juris_bridge_mcp.config.server import ServerSettings
+from juris_bridge_mcp.infrastructure.bootstrap import build_http_app, build_server
 
 
 @pytest.fixture

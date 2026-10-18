@@ -1,6 +1,6 @@
 """Coverage declared in code, from the documented DataJud aliases."""
 
-from juris_bridge_mcp.modules.coverage.domain.coverage import CourtCoverage, SourceCoverage
+from juris_bridge_mcp.domain.coverage import CourtCoverage, SourceCoverage
 
 _UFS = ("ac al am ap ba ce df es go ma mg ms mt pa pb pe pi pr rj rn ro rr rs sc se sp to").split()
 

@@ -9,9 +9,9 @@ heading when `development` is released to `master`.
 
 ### Added
 
-- Architecture convention: self-contained modules mounted as FastMCP sub-servers,
-  each with `domain`, `ports`, `application/use_cases`, `adapters` and
-  `infrastructure` (see `CODE_STANDARDS.md` and ADR 0001), plus `.env.example`,
+- Architecture convention: layers at the top of the package (`domain`, `ports`,
+  `application/use_cases`, `adapters`, `infrastructure`) with concepts mounted as
+  FastMCP sub-servers (see `CODE_STANDARDS.md` and ADR 0005), plus `.env.example`,
   a `Dockerfile` and the `tests/` layout.
 - `GLOSSARY.md` with the initial domain language.
 - Research notes under `docs/research/`: DataJud API, LexML access, court data
@@ -33,3 +33,5 @@ heading when `development` is released to `master`.
 - Shared closed set of 8 Error codes and the MCP error shape.
 - Per-concern settings classes (`server`, `http`, `datajud`) documented in
   `.env.example`, and in-memory MCP and ASGI test harnesses.
+- ADR 0005: layers at the top of the package instead of one module per concept,
+  superseding ADR 0001.

@@ -1,7 +1,7 @@
-from juris_bridge_mcp.modules.coverage.adapters.static_coverage_catalog import (
+from juris_bridge_mcp.adapters.static_coverage_catalog import (
     StaticCoverageCatalog,
 )
-from juris_bridge_mcp.modules.coverage.application.use_cases.list_coverage import list_coverage
+from juris_bridge_mcp.application.use_cases.list_coverage import list_coverage
 
 
 def _coverage():

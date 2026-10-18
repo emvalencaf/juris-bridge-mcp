@@ -1,6 +1,6 @@
 import pytest
 
-from juris_bridge_mcp.shared.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
 
 def test_error_codes_are_the_closed_set_of_eight():

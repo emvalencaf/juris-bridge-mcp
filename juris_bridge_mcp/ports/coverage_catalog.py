@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from juris_bridge_mcp.modules.coverage.domain.coverage import SourceCoverage
+from juris_bridge_mcp.domain.coverage import SourceCoverage
 
 
 class CoverageCatalog(Protocol):

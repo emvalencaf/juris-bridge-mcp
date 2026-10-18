@@ -1,17 +1,18 @@
-"""Composition root: builds the root server and mounts one sub-server per module."""
+"""Composition root: builds the adapters and mounts one FastMCP sub-server per concept."""
 
 from fastmcp import FastMCP
 from starlette.middleware import Middleware
 from starlette.types import ASGIApp
 
-from juris_bridge_mcp.modules.coverage.infrastructure import container as coverage
-from juris_bridge_mcp.shared.auth import BearerAuthMiddleware
+from juris_bridge_mcp.adapters.bearer_auth import BearerAuthMiddleware
+from juris_bridge_mcp.adapters.coverage_mcp_tools import build_coverage_server
+from juris_bridge_mcp.adapters.static_coverage_catalog import StaticCoverageCatalog
 
 
 def build_server() -> FastMCP:
-    """Build the root FastMCP server with every module mounted (no namespace)."""
+    """Build the root FastMCP server with every concept mounted (no namespace)."""
     app = FastMCP("juris-bridge-mcp")
-    app.mount(coverage.build_server())
+    app.mount(build_coverage_server(StaticCoverageCatalog()))
     return app
 
 

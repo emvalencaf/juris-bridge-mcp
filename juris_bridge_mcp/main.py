@@ -5,8 +5,8 @@ import sys
 import uvicorn
 from pydantic import ValidationError
 
-from juris_bridge_mcp.bootstrap import build_http_app
 from juris_bridge_mcp.config.server import ServerSettings
+from juris_bridge_mcp.infrastructure.bootstrap import build_http_app
 
 NOTICE = (
     "Juris Bridge MCP serves public Brazilian judicial data; "

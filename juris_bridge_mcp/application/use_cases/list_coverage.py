@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from juris_bridge_mcp.modules.coverage.ports.coverage_catalog import CoverageCatalog
+from juris_bridge_mcp.ports.coverage_catalog import CoverageCatalog
 
 
 def list_coverage(catalog: CoverageCatalog) -> dict[str, Any]:

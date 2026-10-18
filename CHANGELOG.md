@@ -23,6 +23,8 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Publication term in `GLOSSARY.md` and ADR 0006 (#59): the DJEN as the Source of Publications,
+  self-hosted per user, extending ADR 0002.
 - Diagrams (#32): four overview diagrams under `docs/diagrams/` (architecture and module
   layout, MCP request flow with the wide event, `get_legislation` text fallback chain, AWS
   Reference deployment), each as an HTML source in `code/` and a rendered SVG in `assets/`, with

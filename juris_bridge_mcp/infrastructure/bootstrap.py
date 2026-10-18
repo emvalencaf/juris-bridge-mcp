@@ -15,6 +15,10 @@ from juris_bridge_mcp.adapters.coverage_mcp_tools import build_coverage_server
 from juris_bridge_mcp.adapters.datajud.case_repository import DatajudCaseRepository
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
 from juris_bridge_mcp.adapters.in_memory_ttl_cache import InMemoryTtlCache
+from juris_bridge_mcp.adapters.legin.norm_text_source import LeginNormTextSource
+from juris_bridge_mcp.adapters.legislation.fallback_norm_text_source import (
+    FallbackNormTextSource,
+)
 from juris_bridge_mcp.adapters.legislation.legislation_mcp_tools import build_legislation_server
 from juris_bridge_mcp.adapters.planalto.cached_norm_text_source import CachedNormTextSource
 from juris_bridge_mcp.adapters.planalto.norm_text_source import PlanaltoNormTextSource
@@ -27,10 +31,12 @@ from juris_bridge_mcp.adapters.static_coverage_catalog import StaticCoverageCata
 from juris_bridge_mcp.adapters.wide_event_middleware import WideEventMiddleware
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.http import HttpSettings
+from juris_bridge_mcp.config.legin import LeginSettings
 from juris_bridge_mcp.config.planalto import PlanaltoSettings
 from juris_bridge_mcp.config.senado import SenadoSettings
 from juris_bridge_mcp.domain.courts import SOURCE as DATAJUD
 from juris_bridge_mcp.domain.legislation import SOURCE as SENADO
+from juris_bridge_mcp.domain.legislation_text import LEGIN_SOURCE as LEGIN
 from juris_bridge_mcp.domain.legislation_text import TEXT_SOURCE as PLANALTO
 
 
@@ -40,6 +46,7 @@ def build_server(
     http: HttpSettings,
     senado: SenadoSettings,
     planalto: PlanaltoSettings,
+    legin: LeginSettings,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> FastMCP:
     """Build the root FastMCP server with every concept mounted (no namespace).
@@ -78,6 +85,11 @@ def build_server(
         timeout_seconds=planalto.timeout_seconds,
         requests_per_minute=planalto.requests_per_minute,
     )
+    legin_upstream = upstream_for(
+        LEGIN,
+        timeout_seconds=legin.timeout_seconds,
+        requests_per_minute=legin.requests_per_minute,
+    )
     cases = CachedCaseRepository(
         DatajudCaseRepository(
             upstream, base_url=datajud.base_url, api_key=datajud.api_key.get_secret_value()
@@ -96,7 +108,10 @@ def build_server(
                 ttl_seconds=senado.cache_ttl_seconds,
             ),
             CachedNormTextSource(
-                PlanaltoNormTextSource(planalto_upstream, base_url=planalto.base_url),
+                FallbackNormTextSource(
+                    PlanaltoNormTextSource(planalto_upstream, base_url=planalto.base_url),
+                    LeginNormTextSource(legin_upstream, lexml_base_url=legin.lexml_base_url),
+                ),
                 InMemoryTtlCache(max_entries=planalto.cache_max_entries),
                 ttl_seconds=planalto.cache_ttl_seconds,
             ),
@@ -113,11 +128,17 @@ def build_http_app(
     http: HttpSettings,
     senado: SenadoSettings,
     planalto: PlanaltoSettings,
+    legin: LeginSettings,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> ASGIApp:
     """Build the stateless, JSON-response ASGI app: wide event outermost, then Bearer auth."""
     server = build_server(
-        datajud=datajud, http=http, senado=senado, planalto=planalto, transport=transport
+        datajud=datajud,
+        http=http,
+        senado=senado,
+        planalto=planalto,
+        legin=legin,
+        transport=transport,
     )
     return server.http_app(
         path="/mcp",

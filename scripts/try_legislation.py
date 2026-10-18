@@ -30,6 +30,7 @@ from fastmcp import Client
 
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.http import HttpSettings
+from juris_bridge_mcp.config.legin import LeginSettings
 from juris_bridge_mcp.config.planalto import PlanaltoSettings
 from juris_bridge_mcp.config.senado import SenadoSettings
 from juris_bridge_mcp.infrastructure.bootstrap import build_server
@@ -84,6 +85,7 @@ async def run(arguments: dict[str, Any], *, follow: bool, full: bool) -> bool:
         "http": HttpSettings(),
         "senado": SenadoSettings(),
         "planalto": PlanaltoSettings(),
+        "legin": LeginSettings(),
     }
     async with Client(build_server(**settings)) as client:
         while True:

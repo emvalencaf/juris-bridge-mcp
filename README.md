@@ -108,7 +108,13 @@ The AWS Reference deployment (Lambda + Function URL, Terraform) lives in
   title can still trail an article in older norms.
 - Planalto page paths are built by convention, as there is no index by URN. Norms without a
   convention (a `mensagem`, old provisional measures) and some pre-2004 layouts return metadata
-  and a warning, not the text.
+  and a warning, not the text, unless Câmara Legin has them.
+- When the Planalto has no page or refuses, the text comes from Câmara Legin, whose URL is not
+  derivable from the URN and is read off the LexML URN page and the Câmara data sheet. If the
+  LexML portal serves its security challenge, the server does not solve it and the call is
+  `source_blocked`. The Legin text carries few Annotations, its `warnings` give the amending
+  norms from the data sheet as hints only, and a very large consolidated page (e.g. Lei
+  14.133) may time out at the Câmara (`source_unavailable`, retryable).
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

@@ -152,6 +152,7 @@ async def test_a_norm_without_a_planalto_page_returns_metadata_and_a_warning(mcp
     norm = await _call(mcp_client, urn=URN, include_text=True)
 
     assert norm["content_kind"] == "metadata" and "text" not in norm
+    assert "Neither the Planalto nor the Câmara Legin" in norm["warnings"][0]
     assert "only metadata" in norm["warnings"][0]
 
 
@@ -215,3 +216,65 @@ async def test_the_tool_describes_include_annotations(mcp_client):
 
     assert "include_annotations" in tools["get_legislation"].input_schema["properties"]
     assert "include_annotations=false" in tools["get_legislation"].description
+
+
+CPC = "urn:lex:br:federal:lei:2015-03-16;13105"
+
+
+@pytest.fixture
+def cpc_on_legin(senado, legin):
+    senado.body = senado.fixture("lei_14133_2021_detail.json")
+    legin.serve_cpc()
+
+
+async def test_when_the_planalto_has_no_page_the_camara_legin_supplies_the_text(
+    mcp_client, cpc_on_legin, planalto
+):
+    norm = await _call(mcp_client, urn=CPC, include_text=True)
+
+    assert norm["content_kind"] == "full_text" and norm["text_source"] == "camara_legin"
+    assert norm["text_url"].startswith("https://www2.camara.leg.br/legin/")
+    assert "Art. 1º O processo civil será ordenado" in norm["text"]
+    assert norm["warnings"][0].startswith("The Planalto has no text page")
+    assert any("Câmara Legin, not the Planalto" in w for w in norm["warnings"])
+    assert any(w.startswith("Amendment hints") for w in norm["warnings"])
+    assert planalto.requests, "the Planalto is asked first"
+
+
+async def test_an_article_can_be_read_from_the_fallback_text(mcp_client, cpc_on_legin):
+    norm = await _call(mcp_client, urn=CPC, article="Art. 3º")
+
+    assert norm["text_source"] == "camara_legin" and norm["article"]["label"] == "Art. 3º"
+    assert norm["text"].startswith("Art. 3º Não se excluirá")
+
+
+async def test_a_missing_article_names_the_source_that_was_read(mcp_client, cpc_on_legin):
+    error = await _call(mcp_client, urn=CPC, article="Art. 99")
+
+    assert error["code"] == "not_found" and error["source"] == "camara_legin"
+
+
+async def test_a_planalto_refusal_falls_back_to_the_camara_legin(
+    mcp_client, cpc_on_legin, planalto
+):
+    planalto.status = 403
+
+    norm = await _call(mcp_client, urn=CPC, include_text=True)
+
+    assert norm["text_source"] == "camara_legin"
+    assert "The Planalto failed (source_blocked)" in norm["warnings"][0]
+
+
+async def test_the_camara_legin_is_not_asked_for_metadata_only(mcp_client, cpc_on_legin, legin):
+    await _call(mcp_client, urn=CPC)
+
+    assert legin.requests == []
+
+
+async def test_the_fallback_text_is_cached_with_its_warnings(mcp_client, cpc_on_legin, legin):
+    first = await _call(mcp_client, urn=CPC, include_text=True)
+    fetched = len(legin.requests)
+    second = await _call(mcp_client, urn=CPC, include_text=True, max_chars=50)
+
+    assert len(legin.requests) == fetched
+    assert second["warnings"] == first["warnings"]

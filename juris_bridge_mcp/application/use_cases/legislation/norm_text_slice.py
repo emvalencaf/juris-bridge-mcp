@@ -31,6 +31,7 @@ class TextSlice:
     truncated: bool
     next_cursor: str | None
     url: str
+    source: str = TEXT_SOURCE
     article: Article | None = None
 
 
@@ -55,10 +56,11 @@ async def slice_norm_text(
     source_text = await text_source.fetch(urn)
     if source_text is None:
         warnings.append(
-            "The Planalto has no text page this server can locate for this norm; "
-            "only metadata is returned."
+            "Neither the Planalto nor the Câmara Legin has a text page this server can locate "
+            "for this norm; only metadata is returned."
         )
         return None, tuple(warnings)
+    warnings.extend(source_text.warnings)
     chosen = _find_article(source_text, article, urn, warnings) if article is not None else None
     body = chosen.text if chosen is not None else source_text.text
     if not include_annotations:
@@ -71,7 +73,9 @@ async def slice_norm_text(
     end = offset + max_chars
     truncated = end < len(body)
     next_cursor = Cursor(SOURCE, (end,), scope).encode() if truncated else None
-    piece = TextSlice(body[offset:end], truncated, next_cursor, source_text.url, chosen)
+    piece = TextSlice(
+        body[offset:end], truncated, next_cursor, source_text.url, source_text.source, chosen
+    )
     return piece, tuple(warnings)
 
 
@@ -94,15 +98,15 @@ def _find_article(text: NormText, key: str, urn: Urn, warnings: list[str]) -> Ar
     found, occurrences = text.find_article(key)
     if found is None:
         raise not_found(
-            TEXT_SOURCE,
-            f"The parser could not locate {article_label(key)} in the {TEXT_SOURCE} text of "
+            text.source,
+            f"The parser could not locate {article_label(key)} in the {text.source} text of "
             f"{urn.text}.",
             "The article may not exist or may be laid out in a way this server cannot "
             "read; call again with include_text to read the norm text.",
         )
     if occurrences > 1:
         warnings.append(
-            f"{found.label} appears {occurrences} times in the Planalto text (old wordings "
-            "are kept struck through); the first current one is returned."
+            f"{found.label} appears {occurrences} times in the {text.source} text (old wordings "
+            "may be kept struck through); the first current one is returned."
         )
     return found

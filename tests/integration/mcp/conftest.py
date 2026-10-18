@@ -8,6 +8,7 @@ from fastmcp import Client
 
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.http import HttpSettings
+from juris_bridge_mcp.config.legin import LeginSettings
 from juris_bridge_mcp.config.planalto import PlanaltoSettings
 from juris_bridge_mcp.config.senado import SenadoSettings
 from juris_bridge_mcp.config.server import ServerSettings
@@ -16,6 +17,7 @@ from juris_bridge_mcp.infrastructure.bootstrap import build_http_app, build_serv
 DATAJUD_FIXTURES = Path(__file__).parents[2] / "contract/providers/datajud/fixtures"
 SENADO_FIXTURES = Path(__file__).parents[2] / "contract/providers/senado/fixtures"
 PLANALTO_FIXTURES = Path(__file__).parents[2] / "contract/providers/planalto/fixtures"
+LEGIN_FIXTURES = Path(__file__).parents[2] / "contract/providers/legin/fixtures"
 
 
 def datajud_fixture(name: str) -> dict:
@@ -81,6 +83,47 @@ class FakePlanalto:
         return httpx.Response(200, content=body, headers={"Content-Type": "text/html"})
 
 
+class FakeLegin:
+    """Scripted LexML and Câmara Legin: `pages` maps a URL path to its HTML bytes.
+
+    A path not in `pages` answers the LexML "urn não encontrada" page for `/urn/...` and 404
+    for any other; `requests` records calls.
+    """
+
+    def __init__(self) -> None:
+        self.requests: list[httpx.Request] = []
+        self.pages: dict[str, bytes] = {}
+
+    @staticmethod
+    def fixture(name: str) -> bytes:
+        return (LEGIN_FIXTURES / name).read_bytes()
+
+    def serve_cpc(self) -> None:
+        """Script the whole chain for Lei 13.105/2015 (the Código de Processo Civil)."""
+        folder = "/legin/fed/lei/2015/lei-13105-16-marco-2015-780273-"
+        self.pages["/urn/urn:lex:br:federal:lei:2015-03-16;13105"] = self.fixture(
+            "lexml_lei_13105_2015.htm"
+        )
+        self.pages[folder + "norma-pl.html"] = self.fixture("camara_sheet_lei_13105_2015.htm")
+        self.pages[folder + "normaatualizada-pl.html"] = self.fixture(
+            "camara_text_lei_13105_2015.htm"
+        )
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        body = self.pages.get(request.url.path)
+        if body is None and request.url.path.startswith("/urn/"):
+            body = self.fixture("lexml_urn_not_found.htm")
+        if body is None:
+            return httpx.Response(404, content=b"not found")
+        return httpx.Response(200, content=body, headers={"Content-Type": "text/html"})
+
+
+@pytest.fixture
+def legin() -> FakeLegin:
+    return FakeLegin()
+
+
 @pytest.fixture
 def planalto() -> FakePlanalto:
     return FakePlanalto()
@@ -97,14 +140,17 @@ def datajud() -> FakeDatajud:
 
 
 @pytest.fixture
-def server_args(datajud, senado, planalto) -> dict:
+def server_args(datajud, senado, planalto, legin) -> dict:
     """Settings and transport the root server is built with: no network, fake Sources."""
     senado_host = httpx.URL(SenadoSettings().base_url).host
     planalto_host = httpx.URL(PlanaltoSettings().base_url).host
+    legin_hosts = {httpx.URL(LeginSettings().lexml_base_url).host, "www2.camara.leg.br"}
 
     def route(request: httpx.Request) -> httpx.Response:
         if request.url.host == senado_host:
             return senado(request)
+        if request.url.host in legin_hosts:
+            return legin(request)
         return planalto(request) if request.url.host == planalto_host else datajud(request)
 
     return {
@@ -112,6 +158,7 @@ def server_args(datajud, senado, planalto) -> dict:
         "http": HttpSettings(),
         "senado": SenadoSettings(),
         "planalto": PlanaltoSettings(),
+        "legin": LeginSettings(),
         "transport": httpx.MockTransport(route),
     }
 

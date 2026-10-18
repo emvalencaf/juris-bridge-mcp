@@ -1,4 +1,4 @@
-"""The text of a Norm as the Planalto publishes it, and how to address one article of it."""
+"""The text of a Norm as a Source publishes it, and how to address one article of it."""
 
 import re
 from dataclasses import dataclass, field
@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from juris_bridge_mcp.domain.errors import invalid_argument
 
 TEXT_SOURCE = "planalto"
+LEGIN_SOURCE = "camara_legin"
+MAX_RANGE_ARTICLES = 1_000
 DEFAULT_MAX_CHARS = 20_000
 MAX_MAX_CHARS = 100_000
 
@@ -22,6 +24,10 @@ _REFERENCE = re.compile(
 # In the text the suffix hugs the number (`Art. 12-A`); `Art. 12 - A` is a dash and a sentence.
 _LINE_START = re.compile(
     r"art\.?\s*(?:(\d[\d.]*)[º°o]?(?:-([A-Za-z]{1,2})\b)?|(únic[oa]))", re.IGNORECASE
+)
+# `Arts. 757 a 777. (Revogados ...)`: a stub that stands for every article of the range.
+_RANGE_START = re.compile(
+    r"arts\.?\s*(\d[\d.]*)[º°o]?\s+(a|ao|e)\s+(\d[\d.]*)[º°o]?\b", re.IGNORECASE
 )
 
 
@@ -64,6 +70,24 @@ def article_start(line: str) -> str | None:
     return _key(*match.groups()) if match else None
 
 
+def article_range(line: str) -> tuple[str, ...] | None:
+    """Return the keys a range stub line stands for, or `None` for any other line.
+
+    `Arts. 757 a 777.` covers every number between; `Arts. 4º e 5º` covers just the two. A
+    range that runs backwards or past `MAX_RANGE_ARTICLES` articles is not taken for a stub.
+    """
+    match = _RANGE_START.match(line.strip())
+    if match is None:
+        return None
+    first, joint, last = match.groups()
+    start, end = int(first.replace(".", "")), int(last.replace(".", ""))
+    if joint.lower() == "e":
+        return (str(start), str(end))
+    if not 0 < end - start < MAX_RANGE_ARTICLES:
+        return None
+    return tuple(str(number) for number in range(start, end + 1))
+
+
 def article_label(key: str) -> str:
     """Return the conventional label of an article key, e.g. `5` -> `Art. 5º`."""
     if key == "unico":
@@ -100,12 +124,18 @@ class Article:
 
 @dataclass(frozen=True)
 class NormText:
-    """The plain text of a norm, with its articles located."""
+    """The plain text of a norm, with its articles located.
+
+    `source` names who published it; `warnings` are what the Source's own pages say about how far
+    the text can be trusted, passed on to the agent.
+    """
 
     text: str
     articles: tuple[Article, ...]
     url: str
     retrieved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    source: str = TEXT_SOURCE
+    warnings: tuple[str, ...] = ()
 
     def find_article(self, key: str) -> tuple[Article | None, int]:
         """Return the article for `key` and how many times it appears in the text.

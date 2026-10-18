@@ -1,4 +1,4 @@
-"""Reads a Planalto norm page (FrontPage-era HTML) into plain text with its articles located."""
+"""Reads a norm page (Planalto or Câmara Legin HTML) into plain text with its articles located."""
 
 import re
 from html.parser import HTMLParser
@@ -9,6 +9,7 @@ from juris_bridge_mcp.domain.legislation_text import (
     SUPERSEDED,
     Article,
     NormText,
+    article_range,
     article_start,
     strip_annotations,
 )
@@ -79,26 +80,46 @@ class _Lines(HTMLParser):
         self._chunks.append(data)
 
 
+def decode_page(content: bytes) -> str:
+    """Decode UTF-8 when the page is, else Windows-1252, which the older pages use."""
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError:
+        return content.decode("cp1252", errors="replace")
+
+
+def visible_lines(html: str) -> list[tuple[str, bool]]:
+    """Return the visible lines of a page, each flagged when it opens struck through."""
+    reader = _Lines()
+    reader.feed(html)
+    reader.close()
+    return reader.lines
+
+
 def parse_norm_text(html: str, *, url: str) -> NormText:
     """Return the plain text of the page at `url`, or raise `SchemaDrift` if it has no articles.
 
     A line that opens with `Art.` starts an article, which runs to the next article, to a
     heading (`CAPÍTULO`, `Seção`, or a line in capitals) or to the closing `Brasília, ...` line.
     The rubric title of the next article (`Lugar do crime`) that trails an article is left
-    out of it.
+    out of it. A range stub of revoked articles (`Arts. 757 a 777. (Revogados ...)`) opens one
+    article per number it covers.
     """
-    reader = _Lines()
-    reader.feed(html)
-    reader.close()
-    lines = reader.lines
+    lines = visible_lines(html)
     text = "\n".join(line for line, _ in lines)
     if len(text) < _MIN_TEXT_CHARS:
         raise SchemaDrift("the page holds almost no text")
     blocks: list[tuple[str, list[tuple[str, bool]]]] = []
     current: list[tuple[str, bool]] | None = None
     for line, struck in lines:
+        stub = article_range(line) if "revogad" in line.lower() else None
         key = article_start(line)
-        if key is not None:
+        if stub is not None:
+            if current is not None:
+                _drop_trailing_rubrics(current)
+            blocks.extend((number, [(line, struck)]) for number in stub)
+            current = None
+        elif key is not None:
             if current is not None:
                 _drop_trailing_rubrics(current)
             current = [(line, struck)]

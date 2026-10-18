@@ -9,11 +9,18 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Norm text from the Planalto (#28): `get_legislation` takes `include_text` (plain text sliced
+  by `max_chars`, default 20,000, with `truncated` and `next_text_cursor`; `content_kind:
+  full_text`) and `article` (one article such as `Art. 5º`, `121-A` or `Art. único`, with
+  `flags` `revoked` and `superseded` when the page marks them). An article the parser cannot
+  locate returns `not_found`; a Planalto refusal returns `source_blocked` and a page the
+  parser no longer reads returns `source_changed`. A norm with no locatable page returns
+  metadata and a warning. Adds `JURIS_BRIDGE_PLANALTO_*`.
 - `get_legislation` tool (#27): fetch a federal norm by URN Lex from the Senado `legislacao/urn`
   service: type, number, year, signature date, name, nickname, ementa, Citation,
   `publications` (Diário Oficial `edition`, page, column) and `relations`. Relations are
   collapsed per related norm and kind, sorted newest first and cut to `relations_limit` (default 25, max 100) with `relations_total`.
-  Content is `metadata`; `include_text` returns `not_covered` until the text slice lands (#28).
+  Content is `metadata` unless the text is asked for.
   An unknown URN returns `not_found`; `include_raw` works as in `get_case`.
 - `search_legislation` tool (#26): locate a federal norm by `type` (`lei`,
   `lei-complementar`, `decreto`, `decreto-lei`, `medida-provisoria`,

@@ -9,6 +9,7 @@ from juris_bridge_mcp.application.use_cases.get_legislation import (
 )
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 from juris_bridge_mcp.domain.legislation import Norm, NormRecord, Relation
+from juris_bridge_mcp.domain.legislation_text import Article, NormText
 
 URN = "urn:lex:br:federal:lei:2021-04-01;14133"
 NORM = Norm(URN, "lei", 14133, 2021, date(2021, 4, 1), "Lei nº 14.133 de 01/04/2021")
@@ -24,6 +25,21 @@ class _Repository:
         return self.record
 
 
+class _TextSource:
+    def __init__(self, text=None):
+        self.text = text
+        self.fetched = 0
+
+    async def fetch(self, urn):
+        self.fetched += 1
+        return self.text
+
+
+def _text(*articles: Article, full: str | None = None) -> NormText:
+    body = full if full is not None else "\n".join(a.text for a in articles)
+    return NormText(body, tuple(articles), "https://planalto.test/l1.htm")
+
+
 def _record(relations=(), raw=None) -> NormRecord:
     return NormRecord(NORM, (), tuple(relations), raw if raw is not None else {})
 
@@ -34,14 +50,14 @@ def _relation(day: int, kind="Declaração de Alteração Permanente") -> Relati
 
 async def _failure(record, **arguments) -> ToolFailure:
     with pytest.raises(ToolFailure) as caught:
-        await get_legislation(_Repository(record), **arguments)
+        await get_legislation(_Repository(record), _TextSource(), **arguments)
     return caught.value
 
 
 async def test_fetches_the_norm_by_urn():
     repository = _Repository(_record())
 
-    result = await get_legislation(repository, urn=f" {URN} ")
+    result = await get_legislation(repository, _TextSource(), urn=f" {URN} ")
 
     assert repository.asked == [URN] and result.norm == NORM
     assert result.relations == () and result.relations_total == 0 and result.raw is None
@@ -50,7 +66,7 @@ async def test_fetches_the_norm_by_urn():
 async def test_keeps_the_most_recent_relations_up_to_the_limit():
     record = _record([_relation(d) for d in (3, 9, 1, 7)])
 
-    result = await get_legislation(_Repository(record), urn=URN, relations_limit=2)
+    result = await get_legislation(_Repository(record), _TextSource(), urn=URN, relations_limit=2)
 
     assert [r.norm_id for r in result.relations] == ["9", "7"]
     assert result.relations_total == 4
@@ -59,7 +75,7 @@ async def test_keeps_the_most_recent_relations_up_to_the_limit():
 async def test_collapses_a_norm_repeated_with_the_same_kind():
     record = _record([_relation(5), _relation(5), _relation(5, kind="Declaração de Veto Original")])
 
-    result = await get_legislation(_Repository(record), urn=URN)
+    result = await get_legislation(_Repository(record), _TextSource(), urn=URN)
 
     assert result.relations_total == 2 and DEFAULT_RELATIONS_LIMIT == 25
 
@@ -84,14 +100,139 @@ async def test_relations_limit_is_bounded(limit):
     assert failure.code is ErrorCode.INVALID_ARGUMENT
 
 
-async def test_the_text_is_not_available_yet():
-    failure = await _failure(_record(), urn=URN, include_text=True)
+async def test_no_text_is_fetched_unless_asked_for():
+    source = _TextSource(_text(Article("1", "Art. 1º Text.")))
 
-    assert failure.code is ErrorCode.NOT_COVERED
+    result = await get_legislation(_Repository(_record()), source, urn=URN)
+
+    assert result.text is None and source.fetched == 0
+
+
+async def test_include_text_slices_the_plain_text_and_hands_back_a_cursor():
+    source = _TextSource(_text(full="abcdefghij"))
+    repository = _Repository(_record())
+
+    first = await get_legislation(repository, source, urn=URN, include_text=True, max_chars=4)
+    second = await get_legislation(
+        repository,
+        source,
+        urn=URN,
+        include_text=True,
+        max_chars=4,
+        text_cursor=first.text.next_cursor,
+    )
+    last = await get_legislation(
+        repository,
+        source,
+        urn=URN,
+        include_text=True,
+        max_chars=4,
+        text_cursor=second.text.next_cursor,
+    )
+
+    assert (first.text.text, first.text.truncated) == ("abcd", True)
+    assert (second.text.text, second.text.truncated) == ("efgh", True)
+    assert (last.text.text, last.text.truncated, last.text.next_cursor) == ("ij", False, None)
+    assert last.text.url == "https://planalto.test/l1.htm"
+
+
+async def test_text_that_fits_is_not_truncated():
+    result = await get_legislation(
+        _Repository(_record()), _TextSource(_text(full="short")), urn=URN, include_text=True
+    )
+
+    assert (
+        result.text.text == "short"
+        and not result.text.truncated
+        and result.text.next_cursor is None
+    )
+
+
+async def test_an_article_returns_only_that_article_in_any_spelling():
+    text = _text(Article("4", "Art. 4º Four."), Article("5", "Art. 5º Five.", ("revoked",)))
+
+    result = await get_legislation(
+        _Repository(_record()), _TextSource(text), urn=URN, article="art 5"
+    )
+
+    assert result.text.text == "Art. 5º Five." and result.text.article.flags == ("revoked",)
+    assert result.text.article.label == "Art. 5º"
+
+
+async def test_an_article_the_parser_cannot_locate_is_not_found():
+    text = _text(Article("4", "Art. 4º Four."))
+
+    with pytest.raises(ToolFailure) as caught:
+        await get_legislation(_Repository(_record()), _TextSource(text), urn=URN, article="Art. 9º")
+
+    assert caught.value.code is ErrorCode.NOT_FOUND and caught.value.source == "planalto"
+    assert "Art. 9º" in caught.value.message
+
+
+async def test_a_repeated_article_returns_the_first_current_one_with_a_warning():
+    text = _text(
+        Article("2", "Art. 2º old", ("superseded",)),
+        Article("2", "Art. 2º new"),
+        Article("2", "Art. 2º other"),
+    )
+
+    result = await get_legislation(_Repository(_record()), _TextSource(text), urn=URN, article="2")
+
+    assert result.text.text == "Art. 2º new" and "3 times" in result.warnings[0]
+
+
+async def test_a_norm_with_no_text_page_returns_metadata_and_a_warning():
+    result = await get_legislation(
+        _Repository(_record()), _TextSource(None), urn=URN, include_text=True
+    )
+
+    assert result.text is None and "only metadata" in result.warnings[0]
+
+
+async def test_an_article_slice_continues_with_its_own_cursor():
+    text = _text(Article("1", "Art. 1º abcdef"))
+    repository, source = _Repository(_record()), _TextSource(text)
+
+    first = await get_legislation(repository, source, urn=URN, article="1", max_chars=10)
+    rest = await get_legislation(
+        repository, source, urn=URN, article="1", max_chars=10, text_cursor=first.text.next_cursor
+    )
+
+    assert first.text.text + rest.text.text == "Art. 1º abcdef" and not rest.text.truncated
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        {"max_chars": 0},
+        {"max_chars": 100_001},
+        {"article": "section five"},
+        {"text_cursor": "abc"},
+        {"include_text": True, "text_cursor": "not-a-cursor"},
+    ],
+)
+async def test_bad_text_arguments_are_invalid(arguments):
+    failure = await _failure(_record(), urn=URN, **arguments)
+
+    assert failure.code is ErrorCode.INVALID_ARGUMENT
+
+
+async def test_a_cursor_for_another_article_is_rejected():
+    repository, source = _Repository(_record()), _TextSource(_text(Article("1", "Art. 1º abcdef")))
+    first = await get_legislation(repository, source, urn=URN, article="1", max_chars=3)
+
+    with pytest.raises(ToolFailure) as caught:
+        await get_legislation(
+            repository, source, urn=URN, include_text=True, text_cursor=first.text.next_cursor
+        )
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT
 
 
 async def test_raw_is_attached_on_request_and_marked_unstable():
-    result = await get_legislation(_Repository(_record(raw={"a": 1})), urn=URN, include_raw=True)
+    result = await get_legislation(
+        _Repository(_record(raw={"a": 1})), _TextSource(), urn=URN, include_raw=True
+    )
 
     assert result.raw == {"unstable": True, "payload": {"a": 1}}
 
@@ -99,7 +240,7 @@ async def test_raw_is_attached_on_request_and_marked_unstable():
 async def test_raw_larger_than_the_cap_is_dropped_with_a_warning():
     record = _record(raw={"blob": "x" * 300_000})
 
-    result = await get_legislation(_Repository(record), urn=URN, include_raw=True)
+    result = await get_legislation(_Repository(record), _TextSource(), urn=URN, include_raw=True)
 
     assert result.raw is None and "raw payload omitted" in result.warnings[0]
     assert len(json.dumps(record.raw)) > 256 * 1024

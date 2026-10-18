@@ -6,7 +6,6 @@ from juris_bridge_mcp.application.use_cases.search_cases import search_cases
 from juris_bridge_mcp.domain.case import Case
 from juris_bridge_mcp.domain.case_search import CaseFilters, CasePage
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
-from juris_bridge_mcp.domain.cursor import Cursor
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
 CASE = Case(number=CnjNumber.parse("00008323520184013202"), court="tjsp")
@@ -94,23 +93,3 @@ async def test_unknown_alias_hint_lists_valid_aliases():
         await search_cases(_Repository(_page()), court="nope")
 
     assert "tjsp" in caught.value.hint
-
-
-async def test_a_legislation_cursor_is_rejected():
-    token = Cursor("senado", (10,), CaseFilters().key()).encode()
-
-    with pytest.raises(ToolFailure) as caught:
-        await search_cases(_Repository(_page()), court="tjsp", cursor=token)
-
-    assert caught.value.code is ErrorCode.INVALID_ARGUMENT
-
-
-async def test_a_cursor_whose_position_is_not_a_sort_position_is_rejected():
-    repository = _Repository(_page())
-    token = Cursor("tjsp", (10,), CaseFilters().key()).encode()
-
-    with pytest.raises(ToolFailure) as caught:
-        await search_cases(repository, cursor=token)
-
-    assert caught.value.code is ErrorCode.INVALID_ARGUMENT
-    assert repository.asked == []

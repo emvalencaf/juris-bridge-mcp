@@ -45,6 +45,14 @@ class Cursor:
             case _:
                 raise _invalid()
 
+    def sort_position(self) -> tuple[int, str]:
+        """Return the position as a Source sort position, or raise `invalid_argument`."""
+        match self.position:
+            case (int() as sort_value, str() as tiebreaker):
+                return sort_value, tiebreaker
+            case _:
+                raise _invalid()
+
     @classmethod
     def decode(cls, token: str, scopes: tuple[str, ...]) -> "Cursor":
         """Parse a token, or raise `invalid_argument` for anything outside `scopes`."""

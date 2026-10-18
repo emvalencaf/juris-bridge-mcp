@@ -58,11 +58,7 @@ async def search_cases(
                 "The cursor was issued for a different court or different filters.",
                 hint="Repeat the same court and filters, or start again without a cursor.",
             )
-        match decoded.position:
-            case (int() as timestamp, str() as case_id):
-                after = (timestamp, case_id)
-            case _:
-                raise invalid_argument("The cursor is not valid.")
+        after = decoded.sort_position()
     elif court is None:
         raise invalid_argument(
             "court is required.", hint="Pass an alias such as tjsp, trf1 or stj."

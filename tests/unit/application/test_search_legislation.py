@@ -88,6 +88,6 @@ async def test_a_case_cursor_is_rejected():
 async def test_a_cursor_with_a_non_numeric_offset_is_rejected():
     from juris_bridge_mcp.domain.cursor import Cursor
 
-    token = Cursor("senado", ("x",), LegislationFilters("lei", None, 2021).key()).encode()
+    token = Cursor("senado", ("x", 0), LegislationFilters("lei", None, 2021).key()).encode()
 
     await _invalid(norm_type="lei", year=2021, cursor=token)

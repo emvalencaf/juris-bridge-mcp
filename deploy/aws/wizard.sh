@@ -3,6 +3,9 @@
 # Run from anywhere: deploy/aws/wizard.sh. Re-running is safe; every step is idempotent.
 set -euo pipefail
 
+# AWS CLI v2 pipes output through `less`, which would stop the wizard at "(END)".
+export AWS_PAGER=""
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 TFVARS="$HERE/terraform.tfvars"
@@ -19,7 +22,7 @@ say "1/6 Prerequisites"
 for tool in aws terraform docker openssl; do
   command -v "$tool" >/dev/null || { echo "missing: $tool"; exit 1; }
 done
-aws sts get-caller-identity --query Arn --output text \
+echo "AWS identity: $(aws sts get-caller-identity --query Arn --output text)" \
   || { echo "No AWS credentials. Run 'aws configure' or 'aws sso login', then re-run."; exit 1; }
 
 say "2/6 Settings"

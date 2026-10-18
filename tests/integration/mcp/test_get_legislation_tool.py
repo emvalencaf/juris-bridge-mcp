@@ -100,6 +100,24 @@ async def test_the_text_is_read_in_pieces_until_done(mcp_client, lei_14133):
     assert len(pieces) > 1 and "".join(pieces) == whole["text"] and cursor is None
 
 
+async def test_slices_and_articles_reuse_the_page_the_first_call_fetched(
+    mcp_client, lei_14133, planalto
+):
+    first = await _call(mcp_client, urn=URN, include_text=True, max_chars=3000)
+    fetched = len(planalto.requests)
+
+    await _call(
+        mcp_client,
+        urn=URN,
+        include_text=True,
+        max_chars=3000,
+        text_cursor=first["next_text_cursor"],
+    )
+    await _call(mcp_client, urn=URN, article="Art. 1º")
+
+    assert fetched > 0 and len(planalto.requests) == fetched
+
+
 async def test_the_default_slice_is_20000_characters(mcp_client, lei_14133):
     norm = await _call(mcp_client, urn=URN, include_text=True)
 

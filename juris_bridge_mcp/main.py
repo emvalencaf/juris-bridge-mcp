@@ -9,6 +9,7 @@ from juris_bridge_mcp.adapters.wide_event import configure_logger
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.http import HttpSettings
 from juris_bridge_mcp.config.logging import LogSettings
+from juris_bridge_mcp.config.senado import SenadoSettings
 from juris_bridge_mcp.config.server import ServerSettings
 from juris_bridge_mcp.infrastructure.bootstrap import build_http_app
 
@@ -30,6 +31,7 @@ def main() -> None:
         settings.keys(),
         LogSettings().environment(),
         datajud=DatajudSettings(),
+        senado=SenadoSettings(),
         http=HttpSettings(),
     )
     # uvicorn's access log would add a second line per request next to the wide event.

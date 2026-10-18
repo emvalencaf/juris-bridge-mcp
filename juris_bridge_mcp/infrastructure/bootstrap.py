@@ -15,18 +15,23 @@ from juris_bridge_mcp.adapters.coverage_mcp_tools import build_coverage_server
 from juris_bridge_mcp.adapters.datajud.case_repository import DatajudCaseRepository
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
 from juris_bridge_mcp.adapters.in_memory_ttl_cache import InMemoryTtlCache
+from juris_bridge_mcp.adapters.legislation.legislation_mcp_tools import build_legislation_server
 from juris_bridge_mcp.adapters.rate_limiter import RateLimiter
+from juris_bridge_mcp.adapters.senado.legislation_repository import SenadoLegislationRepository
 from juris_bridge_mcp.adapters.static_coverage_catalog import StaticCoverageCatalog
 from juris_bridge_mcp.adapters.wide_event_middleware import WideEventMiddleware
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.http import HttpSettings
+from juris_bridge_mcp.config.senado import SenadoSettings
 from juris_bridge_mcp.domain.courts import SOURCE as DATAJUD
+from juris_bridge_mcp.domain.legislation import SOURCE as SENADO
 
 
 def build_server(
     *,
     datajud: DatajudSettings,
     http: HttpSettings,
+    senado: SenadoSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> FastMCP:
     """Build the root FastMCP server with every concept mounted (no namespace).
@@ -45,6 +50,19 @@ def build_server(
         max_retries=http.max_retries,
         max_wait_seconds=http.max_wait_seconds,
     )
+    senado = senado or SenadoSettings()
+    senado_upstream = UpstreamClient(
+        build_http_client(timeout_seconds=senado.timeout_seconds, transport=transport),
+        source=SENADO,
+        limiter=RateLimiter(
+            SENADO,
+            max_requests=senado.requests_per_minute,
+            window_seconds=60,
+            max_wait_seconds=http.max_wait_seconds,
+        ),
+        max_retries=http.max_retries,
+        max_wait_seconds=http.max_wait_seconds,
+    )
     cases = CachedCaseRepository(
         DatajudCaseRepository(
             upstream, base_url=datajud.base_url, api_key=datajud.api_key.get_secret_value()
@@ -55,6 +73,11 @@ def build_server(
     app = FastMCP("juris-bridge-mcp")
     app.mount(build_coverage_server(StaticCoverageCatalog()))
     app.mount(build_cases_server(cases))
+    app.mount(
+        build_legislation_server(
+            SenadoLegislationRepository(senado_upstream, base_url=senado.base_url)
+        )
+    )
     return app
 
 
@@ -64,10 +87,11 @@ def build_http_app(
     *,
     datajud: DatajudSettings,
     http: HttpSettings,
+    senado: SenadoSettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> ASGIApp:
     """Build the stateless, JSON-response ASGI app: wide event outermost, then Bearer auth."""
-    return build_server(datajud=datajud, http=http, transport=transport).http_app(
+    return build_server(datajud=datajud, http=http, senado=senado, transport=transport).http_app(
         path="/mcp",
         stateless_http=True,
         json_response=True,

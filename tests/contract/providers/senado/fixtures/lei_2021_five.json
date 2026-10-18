@@ -1,0 +1,75 @@
+{
+  "ListaDocumento": {
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaDocumentov3.xsd",
+    "Metadados": {
+      "Versao": "18/10/2026 03:11:08",
+      "VersaoServico": "3",
+      "DataVersaoServico": "2017-02-01",
+      "DescricaoDataSet": "Obtém a lista de Legislação Federal com base nos parâmetros informados."
+    },
+    "documentos": {
+      "documento": [
+        {
+          "id": "35395664",
+          "tipo": "LEI-n",
+          "descricao": "Lei Numerada",
+          "numero": "14288",
+          "norma": "LEI-14288-2021-12-31",
+          "normaNome": "Lei nº 14.288 de 31/12/2021",
+          "ementa": "Altera a Lei nº 12.546, de 14 de dezembro de 2011, para prorrogar o prazo referente à contribuição previdenciária sobre a receita bruta, e a Lei nº 10.865, de 30 de abril de 2004, para prorrogar o prazo referente a acréscimo de alíquota da Contribuição Social para o Financiamento da Seguridade Social devida pelo Importador de Bens Estrangeiros ou Serviços do Exterior (Cofins-Importação), nos termos que especifica.",
+          "dataassinatura": "31/12/2021",
+          "anoassinatura": "2021",
+          "apelido": "LEI-14288-2021-12-31"
+        },
+        {
+          "id": "35395515",
+          "tipo": "LEI-n",
+          "descricao": "Lei Numerada",
+          "numero": "14287",
+          "norma": "LEI-14287-2021-12-31",
+          "normaNome": "Lei nº 14.287 de 31/12/2021",
+          "ementa": "Altera a Lei nº 8.989, de 24 de fevereiro de 1995, para prorrogar a isenção do Imposto sobre Produtos Industrializados (IPI) na aquisição de automóveis de passageiros e para estender o benefício para as pessoas com deficiência auditiva.",
+          "dataassinatura": "31/12/2021",
+          "anoassinatura": "2021",
+          "apelido": "LEI-14287-2021-12-31"
+        },
+        {
+          "id": "35368534",
+          "tipo": "LEI-n",
+          "descricao": "Lei Numerada",
+          "numero": "14285",
+          "norma": "LEI-14285-2021-12-29",
+          "normaNome": "Lei nº 14.285 de 29/12/2021",
+          "ementa": "Altera as Leis nºs 12.651, de 25 de maio de 2012, que dispõe sobre a proteção da vegetação nativa, 11.952, de 25 de junho de 2009, que dispõe sobre regularização fundiária em terras da União, e 6.766, de 19 de dezembro de 1979, que dispõe sobre o parcelamento do solo urbano, para dispor sobre as áreas de preservação permanente no entorno de cursos d'água em áreas urbanas consolidadas.",
+          "dataassinatura": "29/12/2021",
+          "anoassinatura": "2021",
+          "apelido": "LEI-14285-2021-12-29"
+        },
+        {
+          "id": "35368486",
+          "tipo": "LEI-n",
+          "descricao": "Lei Numerada",
+          "numero": "14283",
+          "norma": "LEI-14283-2021-12-29",
+          "normaNome": "Lei nº 14.283 de 29/12/2021",
+          "ementa": "Abre ao Orçamento Fiscal da União, em favor dos Ministérios da Agricultura, Pecuária e Abastecimento e da Ciência, Tecnologia e Inovações, crédito suplementar no valor de R$ 279.387.421,00, para reforço de dotações constantes da Lei Orçamentária vigente.",
+          "dataassinatura": "29/12/2021",
+          "anoassinatura": "2021",
+          "apelido": "LEI-14283-2021-12-29"
+        },
+        {
+          "id": "35368372",
+          "tipo": "LEI-n",
+          "descricao": "Lei Numerada",
+          "numero": "14284",
+          "norma": "LEI-14284-2021-12-29",
+          "normaNome": "Lei nº 14.284 de 29/12/2021",
+          "ementa": "Institui o Programa Auxílio Brasil e o Programa Alimenta Brasil; define metas para taxas de pobreza; altera a Lei nº 8.742, de 7 de dezembro de 1993; revoga a Lei nº 10.836, de 9 de janeiro de 2004, e dispositivos das Leis n°s 10.696, de 2 de julho de 2003, 12.512, de 14 de outubro de 2011, e 12.722, de 3 de outubro de 2012; e dá outras providências.",
+          "dataassinatura": "29/12/2021",
+          "anoassinatura": "2021",
+          "apelido": "LEI-14284-2021-12-29"
+        }
+      ]
+    }
+  }
+}

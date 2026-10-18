@@ -76,10 +76,9 @@ def stop(token: Token[WideEvent | None]) -> None:
 
 def _merge(section: str, **fields: Any) -> None:
     event = _current.get()
-    if event is not None:
-        event.fields.setdefault(section, {}).update(
-            {k: v for k, v in fields.items() if v is not None}
-        )
+    present = {k: v for k, v in fields.items() if v is not None}
+    if event is not None and present:
+        event.fields.setdefault(section, {}).update(present)
 
 
 def annotate_request(*, method: str, user_agent: str | None) -> None:

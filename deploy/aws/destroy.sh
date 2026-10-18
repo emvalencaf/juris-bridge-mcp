@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Removes everything deploy/aws/ created. Run from the checkout that ran wizard.sh.
+# Removes everything deploy/aws/ created. Run from the checkout that ran deploy.sh.
 set -euo pipefail
 
 export AWS_PAGER=""

@@ -11,7 +11,7 @@ Lambda event.
 Needs `aws` (with credentials), `terraform`, `docker` and `openssl`.
 
 ```bash
-deploy/aws/wizard.sh
+deploy/aws/deploy.sh
 ```
 
 It creates the ECR repository, builds and pushes `deploy/aws/Dockerfile`, applies Terraform and

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Guided deploy of the Reference deployment (ADR 0003): ECR repo -> image -> Lambda + Function URL.
-# Run from anywhere: deploy/aws/wizard.sh. Re-running is safe; every step is idempotent.
+# Run from anywhere: deploy/aws/deploy.sh. Re-running is safe; every step is idempotent.
 set -euo pipefail
 
-# AWS CLI v2 pipes output through `less`, which would stop the wizard at "(END)".
+# AWS CLI v2 pipes output through `less`, which would stop the script at "(END)".
 export AWS_PAGER=""
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

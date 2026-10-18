@@ -93,7 +93,7 @@ docker run --rm -p 8000:8000 --env-file .env juris-bridge-mcp
 ```
 
 The AWS Reference deployment (Lambda + Function URL, Terraform) lives in
-[`deploy/aws/`](deploy/aws/README.md); run `deploy/aws/wizard.sh`.
+[`deploy/aws/`](deploy/aws/README.md); run `deploy/aws/deploy.sh`.
 
 ### Known limits
 

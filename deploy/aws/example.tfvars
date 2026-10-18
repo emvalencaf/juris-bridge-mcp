@@ -1,4 +1,4 @@
-# Copy to terraform.tfvars (git-ignored). The wizard writes it for you.
+# Copy to terraform.tfvars (git-ignored). deploy.sh writes it for you.
 region          = "us-east-1"
 environment     = "prod"
 architecture    = "arm64"

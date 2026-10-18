@@ -28,6 +28,9 @@ heading when `development` is released to `master`.
   Reference deployment), each as an HTML source in `code/` and a rendered SVG in `assets/`, with
   the official AWS Architecture Icons for the deployment one. A release PR to `master` must
   regenerate any diagram whose module, flow or ADR changed.
+- README (#32): a tool overview, a quick start that ends with a working MCP client configuration,
+  the diagrams embedded (architecture, request flow, `get_legislation` fallback; the AWS one in
+  `deploy/aws/README.md`), the Apache-2.0 licence and a responsible-use summary.
 - Licence and responsible use (#32): the Apache-2.0 `LICENSE`, `RESPONSIBLE_USE.md` (LGPD,
   DataJud non-commercial terms, no redistribution, a shared instance needs written CNJ
   authorization, no profiling, nothing sensitive logged, with a README-ready summary) and

@@ -14,3 +14,7 @@ class PlanaltoSettings(EnvSettings):
     timeout_seconds: float = 30
     # No rate limit is published; stay polite with a page that can weigh megabytes.
     requests_per_minute: int = 60
+    # Seconds a parsed norm text is kept in memory, so paging a long norm fetches it once.
+    cache_ttl_seconds: float = 3600
+    # Pages weigh megabytes once parsed, so keep few of them.
+    cache_max_entries: int = 16

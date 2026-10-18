@@ -16,6 +16,7 @@ from juris_bridge_mcp.adapters.datajud.case_repository import DatajudCaseReposit
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
 from juris_bridge_mcp.adapters.in_memory_ttl_cache import InMemoryTtlCache
 from juris_bridge_mcp.adapters.legislation.legislation_mcp_tools import build_legislation_server
+from juris_bridge_mcp.adapters.planalto.cached_norm_text_source import CachedNormTextSource
 from juris_bridge_mcp.adapters.planalto.norm_text_source import PlanaltoNormTextSource
 from juris_bridge_mcp.adapters.rate_limiter import RateLimiter
 from juris_bridge_mcp.adapters.senado.legislation_repository import SenadoLegislationRepository
@@ -87,7 +88,11 @@ def build_server(
     app.mount(
         build_legislation_server(
             SenadoLegislationRepository(senado_upstream, base_url=senado.base_url),
-            PlanaltoNormTextSource(planalto_upstream, base_url=planalto.base_url),
+            CachedNormTextSource(
+                PlanaltoNormTextSource(planalto_upstream, base_url=planalto.base_url),
+                InMemoryTtlCache(max_entries=planalto.cache_max_entries),
+                ttl_seconds=planalto.cache_ttl_seconds,
+            ),
         )
     )
     return app

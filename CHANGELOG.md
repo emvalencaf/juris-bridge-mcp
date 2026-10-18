@@ -9,6 +9,10 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Norm text cache (#42): the parsed Planalto text is kept per URN (default 1 hour, 16 norms;
+  `JURIS_BRIDGE_PLANALTO_CACHE_TTL_SECONDS`, `JURIS_BRIDGE_PLANALTO_CACHE_MAX_ENTRIES`), so
+  paging a long norm or asking for several articles fetches the page once and skips the
+  404 probes for the consolidated name. The cache is per warm environment.
 - Norm text from the Planalto (#28): `get_legislation` takes `include_text` (plain text sliced
   by `max_chars`, default 20,000, with `truncated` and `next_text_cursor`; `content_kind:
   full_text`) and `article` (one article such as `Art. 5º`, `121-A` or `Art. único`, with

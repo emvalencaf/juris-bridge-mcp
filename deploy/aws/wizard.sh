@@ -23,11 +23,16 @@ aws sts get-caller-identity --query Arn --output text \
   || { echo "No AWS credentials. Run 'aws configure' or 'aws sso login', then re-run."; exit 1; }
 
 say "2/6 Settings"
-ask REGION "AWS region" "${AWS_REGION:-us-east-1}"
-ask ENVIRONMENT "Deployment name suffix" "prod"
-case "$(uname -m)" in aarch64|arm64) ARCH=arm64 ;; *) ARCH=x86_64 ;; esac
-ask ARCH "Lambda architecture, must match the machine building the image (arm64 or x86_64)" "$ARCH"
-if [[ ! -f "$TFVARS" ]] || confirm "Rewrite $TFVARS?"; then
+tfvar() { grep "^$1 " "$TFVARS" | cut -d'"' -f2; } # read a string value back from terraform.tfvars
+tf_escape() { local v="${1//\\/\\\\}"; printf '%s' "${v//\"/\\\"}"; }
+if [[ -f "$TFVARS" ]] && ! confirm "Rewrite $TFVARS?"; then
+  REGION="$(tfvar region)"; ENVIRONMENT="$(tfvar environment)"; ARCH="$(tfvar architecture)"
+  echo "Keeping $TFVARS: region $REGION, environment $ENVIRONMENT, architecture $ARCH."
+else
+  ask REGION "AWS region" "${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}"
+  ask ENVIRONMENT "Deployment name suffix" "prod"
+  case "$(uname -m)" in aarch64|arm64) ARCH=arm64 ;; *) ARCH=x86_64 ;; esac
+  ask ARCH "Lambda architecture, must match the machine building the image (arm64 or x86_64)" "$ARCH"
   API_KEYS="$(openssl rand -hex 32)"
   echo "Generated an API key for your MCP clients (shown once, also saved in terraform.tfvars):"
   echo "  $API_KEYS"
@@ -37,7 +42,7 @@ region          = "$REGION"
 environment     = "$ENVIRONMENT"
 architecture    = "$ARCH"
 api_keys        = "$API_KEYS"
-datajud_api_key = "$DATAJUD_KEY"
+datajud_api_key = "$(tf_escape "$DATAJUD_KEY")"
 commit_hash     = "$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 TFV
   )
@@ -75,7 +80,7 @@ echo "GET     -> $(curl -s -m 60 -o /dev/null -w '%{http_code}' -H "Authorizatio
 curl -s -m 60 -o /dev/null -w 'Cold start (initialize) -> %{http_code} in %{time_total}s\n' -X POST "$URL" \
   -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"wizard","version":"0"}}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"wizard","version":"0"}}}' || echo "Cold start request failed (timeout or network)."
 
 say "Done"
 echo "MCP URL: $URL"

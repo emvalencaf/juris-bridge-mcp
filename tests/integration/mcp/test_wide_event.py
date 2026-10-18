@@ -247,3 +247,14 @@ def test_configure_logger_writes_bare_json_to_stdout(capsys):
     logging.getLogger(wide_event.LOGGER_NAME).info(json.dumps({"a": 1}))
 
     assert capsys.readouterr().out == '{"a": 1}\n'
+
+
+def test_call_shape_drops_keys_outside_the_allow_list():
+    event = wide_event.WideEvent({}, "r")
+    token = wide_event.start(event)
+    try:
+        wide_event.annotate(call_shape={"limit": 5, "query": "João da Silva", "year": 2020})
+    finally:
+        wide_event.stop(token)
+
+    assert event.fields["call_shape"] == {"limit": 5, "year": 2020}

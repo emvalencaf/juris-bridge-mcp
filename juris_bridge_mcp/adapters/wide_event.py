@@ -10,12 +10,15 @@ import logging
 import sys
 from collections.abc import Mapping
 from contextvars import ContextVar, Token
-from typing import Any
+from typing import Any, Literal
 
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
 LOGGER_NAME = "juris_bridge_mcp.wide_event"
 MAX_UPSTREAM_ENTRIES = 10
+
+# The only keys a call shape may carry: names and sizes, never values from the request.
+CALL_SHAPE_KEYS = frozenset({"filters", "limit", "cursor_sent", "court_alias", "norm_type", "year"})
 
 _logger = logging.getLogger(LOGGER_NAME)
 _cold_start = True
@@ -100,11 +103,14 @@ def annotate(
     source: str | None = None,
     court: str | None = None,
     result_count: int | None = None,
-    cache: str | None = None,
+    cache: Literal["hit", "miss"] | None = None,
     paginated: bool | None = None,
     call_shape: Mapping[str, Any] | None = None,
 ) -> None:
-    """Add tool business context: only the shape of a call, never its content."""
+    """Add tool business context: only the shape of a call, never its content.
+
+    `call_shape` keeps only the keys in `CALL_SHAPE_KEYS`; any other key is dropped.
+    """
     event = _current.get()
     if event is None:
         return
@@ -118,7 +124,7 @@ def annotate(
         if value is not None:
             event.fields[key] = value
     if call_shape:
-        _merge("call_shape", **call_shape)
+        _merge("call_shape", **{k: v for k, v in call_shape.items() if k in CALL_SHAPE_KEYS})
 
 
 def record_failure(failure: ToolFailure) -> None:

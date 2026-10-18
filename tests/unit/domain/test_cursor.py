@@ -8,13 +8,13 @@ from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
 
 def test_round_trips_court_position_and_filters():
-    cursor = Cursor(court="tjsp", position=(1717858523378, "TJSP_G1_1"), filters_key="abc")
+    cursor = Cursor(scope="tjsp", position=(1717858523378, "TJSP_G1_1"), filters_key="abc")
 
-    assert Cursor.decode(cursor.encode()) == cursor
+    assert Cursor.decode(cursor.encode(), scopes=("tjsp",)) == cursor
 
 
 def test_token_is_opaque_url_safe_text():
-    token = Cursor(court="trf1", position=(1, "x"), filters_key="k").encode()
+    token = Cursor(scope="trf1", position=(1, "x"), filters_key="k").encode()
 
     assert token.isascii() and "=" not in token and "trf1" not in token
 
@@ -29,6 +29,7 @@ def test_token_is_opaque_url_safe_text():
         base64.urlsafe_b64encode(
             json.dumps({"c": "tjsp", "p": [True, "x"], "f": "k"}).encode()
         ).decode(),
+        base64.urlsafe_b64encode(json.dumps({"c": "tjsp", "p": [], "f": "k"}).encode()).decode(),
         base64.urlsafe_b64encode(
             json.dumps({"c": "nope", "p": [1, "x"], "f": "k"}).encode()
         ).decode(),
@@ -36,15 +37,15 @@ def test_token_is_opaque_url_safe_text():
 )
 def test_a_malformed_token_is_invalid_argument(token):
     with pytest.raises(ToolFailure) as caught:
-        Cursor.decode(token)
+        Cursor.decode(token, scopes=("tjsp",))
 
     assert caught.value.code is ErrorCode.INVALID_ARGUMENT
 
 
 def test_a_cursor_decodes_only_for_the_scopes_it_is_asked_for():
-    token = Cursor(court="senado", position=(10, 0), filters_key="k").encode()
+    token = Cursor(scope="senado", position=(10,), filters_key="k").encode()
 
-    assert Cursor.decode(token, scopes=("senado",)).position == (10, 0)
+    assert Cursor.decode(token, scopes=("senado",)).position == (10,)
     with pytest.raises(ToolFailure) as caught:
-        Cursor.decode(token)
+        Cursor.decode(token, scopes=("tjsp",))
     assert caught.value.code is ErrorCode.INVALID_ARGUMENT

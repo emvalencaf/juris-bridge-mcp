@@ -3,7 +3,7 @@
 from datetime import date
 
 from juris_bridge_mcp.domain.courts import DATAJUD_COURTS
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, not_covered
 from juris_bridge_mcp.domain.publication import SOURCE
 
 NOT_PUBLISHING = ("stf",)
@@ -30,13 +30,7 @@ STARTS = {
 
 
 def _not_covered(message: str) -> ToolFailure:
-    return ToolFailure(
-        ErrorCode.NOT_COVERED,
-        message,
-        source=SOURCE,
-        retryable=False,
-        hint="Use list_coverage to see which Courts are covered.",
-    )
+    return not_covered(SOURCE, message, "Use list_coverage to see which Courts are covered.")
 
 
 def resolve_djen_court(alias: str, date_to: date) -> str:

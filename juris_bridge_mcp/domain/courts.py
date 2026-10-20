@@ -1,6 +1,6 @@
 """The Courts DataJud publishes, by alias, and how a CNJ number's `J.TR` segments name them."""
 
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, not_covered
 
 # UFs in the CNJ's `TR` order (alphabetical by state name) for electoral and state courts.
 UFS = ("ac al ap am ba ce df es go ma mt ms mg pa pb pr pe pi rj rn rs ro rr sc se sp to").split()
@@ -35,12 +35,10 @@ _ALIASES = {"tre-dft": "tre-df"}
 
 def stf_not_covered() -> ToolFailure:
     """The failure for STF Cases, which DataJud does not publish."""
-    return ToolFailure(
-        ErrorCode.NOT_COVERED,
+    return not_covered(
+        SOURCE,
         "STF cases are not published by DataJud, the only Source for Cases.",
-        source=SOURCE,
-        retryable=False,
-        hint="Use list_coverage to see which Courts are covered.",
+        "Use list_coverage to see which Courts are covered.",
     )
 
 

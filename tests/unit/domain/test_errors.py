@@ -1,6 +1,6 @@
 import pytest
 
-from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, rate_limited
+from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure, not_covered, rate_limited
 
 
 def test_error_codes_are_the_closed_set_of_eight():
@@ -53,3 +53,15 @@ def test_rate_limited_helper_rounds_the_wait_up_and_is_retryable():
     assert failure.source == "datajud"
     assert failure.retryable is True
     assert failure.retry_after_seconds == 2
+
+
+def test_not_covered_names_the_source_and_is_not_retryable():
+    failure = not_covered("djen", "STF does not publish.", "See list_coverage.")
+
+    assert failure.payload() == {
+        "code": "not_covered",
+        "message": "STF does not publish.",
+        "source": "djen",
+        "retryable": False,
+        "hint": "See list_coverage.",
+    }

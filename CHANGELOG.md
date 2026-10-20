@@ -9,6 +9,8 @@ heading when `development` is released to `master`.
 
 ### Changed
 
+- Errors (#66): `not_covered()` factory in `domain/errors.py`, shared by the DataJud and DJEN
+  Court checks.
 - Planalto norm text (#43): the rubric title of the next article (e.g. `Lugar do crime`) no
   longer trails the previous article, and a heading without accents (`TITULO`), a `SUBTÍTULO` or a
   line in capitals (`DAS PENALIDADES`) now ends the article before it. Known limits of the flags,

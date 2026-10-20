@@ -17,7 +17,7 @@ USER_AGENT = (
     "+https://github.com/emvalencaf/juris-bridge-mcp)"
 )
 
-_RETRYABLE_STATUSES = frozenset({429, 503})
+RETRYABLE_STATUSES = frozenset({429, 503})
 _BACKOFF_BASE_SECONDS = 0.5
 
 
@@ -46,8 +46,13 @@ class UpstreamClient:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         jitter: Callable[[], float] = lambda: random.uniform(0.5, 1.0),  # noqa: S311
         clock: Callable[[], float] = time.monotonic,
+        retried_statuses: frozenset[int] = RETRYABLE_STATUSES,
     ) -> None:
-        """Wrap `client` for one Source; `max_retries` and `max_wait_seconds` come from settings."""
+        """Wrap `client` for one Source; `max_retries` and `max_wait_seconds` come from settings.
+
+        `retried_statuses` are the statuses worth another attempt; a Source that wants a long
+        wait after a 429 leaves it out and handles the answer itself.
+        """
         self._client = client
         self._source = source
         self._limiter = limiter
@@ -56,6 +61,7 @@ class UpstreamClient:
         self._sleep = sleep
         self._jitter = jitter
         self._clock = clock
+        self._retried_statuses = retried_statuses
 
     async def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         """Return the response; waits at most `max_wait_seconds` in total, then raise a failure."""
@@ -70,7 +76,7 @@ class UpstreamClient:
                 waited += self._clock() - started
                 response = await self._client.request(method, url, **kwargs)
                 status = response.status_code
-                if status not in _RETRYABLE_STATUSES:
+                if status not in self._retried_statuses:
                     return response
                 retry_after = _retry_after_seconds(response)
                 backoff = _BACKOFF_BASE_SECONDS * 2**attempt * self._jitter()

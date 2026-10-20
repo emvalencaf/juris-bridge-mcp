@@ -7,6 +7,7 @@ import pytest
 from fastmcp import Client
 
 from juris_bridge_mcp.config.datajud import DatajudSettings
+from juris_bridge_mcp.config.djen import DjenSettings
 from juris_bridge_mcp.config.http import HttpSettings
 from juris_bridge_mcp.config.legin import LeginSettings
 from juris_bridge_mcp.config.planalto import PlanaltoSettings
@@ -18,6 +19,7 @@ DATAJUD_FIXTURES = Path(__file__).parents[2] / "contract/providers/datajud/fixtu
 SENADO_FIXTURES = Path(__file__).parents[2] / "contract/providers/senado/fixtures"
 PLANALTO_FIXTURES = Path(__file__).parents[2] / "contract/providers/planalto/fixtures"
 LEGIN_FIXTURES = Path(__file__).parents[2] / "contract/providers/legin/fixtures"
+DJEN_FIXTURES = Path(__file__).parents[2] / "contract/providers/djen/fixtures"
 
 
 def datajud_fixture(name: str) -> dict:
@@ -35,6 +37,23 @@ class FakeDatajud:
     @staticmethod
     def fixture(name: str) -> dict:
         return datajud_fixture(name)
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        return httpx.Response(self.status, json=self.body)
+
+
+class FakeDjen:
+    """Scripted DJEN: replace `body`/`status` to change the answer; `requests` records calls."""
+
+    def __init__(self) -> None:
+        self.requests: list[httpx.Request] = []
+        self.status = 200
+        self.body: dict = self.fixture("tjsp_decisions.json")
+
+    @staticmethod
+    def fixture(name: str) -> dict:
+        return json.loads((DJEN_FIXTURES / name).read_text())
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
@@ -135,26 +154,35 @@ def senado() -> FakeSenado:
 
 
 @pytest.fixture
+def djen() -> FakeDjen:
+    return FakeDjen()
+
+
+@pytest.fixture
 def datajud() -> FakeDatajud:
     return FakeDatajud()
 
 
 @pytest.fixture
-def server_args(datajud, senado, planalto, legin) -> dict:
+def server_args(datajud, djen, senado, planalto, legin) -> dict:
     """Settings and transport the root server is built with: no network, fake Sources."""
     senado_host = httpx.URL(SenadoSettings().base_url).host
     planalto_host = httpx.URL(PlanaltoSettings().base_url).host
+    djen_host = httpx.URL(DjenSettings().base_url).host
     legin_hosts = {httpx.URL(LeginSettings().lexml_base_url).host, "www2.camara.leg.br"}
 
     def route(request: httpx.Request) -> httpx.Response:
         if request.url.host == senado_host:
             return senado(request)
+        if request.url.host == djen_host:
+            return djen(request)
         if request.url.host in legin_hosts:
             return legin(request)
         return planalto(request) if request.url.host == planalto_host else datajud(request)
 
     return {
         "datajud": DatajudSettings(api_key="test-key"),
+        "djen": DjenSettings(),
         "http": HttpSettings(),
         "senado": SenadoSettings(),
         "planalto": PlanaltoSettings(),

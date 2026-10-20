@@ -88,6 +88,11 @@ def not_found(source: str, message: str, hint: str) -> ToolFailure:
     return source_failure(source, ErrorCode.NOT_FOUND, message, retryable=False, hint=hint)
 
 
+def not_covered(source: str, message: str, hint: str) -> ToolFailure:
+    """Build the non-retryable `not_covered` failure, with a hint on what is covered."""
+    return source_failure(source, ErrorCode.NOT_COVERED, message, retryable=False, hint=hint)
+
+
 def source_failure(
     source: str, code: ErrorCode, message: str, *, retryable: bool, hint: str | None = None
 ) -> ToolFailure:

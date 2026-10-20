@@ -35,6 +35,7 @@ async def test_tools_are_exposed_and_read_only(mcp_client):
         "list_coverage",
         "search_cases",
         "search_legislation",
+        "search_publications",
     ]
     assert all(t.annotations.read_only_hint is True for t in tools)
 

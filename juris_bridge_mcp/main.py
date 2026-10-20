@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from juris_bridge_mcp.adapters.wide_event import configure_logger
 from juris_bridge_mcp.config.datajud import DatajudSettings
+from juris_bridge_mcp.config.djen import DjenSettings
 from juris_bridge_mcp.config.http import HttpSettings
 from juris_bridge_mcp.config.legin import LeginSettings
 from juris_bridge_mcp.config.logging import LogSettings
@@ -33,6 +34,7 @@ def main() -> None:
         settings.keys(),
         LogSettings().environment(),
         datajud=DatajudSettings(),
+        djen=DjenSettings(),
         senado=SenadoSettings(),
         planalto=PlanaltoSettings(),
         legin=LeginSettings(),

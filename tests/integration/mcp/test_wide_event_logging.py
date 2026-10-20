@@ -258,3 +258,23 @@ def test_call_shape_drops_keys_outside_the_allow_list():
         wide_event.stop(token)
 
     assert event.fields["call_shape"] == {"limit": 5, "year": 2020}
+
+
+async def test_search_publications_records_its_shape_but_not_the_query(events, server_args):
+    app = build_http_app(("key-one",), ENVIRONMENT, **server_args)
+    arguments = {
+        "court": "tjsp",
+        "date_from": "2026-10-15",
+        "date_to": "2026-10-15",
+        "query": "Maria Aparecida dos Santos",
+        "limit": 5,
+    }
+    async with _client(app) as client:
+        await client.post("/mcp", json=_call("search_publications", arguments), headers=_auth())
+
+    (event,) = events()
+    assert event["tool"] == {"name": "search_publications"}
+    assert event["source"] == "djen" and event["court"] == "tjsp"
+    assert event["result_count"] == 2
+    assert event["call_shape"] == {"court_alias": "tjsp", "limit": 5}
+    assert "Maria Aparecida" not in json.dumps(event)

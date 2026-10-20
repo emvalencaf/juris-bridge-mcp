@@ -13,7 +13,15 @@ from juris_bridge_mcp.adapters.cases.cached_case_repository import CachedCaseRep
 from juris_bridge_mcp.adapters.cases.cases_mcp_tools import build_cases_server
 from juris_bridge_mcp.adapters.coverage_mcp_tools import build_coverage_server
 from juris_bridge_mcp.adapters.datajud.case_repository import DatajudCaseRepository
-from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
+from juris_bridge_mcp.adapters.djen.publication_repository import (
+    RETRIED_STATUSES as DJEN_RETRIED_STATUSES,
+)
+from juris_bridge_mcp.adapters.djen.publication_repository import DjenPublicationRepository
+from juris_bridge_mcp.adapters.http_client import (
+    RETRYABLE_STATUSES,
+    UpstreamClient,
+    build_http_client,
+)
 from juris_bridge_mcp.adapters.in_memory_ttl_cache import InMemoryTtlCache
 from juris_bridge_mcp.adapters.legin.norm_text_source import LeginNormTextSource
 from juris_bridge_mcp.adapters.legislation.fallback_norm_text_source import (
@@ -22,6 +30,9 @@ from juris_bridge_mcp.adapters.legislation.fallback_norm_text_source import (
 from juris_bridge_mcp.adapters.legislation.legislation_mcp_tools import build_legislation_server
 from juris_bridge_mcp.adapters.planalto.cached_norm_text_source import CachedNormTextSource
 from juris_bridge_mcp.adapters.planalto.norm_text_source import PlanaltoNormTextSource
+from juris_bridge_mcp.adapters.publications.publications_mcp_tools import (
+    build_publications_server,
+)
 from juris_bridge_mcp.adapters.rate_limiter import RateLimiter
 from juris_bridge_mcp.adapters.senado.cached_legislation_repository import (
     CachedLegislationRepository,
@@ -30,6 +41,7 @@ from juris_bridge_mcp.adapters.senado.legislation_repository import SenadoLegisl
 from juris_bridge_mcp.adapters.static_coverage_catalog import StaticCoverageCatalog
 from juris_bridge_mcp.adapters.wide_event_middleware import WideEventMiddleware
 from juris_bridge_mcp.config.datajud import DatajudSettings
+from juris_bridge_mcp.config.djen import DjenSettings
 from juris_bridge_mcp.config.http import HttpSettings
 from juris_bridge_mcp.config.legin import LeginSettings
 from juris_bridge_mcp.config.planalto import PlanaltoSettings
@@ -38,11 +50,13 @@ from juris_bridge_mcp.domain.courts import SOURCE as DATAJUD
 from juris_bridge_mcp.domain.legislation import SOURCE as SENADO
 from juris_bridge_mcp.domain.legislation_text import LEGIN_SOURCE as LEGIN
 from juris_bridge_mcp.domain.legislation_text import TEXT_SOURCE as PLANALTO
+from juris_bridge_mcp.domain.publication import SOURCE as DJEN
 
 
 def build_server(
     *,
     datajud: DatajudSettings,
+    djen: DjenSettings,
     http: HttpSettings,
     senado: SenadoSettings,
     planalto: PlanaltoSettings,
@@ -55,7 +69,11 @@ def build_server(
     """
 
     def upstream_for(
-        source: str, *, timeout_seconds: float, requests_per_minute: int
+        source: str,
+        *,
+        timeout_seconds: float,
+        requests_per_minute: int,
+        retried_statuses: frozenset[int] = RETRYABLE_STATUSES,
     ) -> UpstreamClient:
         return UpstreamClient(
             build_http_client(timeout_seconds=timeout_seconds, transport=transport),
@@ -68,12 +86,19 @@ def build_server(
             ),
             max_retries=http.max_retries,
             max_wait_seconds=http.max_wait_seconds,
+            retried_statuses=retried_statuses,
         )
 
     upstream = upstream_for(
         DATAJUD,
         timeout_seconds=datajud.timeout_seconds,
         requests_per_minute=datajud.requests_per_minute,
+    )
+    djen_upstream = upstream_for(
+        DJEN,
+        timeout_seconds=djen.timeout_seconds,
+        requests_per_minute=djen.requests_per_minute,
+        retried_statuses=DJEN_RETRIED_STATUSES,
     )
     senado_upstream = upstream_for(
         SENADO,
@@ -101,6 +126,9 @@ def build_server(
     app.mount(build_coverage_server(StaticCoverageCatalog()))
     app.mount(build_cases_server(cases))
     app.mount(
+        build_publications_server(DjenPublicationRepository(djen_upstream, base_url=djen.base_url))
+    )
+    app.mount(
         build_legislation_server(
             CachedLegislationRepository(
                 SenadoLegislationRepository(senado_upstream, base_url=senado.base_url),
@@ -125,6 +153,7 @@ def build_http_app(
     environment: Mapping[str, Any] | None = None,
     *,
     datajud: DatajudSettings,
+    djen: DjenSettings,
     http: HttpSettings,
     senado: SenadoSettings,
     planalto: PlanaltoSettings,
@@ -134,6 +163,7 @@ def build_http_app(
     """Build the stateless, JSON-response ASGI app: wide event outermost, then Bearer auth."""
     server = build_server(
         datajud=datajud,
+        djen=djen,
         http=http,
         senado=senado,
         planalto=planalto,

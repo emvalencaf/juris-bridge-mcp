@@ -196,3 +196,19 @@ async def test_upstream_call_is_recorded_on_the_wide_event_with_retries():
 
     (entry,) = event.upstream
     assert (entry["source"], entry["status"], entry["retries"]) == ("datajud", 200, 1)
+
+
+async def test_returns_a_429_to_the_caller_when_the_status_is_not_retried():
+    transport, seen = scripted(httpx.Response(429))
+    client = UpstreamClient(
+        build_http_client(timeout_seconds=7, transport=transport),
+        source="djen",
+        limiter=Recorder(),
+        max_retries=2,
+        max_wait_seconds=5,
+        retried_statuses=frozenset({503}),
+    )
+
+    response = await client.request("GET", "https://example.test/")
+
+    assert response.status_code == 429 and len(seen) == 1

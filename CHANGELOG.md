@@ -23,6 +23,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- `search_publications` (#66): searches the Publications of one Court in a window of up to 31
+  days over the keyless DJEN API, with the query sent as it is (at least 5 characters, since the
+  DJEN answers a shorter one with a misleading HTTP 500). Returns a Normalized result per item
+  (opaque `id`, CNJ number in both forms, raw `tipoDocumento`, release date, HTML-stripped
+  excerpt, `text_length`, Citation). DJEN failures map to the closed Error codes (429 waits 60 s);
+  STF, TREs and periods before a Court's start are `not_covered`. New `JURIS_BRIDGE_DJEN_*`
+  settings. No paging, kind filter or `get_publication` yet (#53).
 - Publication term in `GLOSSARY.md` and ADR 0006 (#59): the DJEN as the Source of Publications,
   self-hosted per user, extending ADR 0002.
 - Diagrams (#32): four overview diagrams under `docs/diagrams/` (architecture and module

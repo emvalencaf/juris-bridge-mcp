@@ -146,3 +146,33 @@ async def test_the_tool_description_says_the_score_is_page_relative(mcp_client):
     description = " ".join(tool.description.split())
     assert "not comparable across pages" in description
     assert "no global relevance ordering" in description
+
+
+async def test_a_cnj_number_lists_the_publications_of_the_case(djen: FakeDjen, mcp_client):
+    page = await _call(mcp_client, court=None, query=None, cnj_number="1234567-76.2025.8.26.0100")
+
+    params = djen.requests[0].url.params
+    assert params["numeroProcesso"] == "12345677620258260100" and "texto" not in params
+    assert params["siglaTribunal"] == "TJSP" and page["court"] == "tjsp"
+    assert page["items"][0]["cnj_number"] == "1234567-76.2025.8.26.0100"
+    assert page["items"][0]["cnj_number_digits"] == "12345677620258260100"
+
+
+async def test_an_invalid_cnj_number_never_calls_the_djen(djen: FakeDjen, mcp_client):
+    error = await _call(mcp_client, court=None, query=None, cnj_number="1234567-76.2025.8.26.0101")
+
+    assert error["code"] == "invalid_argument" and djen.requests == []
+
+
+async def test_a_cnj_number_with_no_publications_is_an_empty_page(djen: FakeDjen, mcp_client):
+    djen.body = FakeDjen.fixture("empty.json")
+
+    page = await _call(mcp_client, court=None, query=None, cnj_number="1234567-76.2025.8.26.0100")
+
+    assert page["items"] == [] and page["complete"] is True
+
+
+async def test_a_cnj_number_documents_itself_in_the_tool_description(mcp_client):
+    tool = next(t for t in await mcp_client.list_tools() if t.name == "search_publications")
+
+    assert "cnj_number" in tool.description

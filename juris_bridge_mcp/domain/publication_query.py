@@ -74,12 +74,13 @@ class QueryGroup:
     """Terms that must all be present and terms that must not, with the one sent to the Source.
 
     `dispatched` is the longest phrase of at least `MIN_TERM_LENGTH` characters, otherwise the
-    longest such word; the Source guarantees it, so `matches` leaves it out.
+    longest such word; the Source guarantees it, so `matches` leaves it out. It is `None` when
+    nothing is sent to the Source (a search by CNJ number) and every term filters locally.
     """
 
     required: tuple[Term, ...]
     excluded: tuple[Term, ...]
-    dispatched: Term
+    dispatched: Term | None
 
     def matches(self, words: tuple[str, ...]) -> bool:
         """Return whether a text (as `normalized_words`) holds the rest of the group."""
@@ -91,7 +92,10 @@ class QueryGroup:
         """Return whether the Source would have returned this text for the group's own request.
 
         The Source matches the dispatched term exactly, so this asks it exactly, then the rest.
+        With nothing dispatched the Source returned every text.
         """
+        if self.dispatched is None:
+            return self.matches(words)
         return self.dispatched.found_in(words, exact=True) and self.matches(words)
 
 
@@ -107,8 +111,14 @@ def group_returns(groups: tuple[QueryGroup, ...], index: int, text: str) -> bool
     return groups[index].matches(words) and not any(g.claims(words) for g in groups[:index])
 
 
-def parse_query(query: str) -> tuple[QueryGroup, ...]:
-    """Parse `query` into OR groups, or raise `invalid_argument` explaining what is wrong."""
+def parse_query(query: str, *, dispatch: bool = True) -> tuple[QueryGroup, ...]:
+    """Parse `query` into OR groups, or raise `invalid_argument` explaining what is wrong.
+
+    With `dispatch` false nothing is sent to the Source, so a term needs no minimum length, an
+    empty query is one group matching every text, and no group has a `dispatched` term.
+    """
+    if not dispatch and not query.strip():
+        return (QueryGroup((), (), None),)
     if query.count('"') % 2:
         raise invalid_argument(
             "query has an unbalanced quote.", hint='Close every quoted phrase: "exact phrase".'
@@ -143,15 +153,17 @@ def parse_query(query: str) -> tuple[QueryGroup, ...]:
         raise invalid_argument(f"query has more than {MAX_GROUPS} OR groups.")
     if sum(len(excluded) for _, excluded in groups) > MAX_EXCLUSIONS:
         raise invalid_argument(f"query has more than {MAX_EXCLUSIONS} excluded terms.")
-    return tuple(_group(required, excluded) for required, excluded in groups)
+    return tuple(_group(required, excluded, dispatch) for required, excluded in groups)
 
 
-def _group(required: list[Term], excluded: list[Term]) -> QueryGroup:
+def _group(required: list[Term], excluded: list[Term], dispatch: bool) -> QueryGroup:
     if not required and not excluded:
         raise invalid_argument(
             "query has an empty group.",
             hint="Put a term on each side of OR; the query is not empty.",
         )
+    if not dispatch:
+        return QueryGroup(tuple(required), tuple(excluded), None)
     long_enough = [t for t in required if len(t.text) >= MIN_TERM_LENGTH]
     phrases = [t for t in long_enough if len(t.words) > 1]
     candidates = phrases or long_enough

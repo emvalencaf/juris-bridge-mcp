@@ -3,6 +3,7 @@
 from datetime import date
 from typing import Protocol
 
+from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.publication import PublicationPage
 
 
@@ -18,10 +19,12 @@ class PublicationRepository(Protocol):
         *,
         page: int = 1,
         organ_id: int | None = None,
+        number: CnjNumber | None = None,
     ) -> PublicationPage:
         """Return page `page` (from 1, 100 items) of the Publications matching `query`.
 
-        `organ_id` narrows the slice to one issuing body. A page past the Source's depth ceiling
+        `organ_id` narrows the slice to one issuing body. `number` narrows it to one Case; `query`
+        may then be empty, which asks for every text. A page past the Source's depth ceiling
         comes back `truncated` instead of failing.
 
         Every kind of item comes back, each with its classified `kind`; filtering is the caller's.

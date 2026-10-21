@@ -10,6 +10,7 @@ import httpx
 from juris_bridge_mcp.adapters.djen.publication_mapper import map_publication
 from juris_bridge_mcp.adapters.http_client import UpstreamClient
 from juris_bridge_mcp.adapters.schema_drift import SchemaDrift
+from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import (
     ErrorCode,
     rate_limited,
@@ -59,16 +60,20 @@ class DjenPublicationRepository:
         *,
         page: int = 1,
         organ_id: int | None = None,
+        number: CnjNumber | None = None,
     ) -> PublicationPage:
         """Fetch page `page` of the Court's Publications in the window, `query` as it is."""
         params: dict[str, Any] = {
             "siglaTribunal": court.upper(),
-            "texto": query,
             "dataDisponibilizacaoInicio": date_from.isoformat(),
             "dataDisponibilizacaoFim": date_to.isoformat(),
             "itensPorPagina": _PAGE_SIZE,
             "pagina": page,
         }
+        if query:
+            params["texto"] = query
+        if number is not None:
+            params["numeroProcesso"] = number.digits
         if organ_id is not None:
             params["orgaoId"] = organ_id
         try:

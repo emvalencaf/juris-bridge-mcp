@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 
+from juris_bridge_mcp.domain.cnj_number import CnjNumber, derive_court
 from juris_bridge_mcp.domain.cursor import Cursor
 from juris_bridge_mcp.domain.errors import invalid_argument
 from juris_bridge_mcp.domain.publication import COUNT_CAP, Publication, PublicationPage
@@ -152,15 +153,21 @@ def _advance(
 async def search_publications(
     repository: PublicationRepository,
     *,
-    court: str,
     date_from: date,
     date_to: date,
-    query: str,
+    court: str | None = None,
+    query: str | None = None,
+    cnj_number: str | None = None,
     kind: str | None = None,
     limit: int = DEFAULT_LIMIT,
     cursor: str | None = None,
 ) -> PublicationSearchResult:
-    """Return a page of the Court's decisions in the window whose text matches `query`.
+    """Return a page of the Court's decisions in the window, matching `query` or of one Case.
+
+    With `cnj_number` (formatted or 20 digits, validated) the Publications are those of that
+    Case: the Court is derived from the number, or checked against `court` when given, and
+    `query` is optional. When present it filters locally and needs no 5-character term, since
+    nothing but the number is sent to the Source. Without it, `court` and `query` are required.
 
     The query is parsed here (see `publication_query`): each OR group asks the Source for its
     longest phrase or word, and the rest of the group filters the fetched text locally; the
@@ -174,6 +181,7 @@ async def search_publications(
     stopped and must come back with the same Court, window, query and kind.
     """
     wanted = _parse_kind(kind)
+    number = CnjNumber.parse(cnj_number) if cnj_number is not None else None
     if not 1 <= limit <= MAX_LIMIT:
         raise invalid_argument(f"limit must be between 1 and {MAX_LIMIT}.")
     if date_from > date_to:
@@ -183,10 +191,20 @@ async def search_publications(
             f"The window is longer than {MAX_WINDOW_DAYS} days.",
             hint="Search a shorter window and repeat it for the next one.",
         )
-    text = query.strip()
-    groups = parse_query(text)
-    alias = resolve_djen_court(court, date_to)
-    key = "|".join((date_from.isoformat(), date_to.isoformat(), text, wanted or ""))
+    text = (query or "").strip()
+    if number is None and not text:
+        raise invalid_argument("query is required without cnj_number.")
+    groups = parse_query(text, dispatch=number is None)
+    alias = _resolve_court(court, number, date_to)
+    key = "|".join(
+        (
+            date_from.isoformat(),
+            date_to.isoformat(),
+            text,
+            wanted or "",
+            number.digits if number else "",
+        )
+    )
     position: _Position | None = _Position(date_to)
     truncation: IncompleteReason | None = None
     if cursor is not None:
@@ -199,11 +217,12 @@ async def search_publications(
         group = groups[position.group]
         page = await repository.search(
             alias,
-            group.dispatched.text,
+            group.dispatched.text if group.dispatched else "",
             position.day,
             position.day,
             page=position.page,
             organ_id=position.organs[0] if position.organs else None,
+            number=number,
         )
         requests += page.requests
         retrieved_at = page.retrieved_at
@@ -243,6 +262,21 @@ async def search_publications(
         not_decisions_dropped=dropped,
         hint=_HINTS[incomplete] if incomplete else None,
     )
+
+
+def _resolve_court(court: str | None, number: CnjNumber | None, date_to: date) -> str:
+    """Return the Court of the search: the one given, the one `number` derives, or both agreeing."""
+    given = resolve_djen_court(court, date_to) if court is not None else None
+    derived = resolve_djen_court(derive_court(number), date_to) if number is not None else None
+    if given is not None and derived is not None and given != derived:
+        raise invalid_argument(
+            f"The CNJ number belongs to {derived.upper()}, not {given.upper()}.",
+            hint="Omit court, or pass the one in the number.",
+        )
+    alias = given or derived
+    if alias is None:
+        raise invalid_argument("court is required without cnj_number.")
+    return alias
 
 
 def _parse_kind(kind: str | None) -> PublicationKind | None:

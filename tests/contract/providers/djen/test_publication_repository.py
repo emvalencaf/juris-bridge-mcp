@@ -10,6 +10,7 @@ from juris_bridge_mcp.adapters.djen.publication_repository import (
     DjenPublicationRepository,
 )
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
+from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -259,3 +260,18 @@ async def test_a_body_that_is_not_json_is_source_changed():
 
 async def test_an_unexpected_status_is_source_changed():
     assert (await _failure(_respond(418))).code is ErrorCode.SOURCE_CHANGED
+
+
+async def test_a_cnj_number_is_asked_as_digits_and_the_text_is_left_out_when_empty():
+    seen = []
+
+    def handler(request):
+        seen.append(dict(request.url.params))
+        return httpx.Response(200, json=_fixture("empty.json"))
+
+    number = CnjNumber("12345677620258260100")
+    await _repository(handler).search("tjsp", "", DAY, DAY, number=number)
+    await _repository(handler).search("tjsp", "recurso", DAY, DAY)
+
+    assert seen[0]["numeroProcesso"] == number.digits and "texto" not in seen[0]
+    assert "numeroProcesso" not in seen[1] and seen[1]["texto"] == "recurso"

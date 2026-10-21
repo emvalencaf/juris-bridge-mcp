@@ -149,3 +149,21 @@ def test_claims_asks_the_source_term_exactly_and_the_rest_locally():
     assert group.claims(normalized_words("especial recurso"))
     assert not group.claims(normalized_words("especiais recurso"))
     assert not group.claims(normalized_words("especial"))
+
+
+def test_without_dispatch_nothing_is_sent_and_short_terms_are_allowed():
+    (group,) = parse_query("de dano -outro", dispatch=False)
+
+    assert group.dispatched is None
+    assert group.matches(("de", "dano")) and not group.matches(("dano", "outro"))
+
+
+def test_without_dispatch_an_empty_query_matches_everything():
+    (group,) = parse_query("  ", dispatch=False)
+
+    assert group.matches(("qualquer", "coisa"))
+
+
+def test_without_dispatch_an_empty_or_group_is_still_invalid():
+    with pytest.raises(ToolFailure):
+        parse_query("dano OR", dispatch=False)

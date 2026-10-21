@@ -3,7 +3,11 @@ from datetime import date
 
 import pytest
 
-from juris_bridge_mcp.application.use_cases.get_publication import SLICE_CHARS, get_publication
+from juris_bridge_mcp.application.use_cases.get_publication import (
+    MAX_PAGES,
+    SLICE_CHARS,
+    get_publication,
+)
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.cursor import Cursor
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
@@ -168,3 +172,22 @@ async def test_a_failure_of_the_source_reaches_the_caller_unchanged():
         await get_publication(_Down(), publication_id=_publication().id)
 
     assert caught.value.code is ErrorCode.SOURCE_UNAVAILABLE
+
+
+async def test_a_search_the_source_truncated_is_not_reported_as_gone():
+    repository = _Repository(PublicationPage(publications=(), total=10000, truncated=True))
+
+    with pytest.raises(ToolFailure) as caught:
+        await get_publication(repository, publication_id=_publication("gone").id)
+
+    assert caught.value.code is ErrorCode.SOURCE_UNAVAILABLE
+
+
+async def test_pages_left_unread_are_not_reported_as_gone():
+    repository = _Repository(_page(_publication("h1"), more=True))
+
+    with pytest.raises(ToolFailure) as caught:
+        await get_publication(repository, publication_id=_publication("gone").id)
+
+    assert caught.value.code is ErrorCode.SOURCE_UNAVAILABLE
+    assert len(repository.asked) == MAX_PAGES

@@ -4,6 +4,7 @@ from datetime import date
 from typing import Any
 
 from fastmcp import FastMCP
+from fastmcp.exceptions import ToolError
 
 from juris_bridge_mcp.adapters import wide_event
 from juris_bridge_mcp.adapters.publications.publication_presenter import (
@@ -18,6 +19,12 @@ from juris_bridge_mcp.application.use_cases.search_publications import (
 from juris_bridge_mcp.domain.errors import ToolFailure, to_tool_error
 from juris_bridge_mcp.domain.publication import SOURCE
 from juris_bridge_mcp.ports.publication_repository import PublicationRepository
+
+
+def _reported(failure: ToolFailure) -> ToolError:
+    """Record the failure on the wide event and return the MCP error to raise."""
+    wide_event.record_failure(failure)
+    return to_tool_error(failure)
 
 
 def build_publications_server(repository: PublicationRepository) -> FastMCP:
@@ -115,8 +122,7 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
                 cursor=cursor,
             )
         except ToolFailure as failure:
-            wide_event.record_failure(failure)
-            raise to_tool_error(failure) from None
+            raise _reported(failure) from None
         wide_event.annotate(
             source=SOURCE,
             court=outcome.court,
@@ -153,8 +159,7 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         try:
             outcome = await get_publication(repository, publication_id=id, cursor=cursor)
         except ToolFailure as failure:
-            wide_event.record_failure(failure)
-            raise to_tool_error(failure) from None
+            raise _reported(failure) from None
         wide_event.annotate(
             source=SOURCE,
             court=outcome.publication.court,

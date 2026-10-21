@@ -9,6 +9,13 @@ heading when `development` is released to `master`.
 
 ### Changed
 
+- Publication fan-out (#68): `search_publications` walks the window one day at a time, newest
+  first, making at most 10 DJEN requests per call. A day at the Source's 10,000 count cap is split
+  by `orgaoId` (taken from the ids on its first page). The result says `complete` and, when not,
+  `incomplete_reason` (`budget`, `slice_cap`, `depth_ceiling`); the depth-ceiling HTTP 500 is
+  truncation, not an error. The Cursor stays opaque and stateless (day, `orgaoId` slice, page).
+  A 429 is waited out for 60 s once before `rate_limited`. `total` and `total_is_lower_bound`
+  are removed: a count over the walked days is not the Source's.
 - Errors (#66): `not_covered()` factory in `domain/errors.py`, shared by the DataJud and DJEN
   Court checks.
 - Planalto norm text (#43): the rubric title of the next article (e.g. `Lugar do crime`) no

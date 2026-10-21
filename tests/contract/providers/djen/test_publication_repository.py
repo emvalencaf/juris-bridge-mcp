@@ -21,11 +21,15 @@ class _OpenLimiter:
         return None
 
 
+async def _no_sleep(seconds: float) -> None:
+    return None
+
+
 def _fixture(name: str) -> dict:
     return json.loads((FIXTURES / name).read_text())
 
 
-def _repository(handler) -> DjenPublicationRepository:
+def _repository(handler, sleep=None) -> DjenPublicationRepository:
     client = build_http_client(timeout_seconds=5, transport=httpx.MockTransport(handler))
     upstream = UpstreamClient(
         client,
@@ -35,7 +39,9 @@ def _repository(handler) -> DjenPublicationRepository:
         max_wait_seconds=1,
         retried_statuses=RETRIED_STATUSES,
     )
-    return DjenPublicationRepository(upstream, base_url="https://djen.test")
+    return DjenPublicationRepository(
+        upstream, base_url="https://djen.test", sleep=sleep or _no_sleep
+    )
 
 
 def _respond(status: int, body=None, **kwargs):
@@ -142,6 +148,64 @@ async def test_429_is_rate_limited_with_a_wait_of_60_seconds():
 
     assert failure.code is ErrorCode.RATE_LIMITED and failure.retry_after_seconds == 60
     assert failure.source == "djen" and failure.retryable is True
+
+
+async def test_a_429_backs_off_60_seconds_and_asks_again_once():
+    slept = []
+    answers = iter([httpx.Response(429), httpx.Response(200, json=_fixture("empty.json"))])
+
+    async def sleep(seconds):
+        slept.append(seconds)
+
+    page = await _repository(lambda request: next(answers), sleep).search(
+        "tjsp", "recurso", DAY, DAY
+    )
+
+    assert slept == [60] and page.publications == ()
+
+
+async def test_a_429_that_persists_asks_only_twice():
+    asked = []
+
+    def handler(request):
+        asked.append(request)
+        return httpx.Response(429)
+
+    with pytest.raises(ToolFailure) as caught:
+        await _repository(handler).search("tjsp", "recurso", DAY, DAY)
+
+    assert caught.value.code is ErrorCode.RATE_LIMITED and len(asked) == 2
+
+
+async def test_asks_for_one_orgao_and_reports_the_orgaos_it_saw():
+    seen = []
+
+    def handler(request):
+        seen.append(dict(request.url.params))
+        return httpx.Response(200, json=_fixture("tjsp_decisions.json"))
+
+    page = await _repository(handler).search("tjsp", "recurso", DAY, DAY, organ_id=1002)
+
+    assert seen[0]["orgaoId"] == "1002"
+    assert page.organ_ids == (1001, 1002)
+
+
+async def test_no_orgao_is_sent_by_default():
+    seen = []
+
+    def handler(request):
+        seen.append(dict(request.url.params))
+        return httpx.Response(200, json=_fixture("empty.json"))
+
+    await _repository(handler).search("tjsp", "recurso", DAY, DAY)
+
+    assert "orgaoId" not in seen[0]
+
+
+async def test_a_500_past_the_first_page_is_the_depth_ceiling_not_an_error():
+    page = await _repository(_respond(500)).search("tjsp", "recurso", DAY, DAY, page=101)
+
+    assert page.truncated is True and page.publications == () and page.more is False
 
 
 async def test_403_is_a_blocked_source():

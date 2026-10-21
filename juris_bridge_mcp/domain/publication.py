@@ -22,7 +22,7 @@ class Publication:
     `kind` is our heuristic classification (see `publication_kind`); `NOT_A_DECISION` items
     are kept here so they can be counted, and never presented.
     `item_hash` is the DJEN's hash of the item, which tells it apart from the others of the
-    same Court, day and Case.
+    same Court, day and Case. `organ_id` is the DJEN's id of the issuing body, when it gives one.
     """
 
     court: str
@@ -34,6 +34,7 @@ class Publication:
     item_hash: str
     kind: PublicationKind
     url: str | None = None
+    organ_id: int | None = None
 
     @property
     def id(self) -> str:
@@ -56,10 +57,17 @@ class PublicationPage:
     """One page of a search, newest first as the DJEN returns it, before any filtering.
 
     `total` is the DJEN's own count, capped at `COUNT_CAP`. `more` is true when matches
-    follow this page.
+    follow this page. `truncated` is true when the DJEN gave up past its depth ceiling, so
+    nothing more can be read of the slice.
     """
 
     publications: tuple[Publication, ...]
     total: int
     more: bool = False
+    truncated: bool = False
     retrieved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def organ_ids(self) -> tuple[int, ...]:
+        """Return the distinct bodies the page's items came from, in order of appearance."""
+        return tuple(dict.fromkeys(p.organ_id for p in self.publications if p.organ_id is not None))

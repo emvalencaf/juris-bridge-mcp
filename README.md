@@ -53,7 +53,7 @@ It exposes six read-only tools over three Sources, and every result is a Normali
 |---|---|
 | `search_cases` | Search Cases of a Court by class, judging body, subject and filing dates (DataJud, metadata only) |
 | `get_case` | Fetch one Case by its CNJ number; the Court is derived from the number |
-| `search_publications` | Search the Publications of a Court released in a window of up to 31 days (DJEN, metadata and a plain-text excerpt, classified by `kind` with despachos and notices dropped; party names are personal data under the LGPD) |
+| `search_publications` | Search the Publications of a Court released in a window of up to 31 days, newest day first, with a cursor and `complete`/`incomplete_reason` (DJEN, metadata and a plain-text excerpt, classified by `kind` with despachos and notices dropped; party names are personal data under the LGPD) |
 | `search_legislation` | Find a Norm by type, number and year (Senado) |
 | `get_legislation` | Fetch a Norm by URN Lex, with its text from the Planalto or, as a fallback, Câmara Legin |
 | `list_coverage` | State what the server can and cannot answer, by Source and Court |

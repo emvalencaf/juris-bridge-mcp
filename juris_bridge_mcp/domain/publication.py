@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
+from juris_bridge_mcp.domain.publication_kind import PublicationKind
 
 SOURCE = "djen"
 
@@ -18,6 +19,8 @@ class Publication:
 
     `document_type` is the raw `tipoDocumento`, free text that differs per Court.
     `url` is set only when the item carries a link to its own content.
+    `kind` is our heuristic classification (see `publication_kind`); `NOT_A_DECISION` items
+    are kept here so they can be counted, and never presented.
     `item_hash` is the DJEN's hash of the item, which tells it apart from the others of the
     same Court, day and Case.
     """
@@ -29,6 +32,7 @@ class Publication:
     excerpt: str
     text_length: int
     item_hash: str
+    kind: PublicationKind
     url: str | None = None
 
     @property
@@ -49,10 +53,10 @@ class Publication:
 
 @dataclass(frozen=True)
 class PublicationPage:
-    """One page of a search, newest first as the DJEN returns it.
+    """One page of a search, newest first as the DJEN returns it, before any filtering.
 
     `total` is the DJEN's own count, capped at `COUNT_CAP`. `more` is true when matches
-    were left out of this page.
+    follow this page.
     """
 
     publications: tuple[Publication, ...]

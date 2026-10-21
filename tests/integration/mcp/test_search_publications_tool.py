@@ -26,6 +26,9 @@ async def test_returns_a_normalized_page_of_publications(djen: FakeDjen, mcp_cli
     assert first["cnj_number"] == "1234567-76.2025.8.26.0100"
     assert first["cnj_number_digits"] == "12345677620258260100"
     assert first["document_type"] == "DESPACHO/DECISÃO"
+    assert first["kind"] == "decisao_interlocutoria"
+    assert "heuristic" in page["kind_classification"]
+    assert page["not_decisions_dropped"] == 0
     assert first["published_on"] == "2026-10-15"
     assert first["excerpt"].startswith("DECISÃO Vistos.")
     assert first["text_length"] > 0
@@ -64,3 +67,15 @@ async def test_a_djen_failure_carries_its_error_code(djen: FakeDjen, mcp_client)
 
     assert error["code"] == "rate_limited" and error["retry_after_seconds"] == 60
     assert len(djen.requests) == 1
+
+
+async def test_the_kind_filter_keeps_only_that_kind(djen: FakeDjen, mcp_client):
+    page = await _call(mcp_client, kind="acordao")
+
+    assert [item["kind"] for item in page["items"]] == ["acordao"]
+
+
+async def test_an_unknown_kind_never_calls_the_djen(djen: FakeDjen, mcp_client):
+    error = await _call(mcp_client, kind="despacho")
+
+    assert error["code"] == "invalid_argument" and djen.requests == []

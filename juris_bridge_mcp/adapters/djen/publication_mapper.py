@@ -8,6 +8,7 @@ from typing import Any
 from juris_bridge_mcp.adapters.schema_drift import SchemaDrift
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.publication import Publication
+from juris_bridge_mcp.domain.publication_kind import classify_publication
 
 EXCERPT_LENGTH = 500
 _DIGITS = re.compile(r"^\d{20}$")
@@ -79,14 +80,20 @@ def map_publication(item: Any, *, court: str) -> Publication:
     except ValueError:
         raise SchemaDrift("an item has no ISO data_disponibilizacao") from None
     text = plain_text(_string(item, "texto") or "")
+    document_type = _string(item, "tipoDocumento")
     link = _string(item, "link")
     return Publication(
         court=court,
         day=day,
         number=CnjNumber(digits),
-        document_type=_string(item, "tipoDocumento"),
+        document_type=document_type,
         excerpt=_excerpt(text),
         text_length=len(text),
         item_hash=item_hash,
+        kind=classify_publication(
+            communication_type=_string(item, "tipoComunicacao"),
+            document_type=document_type,
+            text=text,
+        ),
         url=link if link and link.startswith(("https://", "http://")) else None,
     )

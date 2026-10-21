@@ -43,8 +43,10 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         `court` is then derived from the number, or checked against it when given (a mismatch is
         `invalid_argument`), and `query` is optional; when present it filters locally, with the
         same syntax, and its terms need not be 5 characters. Each item carries only the CNJ
-        number: call get_case for the Case. A number with no Publications in the window returns
-        an empty, complete page. Without `cnj_number`, `court` and `query` are required.
+        number: call get_case for the Case. The Source is asked for the whole window at once, not
+        day by day, so a Case costs one request however long the window. A number with no
+        Publications in the window returns an empty, complete page. Without `cnj_number`,
+        `court` and `query` are required.
 
         `court` is an alias such as `tjsp`, `trf1` or `stj` (see list_coverage); an
         unknown alias returns `invalid_argument`. STF and the electoral courts do not

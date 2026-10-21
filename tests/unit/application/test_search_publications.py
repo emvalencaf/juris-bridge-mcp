@@ -59,6 +59,18 @@ class _Repository:
         return self.pages[min(request.page, len(self.pages)) - 1]
 
 
+class _Spans:
+    """Records the (date_from, date_to, page) of each request; answers `pages` or empty ones."""
+
+    def __init__(self, pages=None):
+        self.pages = pages or {}
+        self.asked: list[tuple] = []
+
+    async def search(self, request):
+        self.asked.append((request.date_from, request.date_to, request.page))
+        return self.pages.get(request.page, PublicationPage(publications=(), total=0))
+
+
 class _Days:
     """Answers per (day, organ, page) from `script`; anything else is an empty page."""
 
@@ -661,3 +673,36 @@ async def test_a_cursor_is_refused_for_another_number():
         await _by_number(repository, OTHER.digits, cursor=first.next_cursor)
 
     assert caught.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+async def test_a_number_is_asked_over_the_whole_window_in_one_request():
+    spans = _Spans()
+
+    result = await _by_number(spans, date_from=date(2026, 9, 15), date_to=DAY)
+
+    assert spans.asked == [(date(2026, 9, 15), DAY, 1)] and result.complete
+
+
+async def test_a_text_search_still_walks_the_window_by_day():
+    spans = _Spans()
+
+    await _search(spans, date_from=DAY - timedelta(days=2), date_to=DAY)
+
+    assert [(a, b) for a, b, _ in spans.asked] == [
+        (DAY, DAY),
+        (DAY - timedelta(days=1),) * 2,
+        (DAY - timedelta(days=2),) * 2,
+    ]
+
+
+async def test_a_number_pages_through_the_window_and_stops_at_the_last_page():
+    paged = _Spans(
+        {
+            1: PublicationPage(publications=(_publication(1),), total=150, more=True),
+            2: PublicationPage(publications=(_publication(2),), total=150),
+        }
+    )
+    result = await _by_number(paged, date_from=date(2026, 9, 15), date_to=DAY)
+
+    assert paged.asked == [(date(2026, 9, 15), DAY, 1), (date(2026, 9, 15), DAY, 2)]
+    assert [p.item_hash for p in result.publications] == ["hash1", "hash2"] and result.complete

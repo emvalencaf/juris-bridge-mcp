@@ -181,8 +181,9 @@ async def search_publications(
     `kind`, when given, keeps only that kind; without it every decision stays, `ambiguous`
     included. Each item is scored against the others of the page (BM25, see
     `publication_ranking`), but the order stays by date. The window is walked one day at a time
-    from `date_to` back, a day matching `COUNT_CAP` items being split by issuing body, and at
-    most `MAX_REQUESTS_PER_CALL` requests are made; `next_cursor` resumes where the call
+    from `date_to` back, a day matching `COUNT_CAP` items being split by issuing body, except
+    that a Case is asked for over the whole window in one slice, and at most
+    `MAX_REQUESTS_PER_CALL` requests are made; `next_cursor` resumes where the call
     stopped and must come back with the same Court, window, query and kind.
     """
     wanted = _parse_kind(kind)
@@ -202,6 +203,8 @@ async def search_publications(
     groups = parse_query(text) if case_number is None else parse_local_query(text)
     alias = _resolve_court(court, case_number, date_to)
     key = _search_key(date_from, date_to, text, wanted, case_number)
+    # A Case is asked for over the whole window in one slice; a text search walks it by day.
+    oldest = date_to if case_number else date_from
     position: _Position | None = _Position(date_to)
     truncation: IncompleteReason | None = None
     if cursor is not None:
@@ -216,7 +219,7 @@ async def search_publications(
             PublicationSearch(
                 court=alias,
                 query=group.source_text,
-                date_from=position.day,
+                date_from=date_from if case_number else position.day,
                 date_to=position.day,
                 page=position.page,
                 organ_id=position.organs[0] if position.organs else None,
@@ -227,7 +230,7 @@ async def search_publications(
         retrieved_at = page.retrieved_at
         if page.truncated:
             truncation = truncation or IncompleteReason.DEPTH_CEILING
-            position = position.next_slice(date_from, len(groups))
+            position = position.next_slice(oldest, len(groups))
             continue
         if position.page == 1 and page.total >= COUNT_CAP:
             truncation = truncation or IncompleteReason.SLICE_CAP
@@ -247,7 +250,7 @@ async def search_publications(
         if len(available) > room:
             position = replace(position, skip=position.skip + room)
             continue
-        position, met = _advance(position, page, date_from, len(groups))
+        position, met = _advance(position, page, oldest, len(groups))
         truncation = truncation or met
     ranked = rank_publications(query_terms(groups), chosen)
     incomplete = IncompleteReason.BUDGET if position is not None else truncation

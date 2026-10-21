@@ -85,9 +85,10 @@ class _Days:
         return self.script.get(key, PublicationPage(publications=(), total=0))
 
 
-async def _search(repository, **overrides):
+async def _search(repository, issuing_bodies=None, **overrides):
     arguments = {"court": "tjsp", "date_from": DAY, "date_to": DAY, "query": "recurso especial"}
-    return await search_publications(repository, **{**arguments, **overrides})
+    catalog = issuing_bodies or _Catalog({}, "")
+    return await search_publications(repository, catalog, **{**arguments, **overrides})
 
 
 async def _code(repository, **overrides) -> ErrorCode:
@@ -432,7 +433,7 @@ class _Catalog:
         self.courts = courts
         self.version = version
 
-    def organ_ids(self, court):
+    def body_ids(self, court):
         return self.courts.get(court, ())
 
 

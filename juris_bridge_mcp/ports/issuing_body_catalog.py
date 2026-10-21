@@ -15,6 +15,6 @@ class IssuingBodyCatalog(Protocol):
         """Return the catalog version, which changes with its content."""
         ...
 
-    def organ_ids(self, court: str) -> tuple[int, ...]:
+    def body_ids(self, court: str) -> tuple[int, ...]:
         """Return the Court's known `orgaoId`, or an empty tuple when it has no entry."""
         ...

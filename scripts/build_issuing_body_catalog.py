@@ -1,14 +1,15 @@
 #!/usr/bin/env -S uv run
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["httpx>=0.28.1"]
+# dependencies = ["fastmcp>=4.1.0", "httpx>=0.28.1"]
 # ///
 """Build the catalog of Issuing bodies (`orgaoId`) of the DJEN Courts (ADR 0007).
 
 The DJEN has no endpoint listing them, so this reads `idOrgao` and `nomeOrgao` from the first
-page of recent days of each Court and merges them into `issuing_bodies.json`. A day at the
-DJEN count cap shows only 100 items, so it is also probed with a few common words, each
-surfacing other bodies. Only ids and body names are kept: no publication text, no party names.
+page of recent days of each Court and merges them into `issuing_bodies.json`. A page shows
+only 100 items, so a day with more is also probed with common words, each surfacing other
+bodies. The file is saved after each Court, so an interrupted run keeps what it read.
+Only ids and body names are kept: no publication text, no party names.
 
 Run it by hand, paced to the DJEN limit of about 20 requests per window:
 
@@ -18,7 +19,7 @@ Run it by hand, paced to the DJEN limit of about 20 requests per window:
 
 The merge is additive: bodies already in the file are kept. When the file changes its
 `version` becomes the generation date plus a counter, which invalidates older Cursors.
-Exit code is 1 on an HTTP failure; the file is then left untouched.
+Exit code is 1 on an HTTP failure; Courts already read stay saved.
 """
 
 import argparse
@@ -32,7 +33,6 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from juris_bridge_mcp.domain.publication import COUNT_CAP
 from juris_bridge_mcp.domain.publication_courts import DJEN_COURTS
 
 CATALOG = (
@@ -42,7 +42,18 @@ BASE_URL = "https://comunicaapi.pje.jus.br/api/v1/comunicacao"
 # 15 requests a minute, under the DJEN's undocumented window of about 20.
 PACE_SECONDS = 4.0
 # Words common in decisions; each narrows a capped day to other items.
-PROBES = ("recurso", "sentença", "acórdão", "decisão", "processo")
+# Checked live: on a TJSP day the first page showed 44 bodies and these five found 61 more.
+PROBES = (
+    "recurso",
+    "sentença",
+    "acórdão",
+    "decisão",
+    "processo",
+    "execução",
+    "agravo",
+    "embargos",
+)
+PAGE_SIZE = 100
 
 
 def _fetch(client: httpx.Client, params: dict[str, str | int]) -> dict:
@@ -73,12 +84,13 @@ def _collect(client: httpx.Client, court: str, days: int) -> dict[int, str]:
             "siglaTribunal": court.upper(),
             "dataDisponibilizacaoInicio": day,
             "dataDisponibilizacaoFim": day,
-            "itensPorPagina": 100,
+            "itensPorPagina": PAGE_SIZE,
             "pagina": 1,
         }
         body = _fetch(client, params)
         found |= _bodies(body)
-        if body.get("count", 0) >= COUNT_CAP:
+        # A full first page hides the bodies of the items past it, not only on capped days.
+        if body.get("count", 0) >= PAGE_SIZE:
             for word in PROBES:
                 found |= _bodies(_fetch(client, {**params, "texto": word}))
         print(f"{court} {day}: {len(found)} bodies so far", file=sys.stderr)
@@ -98,28 +110,34 @@ def main() -> int:
         for court, bodies in catalog["courts"].items()
     }
     before = json.dumps(catalog["courts"], sort_keys=True)
+
+    def save() -> None:
+        merged = {
+            court: [{"id": organ, "name": name} for organ, name in sorted(bodies.items())]
+            for court, bodies in sorted(courts.items())
+            if bodies
+        }
+        if json.dumps(merged, sort_keys=True) == before or catalog["courts"] == merged:
+            return
+        if catalog["version"].split(".")[0] != date.today().isoformat():
+            number = int(catalog["version"].rpartition(".")[2] or 0)
+            catalog["version"] = f"{date.today().isoformat()}.{number + 1}"
+        catalog["generated_on"] = date.today().isoformat()
+        catalog["courts"] = merged
+        if not args.dry_run:
+            CATALOG.write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", "utf-8")
+
     try:
         with httpx.Client(timeout=30) as client:
             for court in args.courts:
                 courts.setdefault(court, {}).update(_collect(client, court, args.days))
+                save()
     except httpx.HTTPError as failure:
         print(f"DJEN request failed: {failure}", file=sys.stderr)
         return 1
-    merged = {
-        court: [{"id": organ, "name": name} for organ, name in sorted(bodies.items())]
-        for court, bodies in sorted(courts.items())
-        if bodies
-    }
-    if json.dumps(merged, sort_keys=True) != before:
-        number = int(catalog["version"].rpartition(".")[2] or 0) + 1
-        catalog["version"] = f"{date.today().isoformat()}.{number}"
-        catalog["generated_on"] = date.today().isoformat()
-        catalog["courts"] = merged
-    output = json.dumps(catalog, ensure_ascii=False, indent=2) + "\n"
     if args.dry_run:
-        print(output)
+        print(json.dumps(catalog, ensure_ascii=False, indent=2))
     else:
-        CATALOG.write_text(output, "utf-8")
         print(f"{CATALOG}: version {catalog['version']}", file=sys.stderr)
     return 0
 

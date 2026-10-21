@@ -85,8 +85,11 @@ research note, the terms say that you must not:
 
 The project follows from this:
 
-- The server returns Case metadata only. DataJud public data has no party or
-  judge fields, and the server adds none.
+- For Cases the server returns DataJud metadata only. DataJud public data has
+  no party or judge fields, and the server adds none. Publications from the
+  DJEN do carry party names, which are personal data under the LGPD: use them
+  only for the lawful purpose they were searched for and do not collect or
+  share them in bulk.
 - There are no party-name, judge-name or CPF filters (spec
   [#19](https://github.com/emvalencaf/juris-bridge-mcp/issues/19)), so the
   server cannot be used to profile individuals. Do not extend or wrap it to do
@@ -134,6 +137,6 @@ the key. If you forward these logs elsewhere, keep to the same rule.
 > terms allow only lawful, non-commercial use and forbid redistributing
 > information derived from it, so run your own instance with your own DataJud
 > key and keep the results for your own use. A shared instance needs written
-> CNJ authorization. The server returns Case metadata only, has no party, judge
-> or CPF search, and never logs search text, CNJ numbers or payloads. Read
+> CNJ authorization. For Cases the server returns DataJud metadata only, has
+> no party, judge or CPF search, and never logs search text, CNJ numbers or payloads. Read
 > [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md) before you deploy it.

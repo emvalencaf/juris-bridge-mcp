@@ -8,7 +8,7 @@
   <p align="center">
     A remote, extensible and testable MCP server that gives AI agents access to Brazilian judicial data through a unified interface. Bridging AI Agents with Brazil's judicial ecosystem.
     <br />
-    <a href="CONTRIBUTING.md"><strong>Explore the docs »</strong></a>
+    <a href="docs/known-limits.md"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/emvalencaf/juris-bridge-mcp/issues/new">Report Bug</a>
@@ -34,7 +34,16 @@
         <li><a href="#quick-start">Quick start</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
+    <li>
+      <a href="#usage">Usage</a>
+      <ul>
+        <li><a href="#running-the-server">Running the server</a></li>
+        <li><a href="#getting-a-norm-and-its-text">Getting a Norm and its text</a></li>
+        <li><a href="#searching-publications">Searching Publications</a></li>
+        <li><a href="#coverage">Coverage</a></li>
+        <li><a href="#known-limits">Known limits</a></li>
+      </ul>
+    </li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -74,7 +83,9 @@ Every request passes the same path: Bearer auth, one wide event per request, the
 ### Built With
 
 * [Python](https://www.python.org) managed with [uv](https://docs.astral.sh/uv/)
+* [FastMCP](https://gofastmcp.com) for the MCP server ([ADR 0001](docs/adr/0001-vertical-slices-on-fastmcp.md))
 * [ruff](https://docs.astral.sh/ruff/)
+* [Terraform](https://www.terraform.io) and AWS Lambda for the Reference deployment
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -101,15 +112,10 @@ Every request passes the same path: Bearer auth, one wide event per request, the
 ### Quick start
 
 1. Copy `.env.example` to `.env` and set `JURIS_BRIDGE_SERVER_API_KEYS` (the Bearer key your client will send; the server refuses to start without one) and `JURIS_BRIDGE_DATAJUD_API_KEY` (the DataJud public key).
-2. Start the server
+2. Start the server (with `uv`, or as a container; see [Running the server](#running-the-server))
    ```bash
-   # uv
    set -a; source .env; set +a
    uv run python -m juris_bridge_mcp.main
-
-   # or container
-   docker build -t juris-bridge-mcp .
-   docker run --rm -p 8000:8000 --env-file .env juris-bridge-mcp
    ```
    The MCP endpoint is `http://localhost:8000/mcp`.
 3. Point your MCP client at it. For a client that takes a JSON configuration:
@@ -125,7 +131,7 @@ Every request passes the same path: Bearer auth, one wide event per request, the
    }
    ```
    With Claude Code: `claude mcp add --transport http juris-bridge http://localhost:8000/mcp --header "Authorization: Bearer <key>"`.
-4. Ask for a Norm, for example "get Lei 14.133/2021 and quote Art. 1", to check the whole chain.
+4. Check the chain: ask for a Norm, for example "get Lei 14.133/2021 and quote Art. 1" (Senado and Planalto), then for a Case, for example "get the Case 0000000-00.0000.0.00.0000" with a real CNJ number (DataJud, which needs `JURIS_BRIDGE_DATAJUD_API_KEY`). `list_coverage` answers with no network call, so it shows only that the server is reachable and the Bearer key is accepted.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -233,9 +239,10 @@ The rate limit and cache are explained further in [docs/known-limits.md](docs/kn
 
 ## Roadmap
 
-- [x] Five read-only tools over DataJud and the Senado, with Planalto and Câmara Legin text
+- [x] Seven read-only tools over DataJud, the DJEN and the Senado, with Planalto and Câmara Legin text
 - [x] Container and AWS Reference deployment
-- [ ] Docs, responsible use and diagrams (in progress, #32)
+- [x] Docs, responsible use and diagrams (#32)
+- [ ] Issuing body catalog for the remaining DJEN Courts (#84)
 - [ ] Case law text and more Courts (see the open issues)
 
 See the [open issues](https://github.com/emvalencaf/juris-bridge-mcp/issues) for proposed features and known issues.
@@ -255,7 +262,7 @@ Coding and documentation rules are in [CODE_STANDARDS.md](CODE_STANDARDS.md).
 
 Distributed under the Apache-2.0 licence. See [LICENSE](LICENSE).
 
-**Responsible use.** The code is Apache-2.0, but the data is not. DataJud's terms allow only lawful, non-commercial use and forbid redistributing information derived from it, so run your own instance with your own DataJud key and keep the results for your own use. A shared instance needs written CNJ authorization. The server returns Case metadata only, has no party, judge or CPF search, and never logs search text, CNJ numbers or payloads. Read [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md) before you deploy it.
+**Responsible use.** The code is Apache-2.0, but the data is not. DataJud's terms allow only lawful, non-commercial use and forbid redistributing information derived from it, so run your own instance with your own DataJud key and keep the results for your own use. A shared instance needs written CNJ authorization. For Cases the server returns DataJud metadata only, has no party, judge or CPF search, and never logs search text, CNJ numbers or payloads. Publications carry party names, which are personal data under the LGPD. Read [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md) before you deploy it.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

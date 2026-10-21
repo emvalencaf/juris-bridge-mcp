@@ -120,3 +120,20 @@ async def test_a_foreign_cursor_is_invalid_argument(djen: FakeDjen, mcp_client):
     error = await _call(mcp_client, cursor="bm90IGEgY3Vyc29y")
 
     assert error["code"] == "invalid_argument" and djen.requests == []
+
+
+async def test_a_day_at_the_count_cap_is_split_by_orgao_and_reported_as_slice_cap(
+    djen: FakeDjen, mcp_client
+):
+    capped = FakeDjen.fixture("tjsp_decisions.json")
+    capped["count"] = 10000
+    normal = FakeDjen.fixture("tjsp_decisions.json")
+    djen.responder = lambda request: normal if "orgaoId" in request.url.params else capped
+
+    page = await _call(mcp_client)
+
+    asked = [r.url.params.get("orgaoId") for r in djen.requests]
+    assert asked == [None, "1001", "1002"]
+    assert page["complete"] is False and page["incomplete_reason"] == "slice_cap"
+    assert page["next_cursor"] is None and "hint" in page
+    assert len(page["items"]) == 4

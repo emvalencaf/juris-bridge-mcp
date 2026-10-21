@@ -58,13 +58,15 @@ class PublicationPage:
 
     `total` is the DJEN's own count, capped at `COUNT_CAP`. `more` is true when matches
     follow this page. `truncated` is true when the DJEN gave up past its depth ceiling, so
-    nothing more can be read of the slice.
+    nothing more can be read of the slice. `requests` is how many requests the page cost, a
+    429 waited out and asked again counting twice.
     """
 
     publications: tuple[Publication, ...]
     total: int
     more: bool = False
     truncated: bool = False
+    requests: int = 1
     retrieved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property

@@ -162,6 +162,13 @@ async def test_a_429_backs_off_60_seconds_and_asks_again_once():
     )
 
     assert slept == [60] and page.publications == ()
+    assert page.requests == 2
+
+
+async def test_a_page_answered_at_once_cost_one_request():
+    page = await _search(_respond(200, _fixture("empty.json")))
+
+    assert page.requests == 1
 
 
 async def test_a_429_that_persists_asks_only_twice():

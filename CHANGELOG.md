@@ -14,7 +14,8 @@ heading when `development` is released to `master`.
   by `orgaoId` (taken from the ids on its first page). The result says `complete` and, when not,
   `incomplete_reason` (`budget`, `slice_cap`, `depth_ceiling`); the depth-ceiling HTTP 500 is
   truncation, not an error. The Cursor stays opaque and stateless (day, `orgaoId` slice, page).
-  A 429 is waited out for 60 s once before `rate_limited`. `total` and `total_is_lower_bound`
+  A 429 is waited out for 60 s once before `rate_limited`, and the repeat counts against the
+  budget. `total` and `total_is_lower_bound`
   are removed: a count over the walked days is not the Source's.
 - Errors (#66): `not_covered()` factory in `domain/errors.py`, shared by the DataJud and DJEN
   Court checks.

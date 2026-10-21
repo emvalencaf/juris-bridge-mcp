@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -50,6 +51,8 @@ class FakeDjen:
         self.requests: list[httpx.Request] = []
         self.status = 200
         self.body: dict = self.fixture("tjsp_decisions.json")
+        # When set, answers each request instead of `body`.
+        self.responder: Callable[[httpx.Request], dict] | None = None
 
     @staticmethod
     def fixture(name: str) -> dict:
@@ -57,7 +60,8 @@ class FakeDjen:
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
-        return httpx.Response(self.status, json=self.body)
+        body = self.responder(request) if self.responder else self.body
+        return httpx.Response(self.status, json=body)
 
 
 class FakeSenado:

@@ -444,3 +444,13 @@ async def test_a_cursor_never_shows_a_page_number_or_offset_in_the_clear():
     first = await _search(days, limit=1)
 
     assert first.next_cursor and "page" not in first.next_cursor.lower()
+
+
+async def test_a_request_repeated_after_a_429_counts_against_the_budget():
+    costly = PublicationPage(publications=(), total=0, requests=2)
+    days = _Days({(date(2026, 9, 30) - timedelta(i), None, 1): costly for i in range(30)})
+
+    result = await _search(days, date_from=date(2026, 9, 1), date_to=date(2026, 9, 30))
+
+    assert len(days.asked) == MAX_REQUESTS_PER_CALL // 2
+    assert result.incomplete_reason == "budget"

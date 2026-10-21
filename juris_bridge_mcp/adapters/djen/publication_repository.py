@@ -30,6 +30,10 @@ RETRIED_STATUSES = frozenset({503})
 class _DepthCeiling(Exception):  # noqa: N818 - control flow inside this module
     """The DJEN answered HTTP 500 past its undocumented depth ceiling."""
 
+    def __init__(self, requests: int) -> None:
+        super().__init__()
+        self.requests = requests
+
 
 class DjenPublicationRepository:
     """Implements `PublicationRepository` over the DJEN public read API."""
@@ -68,9 +72,11 @@ class DjenPublicationRepository:
         if organ_id is not None:
             params["orgaoId"] = organ_id
         try:
-            body = await self._get(params, ceiling_possible=page > 1)
-        except _DepthCeiling:
-            return PublicationPage(publications=(), total=COUNT_CAP, truncated=True)
+            body, requests = await self._get(params, ceiling_possible=page > 1)
+        except _DepthCeiling as ceiling:
+            return PublicationPage(
+                publications=(), total=COUNT_CAP, truncated=True, requests=ceiling.requests
+            )
         try:
             items, count = body["items"], body["count"]
             if not isinstance(items, list):
@@ -84,16 +90,20 @@ class DjenPublicationRepository:
             publications=publications,
             total=count,
             more=count > page * _PAGE_SIZE,
+            requests=requests,
         )
 
-    async def _get(self, params: dict[str, Any], *, ceiling_possible: bool) -> Any:
+    async def _get(self, params: dict[str, Any], *, ceiling_possible: bool) -> tuple[Any, int]:
+        """Return the body and how many requests it took."""
         response = await self._send(params)
+        requests = 1
         if response.status_code == 429:
             await self._sleep(RATE_LIMIT_WAIT_SECONDS)
             response = await self._send(params)
+            requests = 2
         status = response.status_code
         if status == 500 and ceiling_possible:
-            raise _DepthCeiling
+            raise _DepthCeiling(requests)
         if status == 429:
             raise rate_limited(
                 SOURCE,
@@ -124,7 +134,7 @@ class DjenPublicationRepository:
             raise source_changed(SOURCE, "DJEN", "the body is not JSON") from None
         if not isinstance(body, dict):
             raise source_changed(SOURCE, "DJEN", "the body is not an object")
-        return body
+        return body, requests
 
     async def _send(self, params: dict[str, Any]) -> httpx.Response:
         try:

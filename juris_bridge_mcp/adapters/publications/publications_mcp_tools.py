@@ -6,7 +6,11 @@ from typing import Any
 from fastmcp import FastMCP
 
 from juris_bridge_mcp.adapters import wide_event
-from juris_bridge_mcp.adapters.publications.publication_presenter import present_search
+from juris_bridge_mcp.adapters.publications.publication_presenter import (
+    present_publication,
+    present_search,
+)
+from juris_bridge_mcp.application.use_cases.get_publication import get_publication
 from juris_bridge_mcp.application.use_cases.search_publications import (
     DEFAULT_LIMIT,
     search_publications,
@@ -125,5 +129,39 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
             },
         )
         return present_search(outcome)
+
+    @server.tool(name="get_publication", annotations={"readOnlyHint": True})
+    async def get_publication_tool(id: str, cursor: str | None = None) -> dict[str, Any]:
+        """Read the full text of one Publication found by search_publications, as plain text
+        (HTML stripped), in slices.
+
+        WARNING: Publications carry personal data (party names, sometimes lawyers and
+        other people), published as the Court released it. The LGPD applies to what you
+        do with it: do not store, profile or repeat it beyond what the task needs.
+
+        `id` is the opaque id of a search item, passed back unchanged; a malformed one is
+        `invalid_argument`. The Source has no read-by-id endpoint, so the Court, day and Case in
+        the id are searched again and the item picked by its hash: if the Source no longer
+        returns it, the result is `not_found`.
+
+        Returns `text`, a slice of at most 10,000 characters cut at a space, `text_length` of the
+        whole text, `content_kind: "full_text"`, the `citation`, `kind` (heuristic, as in the
+        search) and `document_type`. When `truncated` is true, pass `next_cursor` back as
+        `cursor` with the same `id` to read the next slice; a cursor from another Publication or
+        a malformed one is `invalid_argument`. Source errors are those of search_publications.
+        """
+        try:
+            outcome = await get_publication(repository, publication_id=id, cursor=cursor)
+        except ToolFailure as failure:
+            wide_event.record_failure(failure)
+            raise to_tool_error(failure) from None
+        wide_event.annotate(
+            source=SOURCE,
+            court=outcome.publication.court,
+            result_count=1,
+            paginated=cursor is not None,
+            call_shape={"cursor_sent": cursor is not None},
+        )
+        return present_publication(outcome)
 
     return server

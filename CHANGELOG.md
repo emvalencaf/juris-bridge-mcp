@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Read a Publication in full (#72): `get_publication(id, cursor)` returns the whole text of one
+  Publication as plain text (HTML stripped) with Content kind `full_text`, in slices of at most
+  10,000 characters cut at a space and chained by a stateless Cursor, with `text_length` and the
+  Citation. The DJEN has no read-by-id endpoint, so the Court, day and CNJ number in the `id` are
+  searched again and the item picked by its hash (`not_found` if gone); a malformed `id` or
+  Cursor is `invalid_argument`.
 - Search Publications by CNJ number (#71): `search_publications` takes `cnj_number` (masked or
   20 digits, check digit validated) to list the Publications of one Case in the window. The
   Court is derived from the number or checked against `court`; `query` becomes optional and,

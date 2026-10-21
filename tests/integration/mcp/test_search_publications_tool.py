@@ -176,3 +176,46 @@ async def test_a_cnj_number_documents_itself_in_the_tool_description(mcp_client)
     tool = next(t for t in await mcp_client.list_tools() if t.name == "search_publications")
 
     assert "cnj_number" in tool.description
+
+
+async def _id_of(client, index: int) -> str:
+    page = await _call(client)
+    return page["items"][index]["id"]
+
+
+async def test_get_publication_returns_the_plain_text_of_a_plain_item(djen: FakeDjen, mcp_client):
+    publication_id = await _id_of(mcp_client, 0)
+
+    result = await mcp_client.call_tool("get_publication", {"id": publication_id})
+
+    full = result.data
+    assert full["content_kind"] == "full_text" and full["source"] == "djen"
+    assert full["text"].startswith("DECISÃO Vistos.") and full["truncated"] is False
+    assert full["text_length"] == len(full["text"]) and full["next_cursor"] is None
+    assert full["citation"]["text"].startswith("TJSP, DESPACHO/DECISÃO")
+    assert full["id"] == publication_id
+
+
+async def test_get_publication_strips_the_html_of_an_html_item(djen: FakeDjen, mcp_client):
+    publication_id = await _id_of(mcp_client, 1)
+
+    result = await mcp_client.call_tool("get_publication", {"id": publication_id})
+
+    assert "<" not in result.data["text"] and "RECURSO ESPECIAL & honorários" in result.data["text"]
+
+
+async def test_get_publication_of_a_gone_item_is_not_found(djen: FakeDjen, mcp_client):
+    publication_id = await _id_of(mcp_client, 0)
+    djen.body = FakeDjen.fixture("empty.json")
+
+    result = await mcp_client.call_tool(
+        "get_publication", {"id": publication_id}, raise_on_error=False
+    )
+
+    assert result.is_error and json.loads(result.content[0].text)["code"] == "not_found"
+
+
+async def test_get_publication_rejects_a_malformed_id(mcp_client):
+    result = await mcp_client.call_tool("get_publication", {"id": "zzz"}, raise_on_error=False)
+
+    assert result.is_error and json.loads(result.content[0].text)["code"] == "invalid_argument"

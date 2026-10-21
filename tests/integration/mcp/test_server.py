@@ -32,6 +32,7 @@ async def test_tools_are_exposed_and_read_only(mcp_client):
     assert sorted(t.name for t in tools) == [
         "get_case",
         "get_legislation",
+        "get_publication",
         "list_coverage",
         "search_cases",
         "search_legislation",

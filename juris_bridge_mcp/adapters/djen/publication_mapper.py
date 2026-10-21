@@ -82,6 +82,7 @@ def map_publication(item: Any, *, court: str) -> Publication:
     text = plain_text(_string(item, "texto") or "")
     document_type = _string(item, "tipoDocumento")
     link = _string(item, "link")
+    organ_id = item.get("idOrgao")
     return Publication(
         court=court,
         day=day,
@@ -96,4 +97,5 @@ def map_publication(item: Any, *, court: str) -> Publication:
             text=text,
         ),
         url=link if link and link.startswith(("https://", "http://")) else None,
+        organ_id=organ_id if isinstance(organ_id, int) and not isinstance(organ_id, bool) else None,
     )

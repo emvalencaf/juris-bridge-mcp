@@ -1,22 +1,24 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
 from juris_bridge_mcp.application.use_cases.search_publications import (
     MAX_DJEN_PAGE,
-    MAX_PAGES_PER_CALL,
+    MAX_REQUESTS_PER_CALL,
     search_publications,
 )
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.cursor import Cursor
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
-from juris_bridge_mcp.domain.publication import Publication, PublicationPage
+from juris_bridge_mcp.domain.publication import COUNT_CAP, Publication, PublicationPage
 from juris_bridge_mcp.domain.publication_kind import PublicationKind
 
 DAY = date(2026, 10, 15)
 
 
-def _publication(index: int, kind: PublicationKind = PublicationKind.SENTENCA) -> Publication:
+def _publication(
+    index: int, kind: PublicationKind = PublicationKind.SENTENCA, organ_id: int | None = None
+) -> Publication:
     return Publication(
         court="tjsp",
         day=DAY,
@@ -26,6 +28,7 @@ def _publication(index: int, kind: PublicationKind = PublicationKind.SENTENCA) -
         text_length=5,
         item_hash=f"hash{index}",
         kind=kind,
+        organ_id=organ_id,
     )
 
 
@@ -40,10 +43,27 @@ class _Repository:
     def __init__(self, *pages):
         self.pages = pages or (PublicationPage(publications=(), total=0),)
         self.asked: list[tuple] = []
+        self.organs: list[int | None] = []
 
-    async def search(self, court, query, date_from, date_to, *, page=1):
+    async def search(self, court, query, date_from, date_to, *, page=1, organ_id=None):
         self.asked.append((court, query, date_from, date_to, page))
+        self.organs.append(organ_id)
         return self.pages[min(page, len(self.pages)) - 1]
+
+
+class _Days:
+    """Answers per (day, organ, page) from `script`; anything else is an empty page."""
+
+    def __init__(self, script=None):
+        self.script = script or {}
+        self.asked: list[tuple] = []
+
+    async def search(self, court, query, date_from, date_to, *, page=1, organ_id=None):
+        assert date_from == date_to
+        self.asked.append((date_from, organ_id, page))
+        return self.script.get(
+            (date_from, organ_id, page), PublicationPage(publications=(), total=0)
+        )
 
 
 async def _search(repository, **overrides):
@@ -87,7 +107,7 @@ async def test_a_window_of_32_days_is_invalid_and_31_is_allowed():
     )
     repository = _Repository()
     await _search(repository, date_from=date(2026, 9, 1), date_to=date(2026, 10, 1))
-    assert len(repository.asked) == 1
+    assert len(repository.asked) == MAX_REQUESTS_PER_CALL
 
 
 async def test_a_window_that_ends_before_it_starts_is_invalid():
@@ -199,19 +219,8 @@ async def test_a_call_reads_a_bounded_number_of_source_pages():
 
     result = await _search(repository)
 
-    assert len(repository.asked) == MAX_PAGES_PER_CALL
+    assert len(repository.asked) == MAX_REQUESTS_PER_CALL
     assert result.publications == () and result.next_cursor
-
-
-async def test_the_source_depth_ceiling_ends_the_paging_with_a_hint():
-    repository = _Repository(_page(SENTENCA, more=True))
-    first = await _search(repository, limit=1)
-    key = Cursor.decode(first.next_cursor, scopes=("tjsp",)).filters_key
-    cursor = Cursor("tjsp", (MAX_DJEN_PAGE, 1), key).encode()
-
-    result = await _search(repository, limit=1, cursor=cursor)
-
-    assert result.next_cursor is None and "narrow" in result.hint
 
 
 async def test_the_kind_filter_pages_over_the_kept_items_only():
@@ -242,13 +251,206 @@ async def test_a_cursor_from_another_search_is_invalid():
     assert len(repository.asked) == asked
 
 
-@pytest.mark.parametrize("position", [(0, 0), (MAX_DJEN_PAGE + 1, 0), (1, -1), (1,), ("a", 0)])
+def _cursor(position, key=None):
+    key = key or "|".join(("2026-10-15", "2026-10-15", "recurso especial", ""))
+    return Cursor("tjsp", position, key).encode()
+
+
+@pytest.mark.parametrize(
+    "position",
+    [
+        ("2026-10-15", "", 0, 0, ""),
+        ("2026-10-15", "", MAX_DJEN_PAGE + 1, 0, ""),
+        ("2026-10-15", "", 1, -1, ""),
+        ("2026-10-15", "", 1, 0, "other"),
+        ("2026-10-15", "x", 1, 0, ""),
+        ("2026-10-14", "", 1, 0, ""),
+        ("2026-10-16", "", 1, 0, ""),
+        ("yesterday", "", 1, 0, ""),
+        ("2026-10-15", "", 1),
+        (1, "", 1, 0, ""),
+        ("2026-10-15", "", "a", 0, ""),
+    ],
+)
 async def test_a_cursor_with_a_malformed_position_is_invalid(position):
     repository = _Repository()
-    first = await _search(_Repository(_page(*(SENTENCA,) * 3)), limit=1)
-    key = Cursor.decode(first.next_cursor, scopes=("tjsp",)).filters_key
 
     with pytest.raises(ToolFailure) as caught:
-        await _search(repository, cursor=Cursor("tjsp", position, key).encode())
+        await _search(repository, cursor=_cursor(position))
 
     assert caught.value.code is ErrorCode.INVALID_ARGUMENT and repository.asked == []
+
+
+@pytest.mark.parametrize("token", ["not a cursor", "e30", ""])
+async def test_a_garbage_cursor_is_invalid(token):
+    with pytest.raises(ToolFailure) as caught:
+        await _search(_Repository(), cursor=token)
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+FIRST, LAST = date(2026, 10, 1), date(2026, 10, 3)
+
+
+async def test_the_window_is_walked_newest_day_first():
+    days = _Days()
+
+    result = await _search(days, date_from=FIRST, date_to=LAST)
+
+    assert [asked[0] for asked in days.asked] == [LAST, LAST - timedelta(1), FIRST]
+    assert result.complete is True and result.incomplete_reason is None
+    assert result.next_cursor is None
+
+
+async def test_the_search_goes_on_to_older_days_until_the_limit_is_filled():
+    days = _Days({(LAST, None, 1): _page(SENTENCA), (FIRST, None, 1): _page(SENTENCA, SENTENCA)})
+
+    result = await _search(days, date_from=FIRST, date_to=LAST, limit=2)
+
+    assert len(result.publications) == 2 and result.next_cursor
+    assert [asked[0] for asked in days.asked] == [LAST, LAST - timedelta(1), FIRST]
+
+
+async def test_a_call_stops_at_its_request_budget_with_a_cursor_that_carries_on():
+    window = {"date_from": date(2026, 9, 1), "date_to": date(2026, 9, 30)}
+    days = _Days()
+
+    first = await _search(days, **window)
+    second = await _search(days, **window, cursor=first.next_cursor)
+    third = await _search(days, **window, cursor=second.next_cursor)
+
+    assert len(days.asked) == 30
+    assert (first.complete, first.incomplete_reason) == (False, "budget")
+    assert (second.complete, second.incomplete_reason) == (False, "budget")
+    assert (third.complete, third.incomplete_reason) == (True, None)
+    assert third.next_cursor is None
+    visited = [asked[0] for asked in days.asked]
+    assert visited == [date(2026, 9, 30) - timedelta(i) for i in range(30)]
+
+
+async def test_a_full_page_ends_the_call_before_the_budget_is_spent():
+    days = _Days({(LAST, None, 1): _page(SENTENCA, SENTENCA)})
+
+    result = await _search(days, date_from=FIRST, date_to=LAST, limit=2)
+
+    assert len(days.asked) == 1 and result.next_cursor
+    assert result.complete is False and result.incomplete_reason == "budget"
+
+
+def _capped(day, *organs, **fields):
+    publications = tuple(_publication(i, organ_id=organ) for i, organ in enumerate(organs))
+    return PublicationPage(publications=publications, total=COUNT_CAP, **fields)
+
+
+async def test_a_day_that_hits_the_count_cap_is_split_by_orgao_and_reported_as_slice_cap():
+    days = _Days(
+        {
+            (DAY, None, 1): _capped(DAY, 1001, 1002),
+            (DAY, 1001, 1): _page(SENTENCA),
+            (DAY, 1002, 1): _page(SENTENCA, SENTENCA),
+        }
+    )
+
+    result = await _search(days)
+
+    assert days.asked == [(DAY, None, 1), (DAY, 1001, 1), (DAY, 1002, 1)]
+    assert len(result.publications) == 3
+    assert result.complete is False and result.incomplete_reason == "slice_cap"
+    assert result.next_cursor is None
+
+
+async def test_a_cursor_resumes_inside_an_orgao_slice():
+    days = _Days(
+        {
+            (DAY, None, 1): _capped(DAY, 1001, 1002),
+            (DAY, 1001, 1): _page(SENTENCA, SENTENCA),
+            (DAY, 1002, 1): _page(SENTENCA),
+        }
+    )
+
+    first = await _search(days, limit=1)
+    second = await _search(days, limit=1, cursor=first.next_cursor)
+    third = await _search(days, limit=1, cursor=second.next_cursor)
+
+    assert [len(r.publications) for r in (first, second, third)] == [1, 1, 1]
+    assert days.asked[-1] == (DAY, 1002, 1)
+    assert third.next_cursor is None
+    assert (third.complete, third.incomplete_reason) == (False, "slice_cap")
+
+
+async def test_an_orgao_slice_that_still_hits_the_cap_is_slice_cap():
+    days = _Days(
+        {
+            (DAY, None, 1): _capped(DAY, 1001),
+            (DAY, 1001, 1): _capped(DAY, 1001),
+        }
+    )
+
+    result = await _search(days)
+
+    assert result.incomplete_reason == "slice_cap" and result.complete is False
+
+
+async def test_a_capped_day_with_no_orgao_to_split_by_is_read_as_it_is_and_slice_cap():
+    days = _Days({(DAY, None, 1): _capped(DAY, None, None)})
+
+    result = await _search(days)
+
+    assert days.asked == [(DAY, None, 1)]
+    assert result.incomplete_reason == "slice_cap" and len(result.publications) == 2
+
+
+async def test_the_depth_ceiling_is_truncation_not_an_error():
+    days = _Days(
+        {
+            (DAY, None, 1): _page(SENTENCA, more=True),
+            (DAY, None, 2): PublicationPage(publications=(), total=0, truncated=True),
+        }
+    )
+
+    result = await _search(days)
+
+    assert len(result.publications) == 1 and result.next_cursor is None
+    assert (result.complete, result.incomplete_reason) == (False, "depth_ceiling")
+
+
+async def test_the_last_page_the_source_serves_is_the_depth_ceiling():
+    days = _Days({(DAY, None, MAX_DJEN_PAGE): _page(SENTENCA, more=True)})
+    cursor = _cursor((DAY.isoformat(), "", MAX_DJEN_PAGE, 0, ""))
+
+    result = await _search(days, cursor=cursor)
+
+    assert result.next_cursor is None and result.incomplete_reason == "depth_ceiling"
+
+
+async def test_a_truncation_met_earlier_is_still_reported_by_the_last_call():
+    days = _Days(
+        {
+            (LAST, None, 1): _page(SENTENCA, more=True),
+            (LAST, None, 2): PublicationPage(publications=(), total=0, truncated=True),
+        }
+    )
+
+    first = await _search(days, date_from=FIRST, date_to=LAST, limit=1)
+    second = await _search(days, date_from=FIRST, date_to=LAST, cursor=first.next_cursor)
+
+    assert first.next_cursor and first.incomplete_reason == "budget"
+    assert second.next_cursor is None and second.incomplete_reason == "depth_ceiling"
+
+
+async def test_a_cursor_never_shows_a_page_number_or_offset_in_the_clear():
+    days = _Days({(DAY, None, 1): _page(SENTENCA, SENTENCA)})
+
+    first = await _search(days, limit=1)
+
+    assert first.next_cursor and "page" not in first.next_cursor.lower()
+
+
+async def test_a_request_repeated_after_a_429_counts_against_the_budget():
+    costly = PublicationPage(publications=(), total=0, requests=2)
+    days = _Days({(date(2026, 9, 30) - timedelta(i), None, 1): costly for i in range(30)})
+
+    result = await _search(days, date_from=date(2026, 9, 1), date_to=date(2026, 9, 30))
+
+    assert len(days.asked) == MAX_REQUESTS_PER_CALL // 2
+    assert result.incomplete_reason == "budget"

@@ -49,23 +49,28 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         `decisao_interlocutoria` or `ambiguous`; by default every decision is returned,
         `ambiguous` included.
 
-        Returns up to `limit` (1-25, default 10) decisions, in the order the Source gives
-        them (no relevance ranking). Each item has an opaque `id`, `cnj_number` (masked)
-        and `cnj_number_digits`, `kind` (our classification, see below), the Court's own
-        `document_type` (free text, not normalized), `published_on`, a plain-text `excerpt`
-        (HTML stripped, at most 500 characters), `text_length` of the whole text,
-        `content_kind: "metadata"` and a `citation` whose `url` is null when the item has no
-        link of its own. When more follow, `next_cursor` is an opaque token: pass it back as
-        `cursor` with the same court, dates, query and kind to read on (a different search
-        returns `invalid_argument`); a call reads up to 3 pages of the Source to fill `limit`,
-        and the Source stops at 10,000 matches (`hint` says so). `total` is the Source's
-        count before despachos are dropped, capped at 10,000 (`total_is_lower_bound`);
-        `not_decisions_dropped` says how many despachos, intimações and editais the pages
-        read in this call held. `kind` is inferred from the text, since the Source's labels
-        do not say it (TJSP files most acts as "Intimação", STJ as "DESPACHO / DECISÃO"): it
-        is heuristic, wrong now and then at the line between a despacho and an interlocutory
-        decision, and `ambiguous` is returned instead of a guess. For the Case itself, call
-        get_case with the `cnj_number`.
+        Returns up to `limit` (1-25, default 10) decisions, newest day first (the window is
+        walked back from `date_to`, one day at a time; no relevance ranking). Each item has an
+        opaque `id`, `cnj_number` (masked) and `cnj_number_digits`, `kind` (our classification,
+        see below), the Court's own `document_type` (free text, not normalized),
+        `published_on`, a plain-text `excerpt` (HTML stripped, at most 500 characters),
+        `text_length` of the whole text, `content_kind: "metadata"` and a `citation` whose
+        `url` is null when the item has no link of its own.
+
+        A call makes at most 10 requests to the Source. `complete` is true when the search
+        reached the end of the window and the Source truncated nothing. Otherwise
+        `incomplete_reason` is `budget` (more follows: pass `next_cursor`, an opaque token, back
+        as `cursor` with the same court, dates, query and kind; a different search returns
+        `invalid_argument`), `slice_cap` (a day matched 10,000 or more items, where the Source
+        stops counting; it is split by issuing body, so some items may be missing) or
+        `depth_ceiling` (the Source refuses to page deeper); the last two are reported once the
+        window is done, and `hint` says what to narrow. `not_decisions_dropped` says how many
+        despachos, intimações and editais the pages read in this call held. `kind` is inferred
+        from the text, since the Source's labels do not say it (TJSP files most acts as
+        "Intimação", STJ as "DESPACHO / DECISÃO"): it is heuristic, wrong now and then at the
+        line between a despacho and an interlocutory decision, and `ambiguous` is returned
+        instead of a guess. A 429 from the Source is waited out for 60 s once, then
+        `rate_limited`. For the Case itself, call get_case with the `cnj_number`.
         """
         try:
             outcome = await search_publications(

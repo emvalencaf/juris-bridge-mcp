@@ -10,9 +10,19 @@ class PublicationRepository(Protocol):
     """Finds the Publications of one Court released in a window of days."""
 
     async def search(
-        self, court: str, query: str, date_from: date, date_to: date, *, page: int = 1
+        self,
+        court: str,
+        query: str,
+        date_from: date,
+        date_to: date,
+        *,
+        page: int = 1,
+        organ_id: int | None = None,
     ) -> PublicationPage:
         """Return page `page` (from 1, 100 items) of the Publications matching `query`.
+
+        `organ_id` narrows the slice to one issuing body. A page past the Source's depth ceiling
+        comes back `truncated` instead of failing.
 
         Every kind of item comes back, each with its classified `kind`; filtering is the caller's.
         """

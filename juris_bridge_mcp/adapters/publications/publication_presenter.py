@@ -23,6 +23,7 @@ def present_search(result: PublicationSearchResult) -> dict[str, Any]:
         "items": [_item(p) for p in result.publications],
         "total": result.total,
         "total_is_lower_bound": result.total_is_lower_bound,
+        "next_cursor": result.next_cursor,
         "not_decisions_dropped": result.not_decisions_dropped,
         "kind_classification": KIND_CLASSIFICATION_NOTE,
     }

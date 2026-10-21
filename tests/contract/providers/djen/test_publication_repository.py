@@ -98,11 +98,25 @@ async def test_sends_the_query_as_is_with_the_court_and_window():
 
 async def test_keeps_every_item_of_the_page_and_says_more_follow_when_the_count_is_larger():
     body = _fixture("tjsp_decisions.json")
-    body["count"] = 40
+    body["count"] = 140
 
     page = await _search(_respond(200, body))
 
     assert len(page.publications) == 2 and page.more is True
+
+
+async def test_asks_for_the_page_and_knows_when_it_is_the_last():
+    body = _fixture("tjsp_decisions.json")
+    body["count"] = 102
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.params["pagina"])
+        return httpx.Response(200, json=body)
+
+    second = await _repository(handler).search("tjsp", "recurso", DAY, DAY, page=2)
+
+    assert seen == ["2"] and second.more is False
 
 
 async def test_classifies_each_item_from_its_labels_and_text():

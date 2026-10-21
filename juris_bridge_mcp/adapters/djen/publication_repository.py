@@ -34,9 +34,9 @@ class DjenPublicationRepository:
         self._base_url = base_url.rstrip("/")
 
     async def search(
-        self, court: str, query: str, date_from: date, date_to: date
+        self, court: str, query: str, date_from: date, date_to: date, *, page: int = 1
     ) -> PublicationPage:
-        """Fetch the first page of the Court's Publications in the window, `query` as it is."""
+        """Fetch page `page` of the Court's Publications in the window, `query` as it is."""
         body = await self._get(
             {
                 "siglaTribunal": court.upper(),
@@ -44,7 +44,7 @@ class DjenPublicationRepository:
                 "dataDisponibilizacaoInicio": date_from.isoformat(),
                 "dataDisponibilizacaoFim": date_to.isoformat(),
                 "itensPorPagina": _PAGE_SIZE,
-                "pagina": 1,
+                "pagina": page,
             }
         )
         try:
@@ -59,7 +59,7 @@ class DjenPublicationRepository:
         return PublicationPage(
             publications=publications,
             total=count,
-            more=count > len(items),
+            more=count > page * _PAGE_SIZE,
         )
 
     async def _get(self, params: dict[str, Any]) -> Any:

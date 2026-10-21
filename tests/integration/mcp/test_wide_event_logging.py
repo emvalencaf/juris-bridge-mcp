@@ -276,5 +276,5 @@ async def test_search_publications_records_its_shape_but_not_the_query(events, s
     assert event["tool"] == {"name": "search_publications"}
     assert event["source"] == "djen" and event["court"] == "tjsp"
     assert event["result_count"] == 2
-    assert event["call_shape"] == {"court_alias": "tjsp", "limit": 5}
+    assert event["call_shape"] == {"court_alias": "tjsp", "limit": 5, "cursor_sent": False}
     assert "Maria Aparecida" not in json.dumps(event)

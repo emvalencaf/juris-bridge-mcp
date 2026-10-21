@@ -56,7 +56,7 @@ class PublicationPage:
     """One page of a search, newest first as the DJEN returns it, before any filtering.
 
     `total` is the DJEN's own count, capped at `COUNT_CAP`. `more` is true when matches
-    were left out of this page.
+    follow this page.
     """
 
     publications: tuple[Publication, ...]

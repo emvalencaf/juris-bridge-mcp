@@ -31,14 +31,23 @@ heading when `development` is released to `master`.
   (opaque `id`, CNJ number in both forms, raw `tipoDocumento`, release date, HTML-stripped
   excerpt, `text_length`, Citation). DJEN failures map to the closed Error codes (429 waits 60 s);
   STF, TREs and periods before a Court's start are `not_covered`. New `JURIS_BRIDGE_DJEN_*`
-  settings. No paging or `get_publication` yet (#53).
+  settings. No `get_publication` yet (#53).
 - Publication `kind` (#67): each item of `search_publications` is classified as `acordao`,
   `sentenca`, `decisao_monocratica`, `decisao_interlocutoria` or `ambiguous` from
   `tipoComunicacao`, `tipoDocumento` and the text (a pure heuristic in
   `domain/publication_kind.py`, stated as such in the response). Despachos, intimações, editais
   and notices are dropped and counted in `not_decisions_dropped`; the new `kind` argument keeps
   one kind. The repository now always asks the DJEN for 100 items, so the limit applies after
-  the drop; `total` is still the Source's count before it.
+  the drop; `total` is still the Source's count before it. A phrase a notice uses ("fica
+  intimado", "certidão de") no longer drops a text that rules. STJ and TRF texts open with a party header, so the act's
+  name after it (`DESPACHO`, `DECISÃO`) and the Relator's signature at the end now count; checked
+  by hand against live DJEN items.
+- Publication paging (#67): `search_publications` takes a `cursor` and returns `next_cursor`.
+  The Cursor holds the Source page and how many kept items of it were returned, so the `kind`
+  filter pages over what it keeps; a call reads at most 3 pages of the DJEN to fill `limit`, and
+  stops at the DJEN's 10,000-match ceiling with a hint. A cursor from another Court, window, query
+  or kind is `invalid_argument`. Assumes the DJEN keeps its order between calls, which is
+  undocumented.
 - Publication term in `GLOSSARY.md` and ADR 0006 (#59): the DJEN as the Source of Publications,
   self-hosted per user, extending ADR 0002.
 - Diagrams (#32): four overview diagrams under `docs/diagrams/` (architecture and module

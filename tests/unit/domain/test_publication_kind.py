@@ -105,6 +105,40 @@ LABELLED = [
         "Ato ordinatório: intime-se o autor para ciência da certidão.",
         K.NOT_A_DECISION,
     ),
+    # STJ: a party header comes first, the act's name after it, a Relator signs at the end
+    (
+        "Intimação",
+        "DESPACHO / DECISÃO",
+        "AREsp 1/DF RELATOR : MINISTRO A AGRAVANTE : B DESPACHO Da análise dos autos, intime-se.",
+        K.NOT_A_DECISION,
+    ),
+    (
+        "Intimação",
+        "DESPACHO / DECISÃO",
+        "REsp 2/SP RELATOR : MINISTRO A RECORRENTE : B DECISÃO Defiro o pedido de sustentação.",
+        K.DECISAO_INTERLOCUTORIA,
+    ),
+    (
+        "Intimação",
+        "DESPACHO / DECISÃO",
+        "AREsp 3/PI RELATOR : MINISTRO A DECISÃO Trata-se de agravo. Ante o exposto, "
+        "acolho os embargos de declaração. Publique-se. Intimem-se. Relator HERMAN BENJAMIN",
+        K.DECISAO_MONOCRATICA,
+    ),
+    # a phrase a notice uses does not drop a decision that rules
+    (
+        "Intimação",
+        "Intimação",
+        "Defiro o pedido; fica intimado o réu da tutela.",
+        K.DECISAO_INTERLOCUTORIA,
+    ),
+    (
+        "Intimação",
+        "DESPACHO / DECISÃO",
+        "Nego seguimento ao recurso. Certidão de trânsito.",
+        K.DECISAO_MONOCRATICA,
+    ),
+    ("Intimação", "Intimação", "Fica intimado o autor a se manifestar.", K.NOT_A_DECISION),
     # ambiguous: no marker, or a despacho and a ruling at once
     ("Intimação", "Intimação", "Processo em andamento. Nada mais.", K.AMBIGUOUS),
     ("Intimação", "DESPACHO / DECISÃO", "Petição juntada aos autos.", K.AMBIGUOUS),

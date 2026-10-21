@@ -98,4 +98,5 @@ def map_publication(item: Any, *, court: str) -> Publication:
         ),
         url=link if link and link.startswith(("https://", "http://")) else None,
         organ_id=organ_id if isinstance(organ_id, int) and not isinstance(organ_id, bool) else None,
+        text=text,
     )

@@ -155,6 +155,23 @@ which one supplied it.
 
 ![get_legislation text fallback chain](docs/diagrams/assets/03-get-legislation.svg)
 
+### Searching Publications
+
+`search_publications` reads `query` itself, since the DJEN takes the text as one ordered,
+adjacent phrase and has no operators:
+
+| Write | Meaning |
+|---|---|
+| `recurso especial` | both words (a space is AND) |
+| `"dano moral"` | the words together and in order |
+| `dano OR consumidor` | either group, up to 3 groups; results are united without duplicates |
+| `-honorários` or `-"erro médico"` | exclude, up to 8 in all |
+
+Each group asks the DJEN for its longest phrase, otherwise its longest word (at least 5
+characters); the rest of the group filters the text here, ignoring case and accents and
+matching by word prefix (`recurso` finds `recursos`; there is no stemming). The word asked of
+the DJEN is matched exactly by it, so add an OR group for another form of it.
+
 ### Known limits
 
 The rate limit and cache are explained further in [docs/known-limits.md](docs/known-limits.md).

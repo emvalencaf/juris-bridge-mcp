@@ -42,9 +42,18 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         publish in the DJEN, and a window ending before a Court's start there (about 2021
         for the oldest, later for most) returns `not_covered`. `date_from` and `date_to`
         are inclusive ISO dates (`2026-10-15`), spanning at most 31 days counting both
-        ends. `query` is sent to the Source as it is, trimmed, and must have at least 5
-        characters: the Source reads all of it as one phrase, words in that order and
-        adjacent, ignoring case and accents but not plurals; it has no AND, OR or quotes.
+        ends. `query` is interpreted here, since the Source reads its text as one ordered,
+        adjacent phrase and has no operators: a space is AND, `"exact phrase"` keeps words
+        together, `OR` joins up to 3 alternative groups, `-term` (or `-"phrase"`) excludes, up to
+        8 in all; AND, NOT and `*` are not operators. Each group needs a word or phrase of at
+        least 5 characters, else `invalid_argument` (as for malformed input, with the reason).
+        Per group the Source is asked for its longest phrase, otherwise its longest word, and the
+        other words and the exclusions filter the text here, ignoring case and accents and
+        matching by word prefix (`recurso` finds `recursos`; no stemming). The groups' results are
+        united without duplicates. The word asked of the Source is matched exactly by it, so a
+        plural of that word is not found: put the likelier form in the query or add an OR group. An
+        item two OR groups both match is returned once, by the first; if that group was truncated
+        by the Source, `incomplete_reason` says so.
         `kind` keeps one kind only: `acordao`, `sentenca`, `decisao_monocratica`,
         `decisao_interlocutoria` or `ambiguous`; by default every decision is returned,
         `ambiguous` included.

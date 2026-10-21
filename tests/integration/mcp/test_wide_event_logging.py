@@ -266,7 +266,7 @@ async def test_search_publications_records_its_shape_but_not_the_query(events, s
         "court": "tjsp",
         "date_from": "2026-10-15",
         "date_to": "2026-10-15",
-        "query": "Maria Aparecida dos Santos",
+        "query": "especial recurso",
         "limit": 5,
     }
     async with _client(app) as client:
@@ -277,4 +277,4 @@ async def test_search_publications_records_its_shape_but_not_the_query(events, s
     assert event["source"] == "djen" and event["court"] == "tjsp"
     assert event["result_count"] == 2
     assert event["call_shape"] == {"court_alias": "tjsp", "limit": 5, "cursor_sent": False}
-    assert "Maria Aparecida" not in json.dumps(event)
+    assert "especial" not in json.dumps(event)

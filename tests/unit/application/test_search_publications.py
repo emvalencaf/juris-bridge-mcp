@@ -17,7 +17,10 @@ DAY = date(2026, 10, 15)
 
 
 def _publication(
-    index: int, kind: PublicationKind = PublicationKind.SENTENCA, organ_id: int | None = None
+    index: int,
+    kind: PublicationKind = PublicationKind.SENTENCA,
+    organ_id: int | None = None,
+    text: str = "recurso especial",
 ) -> Publication:
     return Publication(
         court="tjsp",
@@ -25,7 +28,8 @@ def _publication(
         number=CnjNumber("12345677620258260100"),
         document_type="Intimação",
         excerpt="texto",
-        text_length=5,
+        text_length=len(text),
+        text=text,
         item_hash=f"hash{index}",
         kind=kind,
         organ_id=organ_id,
@@ -78,12 +82,12 @@ async def _code(repository, **overrides) -> ErrorCode:
     return caught.value.code
 
 
-async def test_asks_the_resolved_court_with_the_trimmed_query_as_is():
+async def test_asks_the_resolved_court_with_the_longest_word_of_the_query():
     repository = _Repository()
 
     result = await _search(repository, court=" TJSP ", query="  recurso especial ", limit=5)
 
-    assert repository.asked == [("tjsp", "recurso especial", DAY, DAY, 1)]
+    assert repository.asked == [("tjsp", "especial", DAY, DAY, 1)]
     assert result.court == "tjsp" and result.hint is None
 
 
@@ -259,17 +263,19 @@ def _cursor(position, key=None):
 @pytest.mark.parametrize(
     "position",
     [
-        ("2026-10-15", "", 0, 0, ""),
-        ("2026-10-15", "", MAX_DJEN_PAGE + 1, 0, ""),
-        ("2026-10-15", "", 1, -1, ""),
-        ("2026-10-15", "", 1, 0, "other"),
-        ("2026-10-15", "x", 1, 0, ""),
-        ("2026-10-14", "", 1, 0, ""),
-        ("2026-10-16", "", 1, 0, ""),
-        ("yesterday", "", 1, 0, ""),
-        ("2026-10-15", "", 1),
-        (1, "", 1, 0, ""),
-        ("2026-10-15", "", "a", 0, ""),
+        ("2026-10-15", 0, "", 0, 0, ""),
+        ("2026-10-15", 0, "", MAX_DJEN_PAGE + 1, 0, ""),
+        ("2026-10-15", 0, "", 1, -1, ""),
+        ("2026-10-15", 0, "", 1, 0, "other"),
+        ("2026-10-15", 0, "x", 1, 0, ""),
+        ("2026-10-14", 0, "", 1, 0, ""),
+        ("2026-10-16", 0, "", 1, 0, ""),
+        ("yesterday", 0, "", 1, 0, ""),
+        ("2026-10-15", 0, "", 1, 0),
+        (1, 0, "", 1, 0, ""),
+        ("2026-10-15", 0, "", "a", 0, ""),
+        ("2026-10-15", 1, "", 1, 0, ""),
+        ("2026-10-15", -1, "", 1, 0, ""),
     ],
 )
 async def test_a_cursor_with_a_malformed_position_is_invalid(position):
@@ -416,7 +422,7 @@ async def test_the_depth_ceiling_is_truncation_not_an_error():
 
 async def test_the_last_page_the_source_serves_is_the_depth_ceiling():
     days = _Days({(DAY, None, MAX_DJEN_PAGE): _page(SENTENCA, more=True)})
-    cursor = _cursor((DAY.isoformat(), "", MAX_DJEN_PAGE, 0, ""))
+    cursor = _cursor((DAY.isoformat(), 0, "", MAX_DJEN_PAGE, 0, ""))
 
     result = await _search(days, cursor=cursor)
 
@@ -454,3 +460,95 @@ async def test_a_request_repeated_after_a_429_counts_against_the_budget():
 
     assert len(days.asked) == MAX_REQUESTS_PER_CALL // 2
     assert result.incomplete_reason == "budget"
+
+
+def _with_text(index: int, text: str, kind: PublicationKind = SENTENCA) -> Publication:
+    return _publication(index, kind, text=text)
+
+
+class _ByTerm:
+    """Answers each dispatched term with its own page."""
+
+    def __init__(self, **pages):
+        self.pages = pages
+        self.asked: list[str] = []
+
+    async def search(self, court, query, date_from, date_to, *, page=1, organ_id=None):
+        self.asked.append(query)
+        return self.pages.get(query, PublicationPage(publications=(), total=0))
+
+
+def _of(*publications: Publication) -> PublicationPage:
+    return PublicationPage(publications=publications, total=len(publications))
+
+
+async def test_the_other_words_and_the_exclusions_filter_the_fetched_text():
+    repository = _Repository(
+        _of(
+            _with_text(1, "Recursos especiais sobre custas"),
+            _with_text(2, "Especial, sem a outra palavra"),
+            _with_text(3, "recurso especial e honorários"),
+        )
+    )
+
+    result = await _search(repository, query="recurso especial -honorarios")
+
+    assert [p.item_hash for p in result.publications] == ["hash1"]
+
+
+async def test_each_or_group_asks_the_source_for_its_own_term():
+    repository = _ByTerm(
+        especial=_of(_with_text(1, "recurso especial")),
+        indenizacao=_of(_with_text(2, "dano indenizacao")),
+    )
+
+    result = await _search(repository, query="recurso especial OR dano indenizacao")
+
+    assert repository.asked == ["especial", "indenizacao"]
+    assert sorted(p.item_hash for p in result.publications) == ["hash1", "hash2"]
+
+
+async def test_the_union_has_no_duplicates_by_id():
+    both = _with_text(1, "recurso especial dano")
+    repository = _ByTerm(especial=_of(both), recurso=_of(both))
+
+    result = await _search(repository, query="especial OR recurso dano")
+
+    assert [p.id for p in result.publications] == [both.id]
+
+
+async def test_a_group_does_not_claim_what_its_source_term_would_not_return():
+    plural = _with_text(1, "recursos especial")
+    repository = _ByTerm(especial=_of(plural), recursos=_of(plural))
+
+    result = await _search(repository, query="recurso especial OR recursos")
+
+    assert len(result.publications) == 1
+
+
+async def test_the_groups_are_read_in_turn_and_a_cursor_resumes_in_the_right_group():
+    repository = _ByTerm(
+        especial=_of(_with_text(1, "recurso especial")),
+        indenizacao=_of(_with_text(2, "dano indenizacao"), _with_text(3, "dano indenizacao")),
+    )
+    query = "recurso especial OR dano indenizacao"
+
+    first = await _search(repository, query=query, limit=2)
+    second = await _search(repository, query=query, limit=2, cursor=first.next_cursor)
+
+    assert [p.item_hash for p in first.publications] == ["hash1", "hash2"]
+    assert [p.item_hash for p in second.publications] == ["hash3"] and second.complete
+
+
+async def test_the_result_does_not_carry_the_text_it_was_filtered_on():
+    result = await _search(_Repository(_of(_with_text(1, "recurso especial"))))
+
+    assert result.publications[0].text == ""
+
+
+async def test_a_group_without_a_term_the_source_accepts_never_reaches_it():
+    repository = _Repository()
+
+    assert await _code(repository, query="recurso OR de ao") is ErrorCode.INVALID_ARGUMENT
+    assert await _code(repository, query='recurso "especial') is ErrorCode.INVALID_ARGUMENT
+    assert await _code(repository, query="a OR b OR c OR d recurso") is ErrorCode.INVALID_ARGUMENT

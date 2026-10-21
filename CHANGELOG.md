@@ -9,6 +9,13 @@ heading when `development` is released to `master`.
 
 ### Changed
 
+- Publication query (#69): `search_publications` interprets `query` itself: a space is AND,
+  `"exact phrase"`, `OR` groups (at most 3) and `-term` exclusions (at most 8), because the DJEN
+  reads `texto` as one ordered phrase. Per group the DJEN gets the longest phrase, otherwise the
+  longest word (at least 5 characters); the other words and the exclusions filter the text
+  locally, ignoring case and accents and matching by word prefix, and the groups' results are
+  united by `id`. Malformed input is `invalid_argument`. The Cursor now carries the OR group
+  (**Break:** cursors issued before this change are `invalid_argument`).
 - Publication fan-out (#68): `search_publications` walks the window one day at a time, newest
   first, making at most 10 DJEN requests per call. A day at the Source's 10,000 count cap is split
   by `orgaoId` (taken from the ids on its first page). The result says `complete` and, when not,

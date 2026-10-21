@@ -9,6 +9,7 @@ from juris_bridge_mcp.domain.errors import invalid_argument
 from juris_bridge_mcp.domain.publication import COUNT_CAP, Publication, PublicationPage
 from juris_bridge_mcp.domain.publication_courts import resolve_djen_court
 from juris_bridge_mcp.domain.publication_kind import DECISION_KINDS, PublicationKind
+from juris_bridge_mcp.domain.publication_query import QueryGroup, normalized_words, parse_query
 from juris_bridge_mcp.ports.publication_repository import PublicationRepository
 
 DEFAULT_LIMIT = 10
@@ -20,8 +21,6 @@ MAX_DJEN_PAGE = COUNT_CAP // 100
 # Requests to the Source for one call, so a quiet window or a filter that keeps little cannot
 # fan out without end; the Cursor carries the search on.
 MAX_REQUESTS_PER_CALL = 10
-# The DJEN answers a trimmed query shorter than this with a misleading HTTP 500.
-MIN_QUERY_LENGTH = 5
 
 
 class IncompleteReason(StrEnum):
@@ -67,32 +66,36 @@ class PublicationSearchResult:
 
 @dataclass(frozen=True)
 class _Position:
-    """Where a search is: a day, the issuing bodies still to read (first is current), a page.
+    """Where a search is: a day, the OR group, the issuing bodies still to read, a page.
 
-    `skip` is how many kept items of the page were already returned.
+    The first of `organs` is the current one. `skip` is how many kept items of the page were
+    already returned. Within a day the groups are read in turn.
     """
 
     day: date
+    group: int = 0
     organs: tuple[int, ...] = ()
     page: int = 1
     skip: int = 0
 
-    def next_slice(self, date_from: date) -> "_Position | None":
+    def next_slice(self, date_from: date, groups: int) -> "_Position | None":
         """Return the position of the next slice, or `None` past the oldest day."""
         if self.organs[1:]:
-            return _Position(self.day, self.organs[1:])
+            return replace(self, organs=self.organs[1:], page=1, skip=0)
+        if self.group + 1 < groups:
+            return _Position(self.day, self.group + 1)
         day = self.day - timedelta(days=1)
         return _Position(day) if day >= date_from else None
 
     def encode(self, scope: str, key: str, truncation: IncompleteReason | None) -> str:
         """Return the Cursor token for this position and the truncation met so far."""
         organs = ",".join(str(organ) for organ in self.organs)
-        parts = (self.day.isoformat(), organs, self.page, self.skip, truncation or "")
+        parts = (self.day.isoformat(), organs, self.page, self.skip, truncation or "", self.group)
         return Cursor(scope, parts, key).encode()
 
     @classmethod
     def decode(
-        cls, token: str, scope: str, key: str, date_from: date, date_to: date
+        cls, token: str, scope: str, key: str, date_from: date, date_to: date, groups: int
     ) -> "tuple[_Position, IncompleteReason | None]":
         """Parse a token issued for this search, or raise `invalid_argument`."""
         decoded = Cursor.decode(token, scopes=(scope,))
@@ -103,9 +106,17 @@ class _Position:
             )
         try:
             match decoded.position:
-                case (str() as day, str() as organs, int() as page, int() as skip, str() as met):
+                case (
+                    str() as day,
+                    str() as organs,
+                    int() as page,
+                    int() as skip,
+                    str() as met,
+                    int() as group,
+                ):
                     position = cls(
                         date.fromisoformat(day),
+                        group,
                         tuple(int(organ) for organ in organs.split(",")) if organs else (),
                         page,
                         skip,
@@ -117,6 +128,7 @@ class _Position:
             raise invalid_argument("The cursor is not valid.") from None
         if (
             not date_from <= position.day <= date_to
+            or not 0 <= group < groups
             or not 1 <= page <= MAX_DJEN_PAGE
             or skip < 0
             or truncation is IncompleteReason.BUDGET
@@ -127,13 +139,13 @@ class _Position:
 
 
 def _advance(
-    position: _Position, page: PublicationPage, date_from: date
+    position: _Position, page: PublicationPage, date_from: date, groups: int
 ) -> tuple[_Position | None, IncompleteReason | None]:
     """Return where to read next once `page` is spent, and the truncation met leaving it."""
     if page.more and position.page < MAX_DJEN_PAGE:
         return replace(position, page=position.page + 1, skip=0), None
     met = IncompleteReason.DEPTH_CEILING if page.more else None
-    return position.next_slice(date_from), met
+    return position.next_slice(date_from, groups), met
 
 
 async def search_publications(
@@ -149,7 +161,9 @@ async def search_publications(
 ) -> PublicationSearchResult:
     """Return a page of the Court's decisions in the window whose text matches `query`.
 
-    The query goes to the Source as it is, trimmed; nothing is called when an argument is
+    The query is parsed here (see `publication_query`): each OR group asks the Source for its
+    longest phrase or word, and the rest of the group filters the fetched text locally; the
+    groups' results are united without duplicates. Nothing is called when an argument is
     invalid. Despachos, intimações and editais are dropped from what the Source answers, and
     `kind`, when given, keeps only that kind; without it every decision stays, `ambiguous`
     included. The window is walked one day at a time from `date_to` back, a day matching
@@ -168,25 +182,22 @@ async def search_publications(
             hint="Search a shorter window and repeat it for the next one.",
         )
     text = query.strip()
-    if len(text) < MIN_QUERY_LENGTH:
-        raise invalid_argument(
-            f"query must have at least {MIN_QUERY_LENGTH} characters.",
-            hint="The Source reads the whole query as one phrase; use a longer term.",
-        )
+    groups = parse_query(text)
     alias = resolve_djen_court(court, date_to)
     key = "|".join((date_from.isoformat(), date_to.isoformat(), text, wanted or ""))
     position: _Position | None = _Position(date_to)
     truncation: IncompleteReason | None = None
     if cursor is not None:
-        position, truncation = _Position.decode(cursor, alias, key, date_from, date_to)
+        position, truncation = _Position.decode(cursor, alias, key, date_from, date_to, len(groups))
     chosen: list[Publication] = []
     dropped = 0
     requests = 0
     retrieved_at = None
     while position is not None and len(chosen) < limit and requests < MAX_REQUESTS_PER_CALL:
+        group = groups[position.group]
         page = await repository.search(
             alias,
-            text,
+            group.dispatched.text,
             position.day,
             position.day,
             page=position.page,
@@ -196,22 +207,26 @@ async def search_publications(
         retrieved_at = page.retrieved_at
         if page.truncated:
             truncation = truncation or IncompleteReason.DEPTH_CEILING
-            position = position.next_slice(date_from)
+            position = position.next_slice(date_from, len(groups))
             continue
         if position.page == 1 and page.total >= COUNT_CAP:
             truncation = truncation or IncompleteReason.SLICE_CAP
             if not position.organs and page.organ_ids:
-                position = _Position(position.day, page.organ_ids)
+                position = _Position(position.day, position.group, page.organ_ids)
                 continue
         decisions = [p for p in page.publications if p.kind is not PublicationKind.NOT_A_DECISION]
         dropped += len(page.publications) - len(decisions)
-        available = [p for p in decisions if wanted is None or p.kind is wanted][position.skip :]
+        available = [
+            p
+            for p in decisions
+            if (wanted is None or p.kind is wanted) and _belongs_to(p, groups, position.group)
+        ][position.skip :]
         room = limit - len(chosen)
         chosen.extend(available[:room])
         if len(available) > room:
             position = replace(position, skip=position.skip + room)
             continue
-        position, met = _advance(position, page, date_from)
+        position, met = _advance(position, page, date_from, len(groups))
         truncation = truncation or met
     incomplete = IncompleteReason.BUDGET if position is not None else truncation
     return PublicationSearchResult(
@@ -224,6 +239,12 @@ async def search_publications(
         not_decisions_dropped=dropped,
         hint=_HINTS[incomplete] if incomplete else None,
     )
+
+
+def _belongs_to(publication: Publication, groups: tuple[QueryGroup, ...], current: int) -> bool:
+    """Return whether the group matches the text and no earlier group already returned it."""
+    words = normalized_words(publication.text)
+    return groups[current].matches(words) and not any(g.claims(words) for g in groups[:current])
 
 
 def _parse_kind(kind: str | None) -> PublicationKind | None:

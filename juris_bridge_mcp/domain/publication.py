@@ -23,6 +23,7 @@ class Publication:
     are kept here so they can be counted, and never presented.
     `item_hash` is the DJEN's hash of the item, which tells it apart from the others of the
     same Court, day and Case. `organ_id` is the DJEN's id of the issuing body, when it gives one.
+    `text` is the whole plain text, kept so a search can filter on it; it is never presented.
     """
 
     court: str
@@ -35,6 +36,7 @@ class Publication:
     kind: PublicationKind
     url: str | None = None
     organ_id: int | None = None
+    text: str = field(default="", repr=False, compare=False)
 
     @property
     def id(self) -> str:

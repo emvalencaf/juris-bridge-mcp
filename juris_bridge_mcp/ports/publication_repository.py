@@ -10,7 +10,10 @@ class PublicationRepository(Protocol):
     """Finds the Publications of one Court released in a window of days."""
 
     async def search(
-        self, court: str, query: str, date_from: date, date_to: date, *, limit: int
+        self, court: str, query: str, date_from: date, date_to: date
     ) -> PublicationPage:
-        """Return up to `limit` Publications whose text matches `query` as the Source reads it."""
+        """Return the first page of Publications whose text matches `query` as the Source reads it.
+
+        Every kind of item comes back, each with its classified `kind`; filtering is the caller's.
+        """
         ...

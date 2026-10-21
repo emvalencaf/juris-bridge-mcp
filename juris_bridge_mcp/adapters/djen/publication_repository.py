@@ -16,9 +16,9 @@ from juris_bridge_mcp.domain.errors import (
 )
 from juris_bridge_mcp.domain.publication import SOURCE, PublicationPage
 
-# The DJEN documents a page size of 5 or 100 and nothing else.
-_SMALL_PAGE = 5
-_LARGE_PAGE = 100
+# The DJEN documents a page size of 5 or 100 and nothing else. The largest is asked for, since
+# despachos and notices are dropped afterwards and a small page could leave nothing to show.
+_PAGE_SIZE = 100
 # The DJEN says to wait a minute after a 429.
 RATE_LIMIT_WAIT_SECONDS = 60
 # The client must not retry a 429 within seconds: that is what the DJEN blocks.
@@ -34,17 +34,16 @@ class DjenPublicationRepository:
         self._base_url = base_url.rstrip("/")
 
     async def search(
-        self, court: str, query: str, date_from: date, date_to: date, *, limit: int
+        self, court: str, query: str, date_from: date, date_to: date
     ) -> PublicationPage:
         """Fetch the first page of the Court's Publications in the window, `query` as it is."""
-        page_size = _SMALL_PAGE if limit <= _SMALL_PAGE else _LARGE_PAGE
         body = await self._get(
             {
                 "siglaTribunal": court.upper(),
                 "texto": query,
                 "dataDisponibilizacaoInicio": date_from.isoformat(),
                 "dataDisponibilizacaoFim": date_to.isoformat(),
-                "itensPorPagina": page_size,
+                "itensPorPagina": _PAGE_SIZE,
                 "pagina": 1,
             }
         )
@@ -54,13 +53,13 @@ class DjenPublicationRepository:
                 raise SchemaDrift("items is not a list")
             if isinstance(count, bool) or not isinstance(count, int):
                 raise SchemaDrift("count is not a number")
-            publications = tuple(map_publication(item, court=court) for item in items[:limit])
+            publications = tuple(map_publication(item, court=court) for item in items)
         except (SchemaDrift, KeyError, TypeError) as drift:
             raise source_changed(SOURCE, "DJEN", str(drift)) from None
         return PublicationPage(
             publications=publications,
             total=count,
-            more=len(items) > limit or count > len(items),
+            more=count > len(items),
         )
 
     async def _get(self, params: dict[str, Any]) -> Any:

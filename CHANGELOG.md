@@ -31,7 +31,14 @@ heading when `development` is released to `master`.
   (opaque `id`, CNJ number in both forms, raw `tipoDocumento`, release date, HTML-stripped
   excerpt, `text_length`, Citation). DJEN failures map to the closed Error codes (429 waits 60 s);
   STF, TREs and periods before a Court's start are `not_covered`. New `JURIS_BRIDGE_DJEN_*`
-  settings. No paging, kind filter or `get_publication` yet (#53).
+  settings. No paging or `get_publication` yet (#53).
+- Publication `kind` (#67): each item of `search_publications` is classified as `acordao`,
+  `sentenca`, `decisao_monocratica`, `decisao_interlocutoria` or `ambiguous` from
+  `tipoComunicacao`, `tipoDocumento` and the text (a pure heuristic in
+  `domain/publication_kind.py`, stated as such in the response). Despachos, intimações, editais
+  and notices are dropped and counted in `not_decisions_dropped`; the new `kind` argument keeps
+  one kind. The repository now always asks the DJEN for 100 items, so the limit applies after
+  the drop; `total` is still the Source's count before it.
 - Publication term in `GLOSSARY.md` and ADR 0006 (#59): the DJEN as the Source of Publications,
   self-hosted per user, extending ADR 0002.
 - Diagrams (#32): four overview diagrams under `docs/diagrams/` (architecture and module

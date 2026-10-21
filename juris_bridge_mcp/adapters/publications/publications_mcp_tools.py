@@ -26,6 +26,7 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         date_from: date,
         date_to: date,
         query: str,
+        kind: str | None = None,
         limit: int = DEFAULT_LIMIT,
     ) -> dict[str, Any]:
         """Search the Publications (decisions and rulings released in a Diário da Justiça
@@ -43,17 +44,25 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         ends. `query` is sent to the Source as it is, trimmed, and must have at least 5
         characters: the Source reads all of it as one phrase, words in that order and
         adjacent, ignoring case and accents but not plurals; it has no AND, OR or quotes.
+        `kind` keeps one kind only: `acordao`, `sentenca`, `decisao_monocratica`,
+        `decisao_interlocutoria` or `ambiguous`; by default every decision is returned,
+        `ambiguous` included.
 
         Returns up to `limit` (1-25, default 10) Publications of the first page the
         Source answers, newest first as it orders them (no relevance ranking; this tool
         does not page yet, and `hint` says when more match). Each item has an opaque
         `id`, `cnj_number` (masked) and `cnj_number_digits`, the Court's own
-        `document_type` (free text, not normalized), `published_on`, a plain-text
+        `kind` (our heuristic classification, see below), the Court's own `document_type`
+        (free text, not normalized), `published_on`, a plain-text
         `excerpt` (HTML stripped, at most 500 characters), `text_length` of the whole
         text, `content_kind: "metadata"` and a `citation` whose `url` is null when the
         item has no link of its own. `total` is the Source's count, capped at 10,000
-        (`total_is_lower_bound`). Despachos, intimações and editais are not filtered out
-        yet. For the Case itself, call get_case with the `cnj_number`.
+        (`total_is_lower_bound`) and counts items dropped below; `not_decisions_dropped` says
+        how many despachos, intimações and editais of the page were left out. `kind` is
+        inferred from the text, since the Source's labels do not say it (TJSP files most acts
+        as "Intimação", STJ as "DESPACHO / DECISÃO"): it is heuristic, wrong now and then at
+        the line between a despacho and an interlocutory decision, and `ambiguous` is returned
+        instead of a guess. For the Case itself, call get_case with the `cnj_number`.
         """
         try:
             outcome = await search_publications(
@@ -62,6 +71,7 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
                 date_from=date_from,
                 date_to=date_to,
                 query=query,
+                kind=kind,
                 limit=limit,
             )
         except ToolFailure as failure:

@@ -3,10 +3,30 @@ from datetime import date
 import pytest
 
 from juris_bridge_mcp.application.use_cases.search_publications import search_publications
+from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
-from juris_bridge_mcp.domain.publication import PublicationPage
+from juris_bridge_mcp.domain.publication import Publication, PublicationPage
+from juris_bridge_mcp.domain.publication_kind import PublicationKind
 
 DAY = date(2026, 10, 15)
+
+
+def _publication(index: int, kind: PublicationKind = PublicationKind.SENTENCA) -> Publication:
+    return Publication(
+        court="tjsp",
+        day=DAY,
+        number=CnjNumber("12345677620258260100"),
+        document_type="Intimação",
+        excerpt="texto",
+        text_length=5,
+        item_hash=f"hash{index}",
+        kind=kind,
+    )
+
+
+def _page(*kinds: PublicationKind, **fields) -> PublicationPage:
+    publications = tuple(_publication(i, kind) for i, kind in enumerate(kinds))
+    return PublicationPage(publications=publications, total=len(kinds), **fields)
 
 
 class _Repository:
@@ -14,8 +34,8 @@ class _Repository:
         self.page = page or PublicationPage(publications=(), total=0)
         self.asked: list[tuple] = []
 
-    async def search(self, court, query, date_from, date_to, *, limit):
-        self.asked.append((court, query, date_from, date_to, limit))
+    async def search(self, court, query, date_from, date_to):
+        self.asked.append((court, query, date_from, date_to))
         return self.page
 
 
@@ -36,16 +56,18 @@ async def test_asks_the_resolved_court_with_the_trimmed_query_as_is():
 
     result = await _search(repository, court=" TJSP ", query="  recurso especial ", limit=5)
 
-    assert repository.asked == [("tjsp", "recurso especial", DAY, DAY, 5)]
+    assert repository.asked == [("tjsp", "recurso especial", DAY, DAY)]
     assert result.court == "tjsp" and result.hint is None
 
 
 async def test_limit_defaults_to_10():
-    repository = _Repository()
+    repository = _Repository(
+        PublicationPage(publications=tuple(_publication(i) for i in range(12)), total=12)
+    )
 
-    await _search(repository)
+    result = await _search(repository)
 
-    assert repository.asked[0][4] == 10
+    assert len(result.publications) == 10 and result.hint
 
 
 @pytest.mark.parametrize("limit", [0, 26])
@@ -85,3 +107,52 @@ async def test_a_hint_says_when_more_publications_match_than_were_returned():
     result = await _search(repository)
 
     assert result.hint and "narrow" in result.hint
+
+
+async def test_despachos_and_notices_are_dropped_and_counted():
+    kinds = (
+        PublicationKind.NOT_A_DECISION,
+        PublicationKind.ACORDAO,
+        PublicationKind.NOT_A_DECISION,
+    )
+    repository = _Repository(_page(*kinds))
+
+    result = await _search(repository)
+
+    assert [p.kind for p in result.publications] == [PublicationKind.ACORDAO]
+    assert result.not_decisions_dropped == 2
+
+
+async def test_by_default_every_decision_stays_ambiguous_included():
+    kinds = tuple(k for k in PublicationKind if k is not PublicationKind.NOT_A_DECISION)
+
+    result = await _search(_Repository(_page(*kinds)))
+
+    assert [p.kind for p in result.publications] == list(kinds)
+
+
+@pytest.mark.parametrize(
+    "kind",
+    ["acordao", "sentenca", "decisao_monocratica", "decisao_interlocutoria", "ambiguous"],
+)
+async def test_the_kind_filter_keeps_only_that_kind(kind):
+    kinds = tuple(k for k in PublicationKind if k is not PublicationKind.NOT_A_DECISION)
+
+    result = await _search(
+        _Repository(_page(*kinds, PublicationKind.ACORDAO)), kind=f" {kind.upper()} "
+    )
+
+    assert {p.kind.value for p in result.publications} == {kind}
+
+
+@pytest.mark.parametrize("kind", ["despacho", "not_a_decision", "", "decisao"])
+async def test_an_unknown_kind_is_invalid_and_never_reaches_the_source(kind):
+    assert await _code(_Repository(), kind=kind) is ErrorCode.INVALID_ARGUMENT
+
+
+async def test_the_limit_applies_after_the_filter():
+    kinds = (PublicationKind.NOT_A_DECISION,) * 8 + (PublicationKind.SENTENCA,) * 3
+
+    result = await _search(_Repository(_page(*kinds)), limit=2)
+
+    assert len(result.publications) == 2 and result.hint

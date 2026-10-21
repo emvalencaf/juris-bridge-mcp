@@ -42,8 +42,8 @@ def _respond(status: int, body=None, **kwargs):
     return lambda request: httpx.Response(status, json=body, **kwargs)
 
 
-async def _search(handler, limit: int = 10):
-    return await _repository(handler).search("tjsp", "recurso", DAY, DAY, limit=limit)
+async def _search(handler):
+    return await _repository(handler).search("tjsp", "recurso", DAY, DAY)
 
 
 async def test_maps_the_recorded_publications():
@@ -82,7 +82,7 @@ async def test_sends_the_query_as_is_with_the_court_and_window():
         seen.append(request)
         return httpx.Response(200, json=_fixture("empty.json"))
 
-    await _search(handler, limit=10)
+    await _search(handler)
 
     request = seen[0]
     assert request.url.path == "/api/v1/comunicacao"
@@ -96,22 +96,19 @@ async def test_sends_the_query_as_is_with_the_court_and_window():
     }
 
 
-async def test_asks_for_5_items_when_the_limit_is_5_or_less():
-    seen = []
+async def test_keeps_every_item_of_the_page_and_says_more_follow_when_the_count_is_larger():
+    body = _fixture("tjsp_decisions.json")
+    body["count"] = 40
 
-    def handler(request):
-        seen.append(request.url.params["itensPorPagina"])
-        return httpx.Response(200, json=_fixture("empty.json"))
+    page = await _search(_respond(200, body))
 
-    await _search(handler, limit=3)
-
-    assert seen == ["5"]
+    assert len(page.publications) == 2 and page.more is True
 
 
-async def test_keeps_the_first_items_up_to_the_limit_and_says_more_follow():
-    page = await _search(_respond(200, _fixture("tjsp_decisions.json")), limit=1)
+async def test_classifies_each_item_from_its_labels_and_text():
+    page = await _search(_respond(200, _fixture("tjsp_decisions.json")))
 
-    assert len(page.publications) == 1 and page.more is True
+    assert [p.kind.value for p in page.publications] == ["decisao_interlocutoria", "acordao"]
 
 
 async def test_an_empty_answer_is_an_empty_page():

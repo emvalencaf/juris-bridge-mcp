@@ -48,11 +48,27 @@ class _Repository:
         self.pages = pages or (PublicationPage(publications=(), total=0),)
         self.asked: list[tuple] = []
         self.organs: list[int | None] = []
+        self.numbers: list[CnjNumber | None] = []
 
-    async def search(self, court, query, date_from, date_to, *, page=1, organ_id=None):
-        self.asked.append((court, query, date_from, date_to, page))
-        self.organs.append(organ_id)
-        return self.pages[min(page, len(self.pages)) - 1]
+    async def search(self, request):
+        self.asked.append(
+            (request.court, request.query, request.date_from, request.date_to, request.page)
+        )
+        self.organs.append(request.organ_id)
+        self.numbers.append(request.cnj_number)
+        return self.pages[min(request.page, len(self.pages)) - 1]
+
+
+class _Spans:
+    """Records the (date_from, date_to, page) of each request; answers `pages` or empty ones."""
+
+    def __init__(self, pages=None):
+        self.pages = pages or {}
+        self.asked: list[tuple] = []
+
+    async def search(self, request):
+        self.asked.append((request.date_from, request.date_to, request.page))
+        return self.pages.get(request.page, PublicationPage(publications=(), total=0))
 
 
 class _Days:
@@ -62,12 +78,11 @@ class _Days:
         self.script = script or {}
         self.asked: list[tuple] = []
 
-    async def search(self, court, query, date_from, date_to, *, page=1, organ_id=None):
-        assert date_from == date_to
-        self.asked.append((date_from, organ_id, page))
-        return self.script.get(
-            (date_from, organ_id, page), PublicationPage(publications=(), total=0)
-        )
+    async def search(self, request):
+        assert request.date_from == request.date_to
+        key = (request.date_from, request.organ_id, request.page)
+        self.asked.append(key)
+        return self.script.get(key, PublicationPage(publications=(), total=0))
 
 
 async def _search(repository, **overrides):
@@ -256,7 +271,7 @@ async def test_a_cursor_from_another_search_is_invalid():
 
 
 def _cursor(position, key=None):
-    key = key or "|".join(("2026-10-15", "2026-10-15", "recurso especial", ""))
+    key = key or "|".join(("2026-10-15", "2026-10-15", "recurso especial", "", ""))
     return Cursor("tjsp", position, key).encode()
 
 
@@ -473,9 +488,9 @@ class _ByTerm:
         self.pages = pages
         self.asked: list[str] = []
 
-    async def search(self, court, query, date_from, date_to, *, page=1, organ_id=None):
-        self.asked.append(query)
-        return self.pages.get(query, PublicationPage(publications=(), total=0))
+    async def search(self, request):
+        self.asked.append(request.query)
+        return self.pages.get(request.query, PublicationPage(publications=(), total=0))
 
 
 def _of(*publications: Publication) -> PublicationPage:
@@ -565,3 +580,129 @@ async def test_scores_the_items_of_the_page_but_keeps_them_in_date_order():
     assert result.publications[1].relevance.score > result.publications[0].relevance.score > 0
     assert result.publications[0].relevance.matched_terms == ("recurso", "especial")
     assert all(p.text == "" for p in result.publications)
+
+
+NUMBER = CnjNumber("12345677620258260100")
+OTHER = CnjNumber("00000011520258260100")
+
+
+async def _by_number(repository, cnj_number=NUMBER.digits, **overrides):
+    """Search by CNJ number alone: no court and no query unless `overrides` give them."""
+    arguments = {"court": None, "query": None, "cnj_number": cnj_number, **overrides}
+    return await _search(repository, **arguments)
+
+
+async def test_a_cnj_number_asks_the_source_for_it_with_no_text_and_derives_the_court():
+    repository = _Repository(_of(_with_text(1, "qualquer coisa")))
+
+    result = await _by_number(repository, "1234567-76.2025.8.26.0100")
+
+    assert repository.asked == [("tjsp", "", DAY, DAY, 1)]
+    assert repository.numbers == [NUMBER]
+    assert result.court == "tjsp" and [p.item_hash for p in result.publications] == ["hash1"]
+    assert result.publications[0].relevance.score == 0.0
+    assert result.complete
+
+
+async def test_the_20_digit_form_of_the_number_is_accepted():
+    repository = _Repository()
+
+    await _by_number(repository, court="tjsp")
+
+    assert repository.numbers == [NUMBER]
+
+
+async def test_with_a_number_the_query_filters_locally_and_needs_no_long_term():
+    repository = _Repository(
+        _of(_with_text(1, "Dano moral na sentença"), _with_text(2, "outro assunto"))
+    )
+
+    result = await _by_number(repository, query="dano -outro")
+
+    assert repository.asked[0][1] == ""
+    assert [p.item_hash for p in result.publications] == ["hash1"]
+    assert result.publications[0].relevance.matched_terms == ("dano",)
+
+
+async def test_the_court_given_with_a_number_must_be_the_one_it_derives():
+    repository = _Repository()
+
+    with pytest.raises(ToolFailure) as caught:
+        await _by_number(repository, court="trf1")
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT and repository.asked == []
+
+
+@pytest.mark.parametrize("raw", ["", "123", "1234567-76.2025.8.26.0101", "x" * 20])
+async def test_an_invalid_cnj_number_is_invalid_argument(raw):
+    repository = _Repository()
+
+    with pytest.raises(ToolFailure) as caught:
+        await _by_number(repository, raw, court="tjsp")
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT and repository.asked == []
+
+
+async def test_without_a_number_a_court_and_a_query_are_required():
+    assert await _code(_Repository(), court=None) is ErrorCode.INVALID_ARGUMENT
+    assert await _code(_Repository(), query=None) is ErrorCode.INVALID_ARGUMENT
+    assert await _code(_Repository(), query="  ") is ErrorCode.INVALID_ARGUMENT
+
+
+async def test_a_number_with_no_publications_is_an_empty_complete_result():
+    result = await _by_number(_Repository())
+
+    assert result.publications == () and result.complete and result.next_cursor is None
+
+
+async def test_a_cursor_resumes_the_search_by_number_that_issued_it():
+    repository = _Repository(_of(*(_with_text(i, "x") for i in range(3))))
+    first = await _by_number(repository, limit=1)
+
+    rest = await _by_number(repository, cursor=first.next_cursor)
+
+    assert first.next_cursor
+    assert [p.item_hash for p in rest.publications] == ["hash1", "hash2"]
+
+
+async def test_a_cursor_is_refused_for_another_number():
+    repository = _Repository(_of(*(_with_text(i, "x") for i in range(3))))
+    first = await _by_number(repository, limit=1)
+
+    with pytest.raises(ToolFailure) as caught:
+        await _by_number(repository, OTHER.digits, cursor=first.next_cursor)
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+async def test_a_number_is_asked_over_the_whole_window_in_one_request():
+    spans = _Spans()
+
+    result = await _by_number(spans, date_from=date(2026, 9, 15), date_to=DAY)
+
+    assert spans.asked == [(date(2026, 9, 15), DAY, 1)] and result.complete
+
+
+async def test_a_text_search_still_walks_the_window_by_day():
+    spans = _Spans()
+
+    await _search(spans, date_from=DAY - timedelta(days=2), date_to=DAY)
+
+    assert [(a, b) for a, b, _ in spans.asked] == [
+        (DAY, DAY),
+        (DAY - timedelta(days=1),) * 2,
+        (DAY - timedelta(days=2),) * 2,
+    ]
+
+
+async def test_a_number_pages_through_the_window_and_stops_at_the_last_page():
+    paged = _Spans(
+        {
+            1: PublicationPage(publications=(_publication(1),), total=150, more=True),
+            2: PublicationPage(publications=(_publication(2),), total=150),
+        }
+    )
+    result = await _by_number(paged, date_from=date(2026, 9, 15), date_to=DAY)
+
+    assert paged.asked == [(date(2026, 9, 15), DAY, 1), (date(2026, 9, 15), DAY, 2)]
+    assert [p.item_hash for p in result.publications] == ["hash1", "hash2"] and result.complete

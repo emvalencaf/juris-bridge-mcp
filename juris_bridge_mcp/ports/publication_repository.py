@@ -1,28 +1,17 @@
 """Port: where Publications come from."""
 
-from datetime import date
 from typing import Protocol
 
-from juris_bridge_mcp.domain.publication import PublicationPage
+from juris_bridge_mcp.domain.publication import PublicationPage, PublicationSearch
 
 
 class PublicationRepository(Protocol):
     """Finds the Publications of one Court released in a window of days."""
 
-    async def search(
-        self,
-        court: str,
-        query: str,
-        date_from: date,
-        date_to: date,
-        *,
-        page: int = 1,
-        organ_id: int | None = None,
-    ) -> PublicationPage:
-        """Return page `page` (from 1, 100 items) of the Publications matching `query`.
+    async def search(self, request: PublicationSearch) -> PublicationPage:
+        """Return page `request.page` (from 1, 100 items) of the Publications it asks for.
 
-        `organ_id` narrows the slice to one issuing body. A page past the Source's depth ceiling
-        comes back `truncated` instead of failing.
+        A page past the Source's depth ceiling comes back `truncated` instead of failing.
 
         Every kind of item comes back, each with its classified `kind`; filtering is the caller's.
         """

@@ -172,6 +172,10 @@ characters); the rest of the group filters the text here, ignoring case and acce
 matching by word prefix (`recurso` finds `recursos`; there is no stemming). The word asked of
 the DJEN is matched exactly by it, so add an OR group for another form of it.
 
+With `cnj_number` (masked or 20 digits) the search lists the Publications of that Case: the
+court is derived from the number (or checked against `court`), `query` is optional and filters
+here only, with no minimum term length. For the Case itself, call `get_case`.
+
 ### Known limits
 
 The rate limit and cache are explained further in [docs/known-limits.md](docs/known-limits.md).

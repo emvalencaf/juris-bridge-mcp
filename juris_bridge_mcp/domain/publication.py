@@ -69,6 +69,23 @@ class Publication:
 
 
 @dataclass(frozen=True)
+class PublicationSearch:
+    """One request to the Source: a Court's Publications released in a window of days.
+
+    `query` is sent as the Source's text, or left out when empty. `page` counts from 1.
+    `organ_id` narrows the slice to one issuing body and `cnj_number` to one Case.
+    """
+
+    court: str
+    query: str
+    date_from: date
+    date_to: date
+    page: int = 1
+    organ_id: int | None = None
+    cnj_number: CnjNumber | None = None
+
+
+@dataclass(frozen=True)
 class PublicationPage:
     """One page of a search, newest first as the DJEN returns it, before any filtering.
 

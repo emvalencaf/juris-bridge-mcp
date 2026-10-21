@@ -22,10 +22,11 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
 
     @server.tool(name="search_publications", annotations={"readOnlyHint": True})
     async def search_publications_tool(
-        court: str,
         date_from: date,
         date_to: date,
-        query: str,
+        court: str | None = None,
+        query: str | None = None,
+        cnj_number: str | None = None,
         kind: str | None = None,
         limit: int = DEFAULT_LIMIT,
         cursor: str | None = None,
@@ -36,6 +37,16 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         WARNING: Publications carry personal data (party names, sometimes lawyers and
         other people), published as the Court released it. The LGPD applies to what you
         do with it: do not store, profile or repeat it beyond what the task needs.
+
+        Pass `cnj_number` (masked `NNNNNNN-DD.AAAA.J.TR.OOOO` or its 20 digits; a wrong length or
+        check digit is `invalid_argument`) to list the Publications of one Case in the window:
+        `court` is then derived from the number, or checked against it when given (a mismatch is
+        `invalid_argument`), and `query` is optional; when present it filters locally, with the
+        same syntax, and its terms need not be 5 characters. Each item carries only the CNJ
+        number: call get_case for the Case. The Source is asked for the whole window at once, not
+        day by day, so a Case costs one request however long the window. A number with no
+        Publications in the window returns an empty, complete page. Without `cnj_number`,
+        `court` and `query` are required.
 
         `court` is an alias such as `tjsp`, `trf1` or `stj` (see list_coverage); an
         unknown alias returns `invalid_argument`. STF and the electoral courts do not
@@ -94,6 +105,7 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
                 date_from=date_from,
                 date_to=date_to,
                 query=query,
+                cnj_number=cnj_number,
                 kind=kind,
                 limit=limit,
                 cursor=cursor,

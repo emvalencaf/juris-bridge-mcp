@@ -4,12 +4,18 @@ from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 
+from juris_bridge_mcp.domain.cnj_number import CnjNumber, derive_court
 from juris_bridge_mcp.domain.cursor import Cursor
 from juris_bridge_mcp.domain.errors import invalid_argument
-from juris_bridge_mcp.domain.publication import COUNT_CAP, Publication, PublicationPage
+from juris_bridge_mcp.domain.publication import (
+    COUNT_CAP,
+    Publication,
+    PublicationPage,
+    PublicationSearch,
+)
 from juris_bridge_mcp.domain.publication_courts import resolve_djen_court
 from juris_bridge_mcp.domain.publication_kind import DECISION_KINDS, PublicationKind
-from juris_bridge_mcp.domain.publication_query import group_returns, parse_query
+from juris_bridge_mcp.domain.publication_query import group_returns, parse_local_query, parse_query
 from juris_bridge_mcp.domain.publication_ranking import query_terms, rank_publications
 from juris_bridge_mcp.ports.publication_repository import PublicationRepository
 
@@ -152,15 +158,21 @@ def _advance(
 async def search_publications(
     repository: PublicationRepository,
     *,
-    court: str,
     date_from: date,
     date_to: date,
-    query: str,
+    court: str | None = None,
+    query: str | None = None,
+    cnj_number: str | None = None,
     kind: str | None = None,
     limit: int = DEFAULT_LIMIT,
     cursor: str | None = None,
 ) -> PublicationSearchResult:
-    """Return a page of the Court's decisions in the window whose text matches `query`.
+    """Return a page of the Court's decisions in the window, matching `query` or of one Case.
+
+    With `cnj_number` (formatted or 20 digits, validated) the Publications are those of that
+    Case: the Court is derived from the number, or checked against `court` when given, and
+    `query` is optional. When present it filters locally and needs no 5-character term, since
+    nothing but the number is sent to the Source. Without it, `court` and `query` are required.
 
     The query is parsed here (see `publication_query`): each OR group asks the Source for its
     longest phrase or word, and the rest of the group filters the fetched text locally; the
@@ -169,11 +181,13 @@ async def search_publications(
     `kind`, when given, keeps only that kind; without it every decision stays, `ambiguous`
     included. Each item is scored against the others of the page (BM25, see
     `publication_ranking`), but the order stays by date. The window is walked one day at a time
-    from `date_to` back, a day matching `COUNT_CAP` items being split by issuing body, and at
-    most `MAX_REQUESTS_PER_CALL` requests are made; `next_cursor` resumes where the call
+    from `date_to` back, a day matching `COUNT_CAP` items being split by issuing body, except
+    that a Case is asked for over the whole window in one slice, and at most
+    `MAX_REQUESTS_PER_CALL` requests are made; `next_cursor` resumes where the call
     stopped and must come back with the same Court, window, query and kind.
     """
     wanted = _parse_kind(kind)
+    case_number = CnjNumber.parse(cnj_number) if cnj_number is not None else None
     if not 1 <= limit <= MAX_LIMIT:
         raise invalid_argument(f"limit must be between 1 and {MAX_LIMIT}.")
     if date_from > date_to:
@@ -183,10 +197,14 @@ async def search_publications(
             f"The window is longer than {MAX_WINDOW_DAYS} days.",
             hint="Search a shorter window and repeat it for the next one.",
         )
-    text = query.strip()
-    groups = parse_query(text)
-    alias = resolve_djen_court(court, date_to)
-    key = "|".join((date_from.isoformat(), date_to.isoformat(), text, wanted or ""))
+    text = (query or "").strip()
+    if case_number is None and not text:
+        raise invalid_argument("query is required without cnj_number.")
+    groups = parse_query(text) if case_number is None else parse_local_query(text)
+    alias = _resolve_court(court, case_number, date_to)
+    key = _search_key(date_from, date_to, text, wanted, case_number)
+    # A Case is asked for over the whole window in one slice; a text search walks it by day.
+    oldest = date_to if case_number else date_from
     position: _Position | None = _Position(date_to)
     truncation: IncompleteReason | None = None
     if cursor is not None:
@@ -198,18 +216,21 @@ async def search_publications(
     while position is not None and len(chosen) < limit and requests < MAX_REQUESTS_PER_CALL:
         group = groups[position.group]
         page = await repository.search(
-            alias,
-            group.dispatched.text,
-            position.day,
-            position.day,
-            page=position.page,
-            organ_id=position.organs[0] if position.organs else None,
+            PublicationSearch(
+                court=alias,
+                query=group.source_text,
+                date_from=date_from if case_number else position.day,
+                date_to=position.day,
+                page=position.page,
+                organ_id=position.organs[0] if position.organs else None,
+                cnj_number=case_number,
+            )
         )
         requests += page.requests
         retrieved_at = page.retrieved_at
         if page.truncated:
             truncation = truncation or IncompleteReason.DEPTH_CEILING
-            position = position.next_slice(date_from, len(groups))
+            position = position.next_slice(oldest, len(groups))
             continue
         if position.page == 1 and page.total >= COUNT_CAP:
             truncation = truncation or IncompleteReason.SLICE_CAP
@@ -229,7 +250,7 @@ async def search_publications(
         if len(available) > room:
             position = replace(position, skip=position.skip + room)
             continue
-        position, met = _advance(position, page, date_from, len(groups))
+        position, met = _advance(position, page, oldest, len(groups))
         truncation = truncation or met
     ranked = rank_publications(query_terms(groups), chosen)
     incomplete = IncompleteReason.BUDGET if position is not None else truncation
@@ -243,6 +264,34 @@ async def search_publications(
         not_decisions_dropped=dropped,
         hint=_HINTS[incomplete] if incomplete else None,
     )
+
+
+def _search_key(
+    date_from: date,
+    date_to: date,
+    text: str,
+    kind: PublicationKind | None,
+    case_number: CnjNumber | None,
+) -> str:
+    """Return what a Cursor must agree on with the search that issued it (empty if unset)."""
+    digits = case_number.digits if case_number else ""
+    return "|".join((date_from.isoformat(), date_to.isoformat(), text, kind or "", digits))
+
+
+def _resolve_court(court: str | None, case_number: CnjNumber | None, date_to: date) -> str:
+    """Return the Court of the search: the one given, the one the number derives, or both."""
+    named = [court] if court is not None else []
+    if case_number is not None:
+        named.append(derive_court(case_number))
+    if not named:
+        raise invalid_argument("court is required without cnj_number.")
+    aliases = [resolve_djen_court(alias, date_to) for alias in named]
+    if len(set(aliases)) > 1:
+        raise invalid_argument(
+            f"The CNJ number belongs to {aliases[1].upper()}, not {aliases[0].upper()}.",
+            hint="Omit court, or pass the one in the number.",
+        )
+    return aliases[0]
 
 
 def _parse_kind(kind: str | None) -> PublicationKind | None:

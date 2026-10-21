@@ -9,6 +9,16 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Search Publications by CNJ number (#71): `search_publications` takes `cnj_number` (masked or
+  20 digits, check digit validated) to list the Publications of one Case in the window. The
+  Court is derived from the number or checked against `court`; `query` becomes optional and,
+  when given, filters locally without the 5-character minimum. The number is sent to the DJEN as
+  `numeroProcesso`, with the same window, Cursor and `complete` semantics. `court` and `query`
+  are required only without a number. No Case enrichment: items carry the CNJ number in both
+  forms and the agent calls `get_case`. The tool's `court` and `query` are no longer required
+  by the schema, and `date_from`, `date_to` now come first.
+  A Case is asked for over the whole window in one DJEN request instead of day by day (checked
+  live: the DJEN filters `numeroProcesso` over a range, and a 31-day walk had hit its HTTP 500s).
 - Publication ranking (#70): every item of `search_publications` carries `score`, a page-relative
   BM25 computed in pure Python over the texts fetched in the call (accents and case folded, the
   start of the text and the ementa weighted higher) and scaled so the page's best item is 1.0,

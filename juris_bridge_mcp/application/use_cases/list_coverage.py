@@ -14,7 +14,15 @@ def list_coverage(catalog: CoverageCatalog) -> dict[str, Any]:
                 "kind": s.kind,
                 "description": s.description,
                 "courts": [
-                    {"alias": c.alias, "supported": c.supported, "citation_url": c.citation_url}
+                    {
+                        "alias": c.alias,
+                        "supported": c.supported,
+                        "citation_url": c.citation_url,
+                        "available_from": c.available_from.isoformat()
+                        if c.available_from
+                        else None,
+                        "reason": c.reason,
+                    }
                     for c in s.courts
                 ],
             }

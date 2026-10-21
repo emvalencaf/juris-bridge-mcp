@@ -16,9 +16,14 @@ def build_coverage_server(catalog: CoverageCatalog) -> FastMCP:
     def list_coverage_tool() -> dict[str, Any]:
         """List what this server can answer, per Source and Court (Tribunal).
 
-        Sources are DataJud (court Cases, identified by CNJ number) and the Senado
-        API (federal Legislation). Each Court has a short alias such as `tjsp`;
-        `citation_url` says whether a stable public URL can be cited for its Cases.
+        Sources are DataJud (court Cases, identified by CNJ number), the DJEN (court
+        Publications) and the Senado API (federal Legislation). Each Court has a short
+        alias such as `tjsp`; `citation_url` says whether a stable public URL can be
+        cited for its Cases. For the DJEN, `supported` is false for STF and the TREs
+        (`reason` says why, and searching them returns `not_covered`), and
+        `available_from` is the first day with data seen (null if unknown). The DJEN is
+        no archive: it starts about 2021 and later for many Courts, and its results can
+        be non-exhaustive.
         Makes no network call, so use it to plan before querying.
         """
         return list_coverage(catalog)

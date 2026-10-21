@@ -44,7 +44,7 @@ async def test_tools_are_exposed_and_read_only(mcp_client):
 async def test_list_coverage_reports_sources(mcp_client):
     result = await mcp_client.call_tool("list_coverage", {})
 
-    assert {s["source"] for s in result.data["sources"]} == {"datajud", "senado"}
+    assert {s["source"] for s in result.data["sources"]} == {"datajud", "djen", "senado"}
 
 
 async def test_missing_key_gets_401(asgi_client):

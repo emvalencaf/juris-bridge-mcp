@@ -29,6 +29,11 @@ STARTS = {
 }
 
 
+NOT_PUBLISHING_COURTS = NOT_PUBLISHING + tuple(
+    c for c in DATAJUD_COURTS if c.startswith(ELECTORAL_PREFIX)
+)
+
+
 def _not_covered(message: str) -> ToolFailure:
     return not_covered(SOURCE, message, "Use list_coverage to see which Courts are covered.")
 

@@ -184,6 +184,8 @@ The window is read one day at a time, newest first, with at most 10 DJEN request
 after about 10,000 of a slice, so narrow the query). A day at the count cap is split by Issuing
 body, using the catalog shipped with the server ([ADR 0007](docs/adr/0007-issuing-body-catalog-from-a-maintainer-script.md)).
 
+![search_publications flow](docs/diagrams/assets/05-search-publications.svg)
+
 ### Coverage
 
 `list_coverage` states, per Source and Court, what can be answered, with no network call.

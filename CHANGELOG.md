@@ -9,6 +9,8 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Portuguese README: `README.pt-BR.md` translates the README, and language badges at the top of
+  both link them.
 - Issuing body catalog (#77): a capped DJEN day is split by every known `orgaoId` of the Court,
   from `issuing_bodies.json` shipped with the server, plus any body seen on page 1 that the
   catalog lacks; `slice_cap` is reported only when a slice itself reaches the cap or such a body

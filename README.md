@@ -1,5 +1,7 @@
 <a id="readme-top"></a>
 
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README.md)
+[![pt-BR](https://img.shields.io/badge/lang-pt--BR-green.svg)](README.pt-BR.md)
 
 <br />
 <div align="center">

@@ -75,7 +75,9 @@ or `infrastructure`. Tests mirror the layers: `tests/unit/<layer>/`,
   does this for you.
 - Do not add badges that point to a private repository (they render broken), and
   do not put personal e-mail addresses in the README; link the GitHub profile.
-- Update the README in the same PR as the change it describes.
+- Update the README in the same PR as the change it describes, and mirror the change in
+  `README.pt-BR.md`, the Portuguese translation linked by the language badges (the English
+  `README.md` prevails when they differ).
 
 ## Skills
 

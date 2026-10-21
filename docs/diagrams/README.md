@@ -8,6 +8,7 @@ Overview diagrams of the server, embedded in the READMEs.
 | 02 | [MCP request flow](assets/02-request-flow.svg) | Sequence | What happens between an MCP call and its Normalized result or Error code, and what does the wide event hold? |
 | 03 | [get_legislation text fallback](assets/03-get-legislation.svg) | Flowchart | Why does the text sometimes come from another Source, and what do `content_kind` and `warnings[]` say? |
 | 04 | [AWS Reference deployment](assets/04-aws-deployment.svg) | Deployment | Which AWS services run, and where is the portability boundary? |
+| 05 | [search_publications flow](assets/05-search-publications.svg) | Flowchart | How is a window read within the request budget, and how is a day at the DJEN count cap split by Issuing body? |
 
 ## Folders
 

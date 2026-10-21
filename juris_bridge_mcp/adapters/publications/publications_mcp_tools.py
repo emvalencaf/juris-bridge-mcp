@@ -18,6 +18,7 @@ from juris_bridge_mcp.application.use_cases.search_publications import (
 )
 from juris_bridge_mcp.domain.errors import ToolFailure, to_tool_error
 from juris_bridge_mcp.domain.publication import SOURCE
+from juris_bridge_mcp.ports.issuing_body_catalog import IssuingBodyCatalog
 from juris_bridge_mcp.ports.publication_repository import PublicationRepository
 
 
@@ -27,8 +28,10 @@ def _reported(failure: ToolFailure) -> ToolError:
     return to_tool_error(failure)
 
 
-def build_publications_server(repository: PublicationRepository) -> FastMCP:
-    """Build the sub-server exposing the Publication tools over the given repository."""
+def build_publications_server(
+    repository: PublicationRepository, issuing_bodies: IssuingBodyCatalog
+) -> FastMCP:
+    """Build the sub-server exposing the Publication tools over the repository and catalog."""
     server = FastMCP("publications")
 
     @server.tool(name="search_publications", annotations={"readOnlyHint": True})
@@ -99,7 +102,8 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         `incomplete_reason` is `budget` (more follows: pass `next_cursor`, an opaque token, back
         as `cursor` with the same court, dates, query and kind; a different search returns
         `invalid_argument`), `slice_cap` (a day matched 10,000 or more items, where the Source
-        stops counting; it is split by issuing body, so some items may be missing) or
+        stops counting; it is split by issuing body, but a slice still reached the count or a
+        body is missing from the server's catalog, so some items may be missing) or
         `depth_ceiling` (the Source refuses to page deeper); the last two are reported once the
         window is done, and `hint` says what to narrow. `not_decisions_dropped` says how many
         despachos, intimações and editais the pages read in this call held. `kind` is inferred
@@ -120,6 +124,7 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
                 kind=kind,
                 limit=limit,
                 cursor=cursor,
+                issuing_bodies=issuing_bodies,
             )
         except ToolFailure as failure:
             raise _reported(failure) from None

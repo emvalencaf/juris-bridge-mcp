@@ -36,6 +36,18 @@ stored (see [RESPONSIBLE_USE.md](../RESPONSIBLE_USE.md)). A distributed cache is
 out of scope for the MVP and can replace the in-memory one behind the port
 without changing use cases.
 
+## Capped DJEN days and the Issuing body catalog
+
+A DJEN day that matches 10,000 items or more is split by Issuing body (`orgaoId`)
+from a catalog shipped with the server (ADR 0007). The DJEN has no endpoint listing
+them, so the catalog is built by hand with `scripts/build_issuing_body_catalog.py`
+and can lag behind the Courts. A body that is **both missing from the catalog and
+absent from the first page of the capped day cannot be detected**: its items are
+not read and the result can say `complete: true`. Refresh the catalog per release
+or when an unexpected `slice_cap` shows up. The shipped catalog does not cover every Court yet (run the script with `--resume` to
+complete it). A Court with no catalog entry is split
+by the bodies of the first page only and always reports `slice_cap`.
+
 ## Other limits
 
 Limits of the norm text (revoked and superseded flags, article boundaries,

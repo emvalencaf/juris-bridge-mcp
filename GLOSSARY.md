@@ -28,6 +28,10 @@ _Avoid_: jurisprudence
 A decision or ruling (_decisão_, _acórdão_) as released in a Diário da Justiça Eletrônico, with its release date and text; distinct from the Case it belongs to.
 _Avoid_: intimação, notice, case law (when a single released item is meant)
 
+**Issuing body**:
+The unit of a Court (_órgão_, such as a chamber, panel or office) that issues a Publication, identified by an `orgaoId` in the DJEN.
+_Avoid_: organ, chamber, vara (these are kinds of Issuing body, not the concept)
+
 **Relevance**:
 How a Publication fits a search query among the others of the same page: a `score` from 0 to 1 (BM25 scaled so the page's best item is 1.0) and the `matched_terms` found in its text. It is only meaningful within one response; results stay ordered by date and no global relevance ordering exists.
 _Avoid_: rank, ranking (the order is by date), global score

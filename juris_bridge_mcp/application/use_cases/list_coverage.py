@@ -13,10 +13,7 @@ def list_coverage(catalog: CoverageCatalog) -> dict[str, Any]:
                 "source": s.source,
                 "kind": s.kind,
                 "description": s.description,
-                "courts": [
-                    {"alias": c.alias, "supported": c.supported, "citation_url": c.citation_url}
-                    for c in s.courts
-                ],
+                "courts": [c.to_dict() for c in s.courts],
             }
             for s in catalog.sources()
         ]

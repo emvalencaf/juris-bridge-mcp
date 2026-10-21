@@ -177,6 +177,21 @@ With `cnj_number` (masked or 20 digits) the search lists the Publications of tha
 court is derived from the number (or checked against `court`), `query` is optional and filters
 here only, with no minimum term length. For the Case itself, call `get_case`.
 
+### Coverage
+
+`list_coverage` states, per Source and Court, what can be answered, with no network call.
+
+| Source | Kind | Covered | Not covered |
+|---|---|---|---|
+| DataJud | Cases | 91 Courts by alias (`tjsp`, `trf1`, `tre-sp`...) | STF |
+| DJEN | Publications | every DataJud Court but the TREs; `available_from` gives the first day with data known | STF and the TREs: `not_covered`, with no fallback to portals |
+| Senado | Legislation | federal norms | |
+
+The DJEN is no archive: it holds Publications from about 2021 onward and from later for
+many Courts (TJSP from 2025-03, STJ from 2024-12), and a Court without `available_from` has no
+known start. A window ending before a Court's start is `not_covered`. Results can be
+non-exhaustive.
+
 ### Known limits
 
 The rate limit and cache are explained further in [docs/known-limits.md](docs/known-limits.md).

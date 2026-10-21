@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- List the DJEN Coverage (#73): `list_coverage` adds the `djen` Source (Publications) with the
+  Courts that publish there, the `available_from` date known for each and the Courts that are
+  `not_covered` (STF and the TREs) with a `reason`. It reads the same module as
+  `search_publications` and `get_publication`, so the two cannot disagree. README coverage table. `available_from` and `reason` are left out when unknown, and STF
+  and the TREs each get their own reason.
 - Read a Publication in full (#72): `get_publication(id, cursor)` returns the whole text of one
   Publication as plain text (HTML stripped) with Content kind `full_text`, in slices of at most
   10,000 characters cut at a space and chained by a stateless Cursor, with `text_length` and the

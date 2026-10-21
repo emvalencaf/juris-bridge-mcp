@@ -3,6 +3,7 @@
 from typing import Any
 
 from juris_bridge_mcp.adapters.presentation import iso_utc
+from juris_bridge_mcp.application.use_cases.get_publication import PublicationText
 from juris_bridge_mcp.application.use_cases.search_publications import PublicationSearchResult
 from juris_bridge_mcp.domain.publication import SOURCE, Publication
 
@@ -30,6 +31,29 @@ def present_search(result: PublicationSearchResult) -> dict[str, Any]:
     if result.hint is not None:
         presented["hint"] = result.hint
     return presented
+
+
+def present_publication(result: PublicationText) -> dict[str, Any]:
+    """Return one slice of the Publication's full plain text, with `next_cursor` to read on."""
+    publication = result.publication
+    return {
+        "id": publication.id,
+        "source": SOURCE,
+        "retrieved_at": iso_utc(result.retrieved_at),
+        "content_kind": "full_text",
+        "citation": {"text": publication.citation_text, "url": publication.url},
+        "cnj_number": publication.number.formatted,
+        "cnj_number_digits": publication.number.digits,
+        "court": publication.court,
+        "kind": publication.kind.value,
+        "document_type": publication.document_type,
+        "published_on": publication.day.isoformat(),
+        "text": result.text,
+        "text_length": publication.text_length,
+        "truncated": result.truncated,
+        "next_cursor": result.next_cursor,
+        "kind_classification": KIND_CLASSIFICATION_NOTE,
+    }
 
 
 def _item(publication: Publication) -> dict[str, Any]:

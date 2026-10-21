@@ -1,16 +1,52 @@
 """A Publication as the DJEN released it, and what one page of a search holds."""
 
 import base64
+import binascii
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
+from juris_bridge_mcp.domain.errors import ToolFailure, invalid_argument
 from juris_bridge_mcp.domain.publication_kind import PublicationKind
 
 SOURCE = "djen"
 
 # The DJEN stops counting matches here, so a total at this value is a lower bound.
 COUNT_CAP = 10000
+
+
+@dataclass(frozen=True)
+class PublicationRef:
+    """What an opaque Publication id carries: Court, day, CNJ number and item hash.
+
+    The DJEN has no read-by-id endpoint, so these are what it takes to find the item again.
+    """
+
+    court: str
+    day: date
+    number: CnjNumber
+    item_hash: str
+
+    def encode(self) -> str:
+        """Return the opaque, URL-safe id."""
+        raw = "|".join((self.court, self.day.isoformat(), self.number.digits, self.item_hash))
+        return base64.urlsafe_b64encode(raw.encode()).decode().rstrip("=")
+
+    @classmethod
+    def decode(cls, token: str) -> "PublicationRef":
+        """Parse an id, or raise `invalid_argument`."""
+        try:
+            raw = base64.urlsafe_b64decode(token + "=" * (-len(token) % 4)).decode()
+            court, day, digits, item_hash = raw.split("|", 3)
+            ref = cls(court, date.fromisoformat(day), CnjNumber.parse(digits), item_hash)
+        except (ValueError, binascii.Error, ToolFailure):
+            ref = None
+        if ref is None or not ref.court or not ref.item_hash:
+            raise invalid_argument(
+                "The id is not valid.",
+                hint="Pass the id exactly as search_publications returned it.",
+            )
+        return ref
 
 
 @dataclass(frozen=True)
@@ -55,8 +91,7 @@ class Publication:
     @property
     def id(self) -> str:
         """Return the opaque id: Court, day, CNJ number and item hash."""
-        raw = "|".join((self.court, self.day.isoformat(), self.number.digits, self.item_hash))
-        return base64.urlsafe_b64encode(raw.encode()).decode().rstrip("=")
+        return PublicationRef(self.court, self.day, self.number, self.item_hash).encode()
 
     @property
     def citation_text(self) -> str:

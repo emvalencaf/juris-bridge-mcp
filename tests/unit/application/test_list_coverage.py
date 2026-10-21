@@ -56,20 +56,32 @@ def test_a_covered_djen_court_states_its_known_start():
         "supported": True,
         "citation_url": False,
         "available_from": "2025-03-01",
-        "reason": None,
     }
 
 
-def test_a_djen_court_without_a_known_start_has_a_null_date():
+def test_a_djen_court_without_a_known_start_omits_the_date():
     court = _djen("tjba")
 
-    assert court["supported"] is True and court["available_from"] is None
+    assert court["supported"] is True and "available_from" not in court
 
 
-def test_stf_and_the_tres_are_not_covered_by_the_djen_with_a_reason():
-    for alias in ("stf", "tre-sp", "tre-df"):
-        court = _djen(alias)
-        assert court["supported"] is False and court["reason"]
+def test_stf_and_the_tres_are_not_covered_by_the_djen_each_with_its_reason():
+    stf, tre = _djen("stf"), _djen("tre-sp")
+
+    assert stf["supported"] is tre["supported"] is False
+    assert stf["reason"] and tre["reason"] and stf["reason"] != tre["reason"]
+
+
+def test_a_source_that_has_no_dates_or_reasons_does_not_emit_them():
+    tjsp = next(
+        c
+        for s in _coverage()["sources"]
+        if s["source"] == "datajud"
+        for c in s["courts"]
+        if c["alias"] == "tjsp"
+    )
+
+    assert tjsp == {"alias": "tjsp", "supported": True, "citation_url": False}
 
 
 def test_the_catalog_and_the_resolver_agree_on_who_is_covered():

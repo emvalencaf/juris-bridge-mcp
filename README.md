@@ -188,7 +188,7 @@ here only, with no minimum term length. For the Case itself, call `get_case`.
 | Senado | Legislation | federal norms | |
 
 The DJEN is no archive: it holds Publications from about 2021 onward and from later for
-many Courts (TJSP from 2025-03, STJ from 2024-12), and a Court with a null `available_from` has no
+many Courts (TJSP from 2025-03, STJ from 2024-12), and a Court without `available_from` has no
 known start. A window ending before a Court's start is `not_covered`. Results can be
 non-exhaustive.
 

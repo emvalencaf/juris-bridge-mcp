@@ -21,7 +21,7 @@ def build_coverage_server(catalog: CoverageCatalog) -> FastMCP:
         alias such as `tjsp`; `citation_url` says whether a stable public URL can be
         cited for its Cases. For the DJEN, `supported` is false for STF and the TREs
         (`reason` says why, and searching them returns `not_covered`), and
-        `available_from` is the first day with data seen (null if unknown). The DJEN is
+        `available_from` is the first day with data seen (absent if unknown). The DJEN is
         no archive: it starts about 2021 and later for many Courts, and its results can
         be non-exhaustive.
         Makes no network call, so use it to plan before querying.

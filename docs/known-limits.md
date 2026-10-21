@@ -44,7 +44,8 @@ them, so the catalog is built by hand with `scripts/build_issuing_body_catalog.p
 and can lag behind the Courts. A body that is **both missing from the catalog and
 absent from the first page of the capped day cannot be detected**: its items are
 not read and the result can say `complete: true`. Refresh the catalog per release
-or when an unexpected `slice_cap` shows up. A Court with no catalog entry is split
+or when an unexpected `slice_cap` shows up. The shipped catalog does not cover every Court yet (run the script with `--resume` to
+complete it). A Court with no catalog entry is split
 by the bodies of the first page only and always reports `slice_cap`.
 
 ## Other limits

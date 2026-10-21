@@ -10,6 +10,7 @@ from juris_bridge_mcp.domain.publication import COUNT_CAP, Publication, Publicat
 from juris_bridge_mcp.domain.publication_courts import resolve_djen_court
 from juris_bridge_mcp.domain.publication_kind import DECISION_KINDS, PublicationKind
 from juris_bridge_mcp.domain.publication_query import group_returns, parse_query
+from juris_bridge_mcp.domain.publication_ranking import query_terms, rank
 from juris_bridge_mcp.ports.publication_repository import PublicationRepository
 
 DEFAULT_LIMIT = 10
@@ -166,10 +167,11 @@ async def search_publications(
     groups' results are united without duplicates. Nothing is called when an argument is
     invalid. Despachos, intimações and editais are dropped from what the Source answers, and
     `kind`, when given, keeps only that kind; without it every decision stays, `ambiguous`
-    included. The window is walked one day at a time from `date_to` back, a day matching
-    `COUNT_CAP` items being split by issuing body, and at most `MAX_REQUESTS_PER_CALL` requests
-    are made; `next_cursor` resumes where the call stopped and must come back with the same
-    Court, window, query and kind.
+    included. Each item is scored against the others of the page (BM25, see
+    `publication_ranking`), but the order stays by date. The window is walked one day at a time
+    from `date_to` back, a day matching `COUNT_CAP` items being split by issuing body, and at
+    most `MAX_REQUESTS_PER_CALL` requests are made; `next_cursor` resumes where the call
+    stopped and must come back with the same Court, window, query and kind.
     """
     wanted = _parse_kind(kind)
     if not 1 <= limit <= MAX_LIMIT:
@@ -223,17 +225,22 @@ async def search_publications(
             and group_returns(groups, position.group, p.text)
         ][position.skip :]
         room = limit - len(chosen)
-        # The text was only needed to filter; it is not carried into the result.
-        chosen.extend(replace(p, text="") for p in available[:room])
+        chosen.extend(available[:room])
         if len(available) > room:
             position = replace(position, skip=position.skip + room)
             continue
         position, met = _advance(position, page, date_from, len(groups))
         truncation = truncation or met
+    # The text was only needed to filter and score; it is not carried into the result.
+    relevance = rank(query_terms(groups), [p.text for p in chosen])
+    ranked = tuple(
+        replace(p, text="", score=r.score, matched_terms=r.matched_terms)
+        for p, r in zip(chosen, relevance, strict=True)
+    )
     incomplete = IncompleteReason.BUDGET if position is not None else truncation
     return PublicationSearchResult(
         court=alias,
-        publications=tuple(chosen),
+        publications=ranked,
         complete=incomplete is None,
         incomplete_reason=incomplete,
         next_cursor=position.encode(alias, key, truncation) if position else None,

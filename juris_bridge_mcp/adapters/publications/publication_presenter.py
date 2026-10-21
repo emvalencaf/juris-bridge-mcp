@@ -46,4 +46,6 @@ def _item(publication: Publication) -> dict[str, Any]:
         "published_on": publication.day.isoformat(),
         "excerpt": publication.excerpt,
         "text_length": publication.text_length,
+        "score": publication.score,
+        "matched_terms": list(publication.matched_terms),
     }

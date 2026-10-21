@@ -65,10 +65,11 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         `published_on`, a plain-text `excerpt` (HTML stripped, at most 500 characters),
         `text_length` of the whole text, `content_kind: "metadata"` and a `citation` whose
         `url` is null when the item has no link of its own. It also has `matched_terms`, the
-        query terms found in its text, and `score`, a BM25 relevance computed over the texts of
-        this response only (accents and case ignored; the start of the text and the ementa weigh
-        more). `score` is not comparable across pages, and the order is by date: there is no
-        global relevance ordering, so compare scores within a response and read on with
+        query terms found in its text, and `score`, a BM25 relevance from 0 to 1 computed over
+        the texts of this response only (accents and case ignored; the start of the text and the
+        ementa weigh more) and scaled so the best item of the page is 1.0, which a page of one
+        item always is. `score` is not comparable across pages, and the order is by date: there is
+        no global relevance ordering, so compare scores within a response and read on with
         `next_cursor` for the rest.
 
         A call makes at most 10 requests to the Source. `complete` is true when the search

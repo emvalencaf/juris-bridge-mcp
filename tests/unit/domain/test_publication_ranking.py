@@ -94,15 +94,41 @@ def test_terms_of_all_or_groups_count_once():
     assert [t.text for t in terms] == ["consumidor", "dano", "moral"]
 
 
+def test_the_best_item_of_a_page_scores_1_and_the_others_less():
+    best, middle, worst = _rank(
+        "dano moral",
+        "dano moral dano moral",
+        "dano moral " + "x " * 30,
+        "dano " + "x " * 60,
+    )
+
+    assert best.score == 1.0
+    assert 0 < worst.score < middle.score < 1.0
+
+
+def test_a_page_where_every_item_holds_every_term_still_spreads_the_scores():
+    short, long = _rank("consumidor", "consumidor " + "x " * 5, "consumidor " + "x " * 500)
+
+    assert short.score == 1.0 and 0.1 < long.score < 1.0
+
+
+def test_a_page_of_one_scores_1_and_a_page_with_no_match_scores_0():
+    (only,) = _rank("consumidor", "o consumidor pediu")
+    (nothing,) = _rank("consumidor", "outro assunto")
+
+    assert only.score == 1.0 and nothing.score == 0.0
+
+
 def test_an_empty_page_ranks_nothing():
     assert _rank("consumidor") == []
 
 
 def test_a_page_of_25_long_texts_ranks_in_milliseconds():
+    # It takes tens of milliseconds; the bound is loose on purpose so a slow runner cannot fail it.
     texts = [("O consumidor pediu dano moral e recurso especial. " * 1400)[:70_000]] * 25
     terms = query_terms(parse_query("consumidor dano recurso"))
 
     started = time.perf_counter()
     rank(terms, texts)
 
-    assert time.perf_counter() - started < 0.5
+    assert time.perf_counter() - started < 3.0

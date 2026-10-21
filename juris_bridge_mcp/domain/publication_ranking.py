@@ -2,16 +2,19 @@
 
 The score only says which item of a page fits the query best: document frequencies and the
 average length come from the page itself, so scores are not comparable across pages and there
-is no global relevance ordering. Nothing is indexed or kept. Accents and case are folded (see
-`normalized_words`); a term counts by word prefix, a phrase by adjacent words. An occurrence in
-the first `HEAD_WORDS` words or in the ementa (found among the first `EMENTA_SEARCH_WORDS`)
-weighs `1 + ZONE_BOOST` times.
+is no global relevance ordering. The scores are then scaled so the best item of the page is
+1.0 (0 for all when nothing matches): when every item holds every term the raw values are all
+near zero and say nothing to a reader, and a page of one item reads as 1.0. Nothing is indexed
+or kept. Accents and case are folded (see `normalized_words`); a term counts by word prefix, a
+phrase by adjacent words. An occurrence in the first `HEAD_WORDS` words or in the ementa (found
+among the first `EMENTA_SEARCH_WORDS`) weighs `1 + ZONE_BOOST` times.
 """
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import replace
 
+from juris_bridge_mcp.domain.publication import Publication, Relevance
 from juris_bridge_mcp.domain.publication_query import QueryGroup, Term, normalized_words
 
 K1 = 1.2
@@ -20,14 +23,6 @@ HEAD_WORDS = 150
 EMENTA_WORDS = 150
 EMENTA_SEARCH_WORDS = 100
 ZONE_BOOST = 2.0
-
-
-@dataclass(frozen=True)
-class Relevance:
-    """How one text of a page fits the query: `score` and the query terms it holds."""
-
-    score: float
-    matched_terms: tuple[str, ...]
 
 
 def query_terms(groups: tuple[QueryGroup, ...]) -> tuple[Term, ...]:
@@ -61,12 +56,28 @@ def rank(terms: Sequence[Term], texts: Sequence[str]) -> list[Relevance]:
     for column in range(len(terms)):
         holding = sum(1 for row in counts if row[column] > 0)
         idf.append(math.log(1 + (size - holding + 0.5) / (holding + 0.5)))
-    ranked = []
+    scored = []
     for words, row in zip(docs, counts, strict=True):
         norm = K1 * (1 - B + B * len(words) / average)
         score = sum(
             w * (K1 + 1) / (w + norm) * rarity for w, rarity in zip(row, idf, strict=True) if w
         )
         matched = tuple(t.text for t, w in zip(terms, row, strict=True) if w)
-        ranked.append(Relevance(round(score, 4), matched))
-    return ranked
+        scored.append((score, matched))
+    best = max((score for score, _ in scored), default=0.0)
+    return [
+        Relevance(round(score / best, 3) if best else 0.0, matched) for score, matched in scored
+    ]
+
+
+def rank_publications(
+    terms: Sequence[Term], publications: Sequence[Publication]
+) -> tuple[Publication, ...]:
+    """Return the publications in the same order, each with its `relevance` and no text.
+
+    The text was only needed to filter and score; it is not carried into the result.
+    """
+    relevance = rank(terms, [p.text for p in publications])
+    return tuple(
+        replace(p, text="", relevance=r) for p, r in zip(publications, relevance, strict=True)
+    )

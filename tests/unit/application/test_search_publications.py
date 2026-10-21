@@ -562,6 +562,6 @@ async def test_scores_the_items_of_the_page_but_keeps_them_in_date_order():
     result = await _search(repository, query="recurso especial")
 
     assert [p.item_hash for p in result.publications] == ["hash0", "hash1"]
-    assert result.publications[1].score > result.publications[0].score > 0
-    assert result.publications[0].matched_terms == ("recurso", "especial")
+    assert result.publications[1].relevance.score > result.publications[0].relevance.score > 0
+    assert result.publications[0].relevance.matched_terms == ("recurso", "especial")
     assert all(p.text == "" for p in result.publications)

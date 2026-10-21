@@ -10,7 +10,7 @@ from juris_bridge_mcp.domain.publication import COUNT_CAP, Publication, Publicat
 from juris_bridge_mcp.domain.publication_courts import resolve_djen_court
 from juris_bridge_mcp.domain.publication_kind import DECISION_KINDS, PublicationKind
 from juris_bridge_mcp.domain.publication_query import group_returns, parse_query
-from juris_bridge_mcp.domain.publication_ranking import query_terms, rank
+from juris_bridge_mcp.domain.publication_ranking import query_terms, rank_publications
 from juris_bridge_mcp.ports.publication_repository import PublicationRepository
 
 DEFAULT_LIMIT = 10
@@ -231,12 +231,7 @@ async def search_publications(
             continue
         position, met = _advance(position, page, date_from, len(groups))
         truncation = truncation or met
-    # The text was only needed to filter and score; it is not carried into the result.
-    relevance = rank(query_terms(groups), [p.text for p in chosen])
-    ranked = tuple(
-        replace(p, text="", score=r.score, matched_terms=r.matched_terms)
-        for p, r in zip(chosen, relevance, strict=True)
-    )
+    ranked = rank_publications(query_terms(groups), chosen)
     incomplete = IncompleteReason.BUDGET if position is not None else truncation
     return PublicationSearchResult(
         court=alias,

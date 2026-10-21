@@ -15,6 +15,7 @@ Run it by hand, paced to the DJEN limit of about 20 requests per window:
 
     scripts/build_issuing_body_catalog.py                       # every Court, last 5 days
     scripts/build_issuing_body_catalog.py --courts tjsp trf1 --days 10
+    scripts/build_issuing_body_catalog.py --resume              # skip Courts already read
     scripts/build_issuing_body_catalog.py --dry-run             # print, write nothing
 
 The merge is additive: bodies already in the file are kept. When the file changes its
@@ -101,6 +102,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--courts", nargs="+", default=list(DJEN_COURTS), metavar="ALIAS")
     parser.add_argument("--days", type=int, default=5, help="recent days to read per Court")
+    parser.add_argument(
+        "--resume", action="store_true", help="skip the Courts that already have bodies in the file"
+    )
     parser.add_argument("--dry-run", action="store_true", help="print the catalog, write nothing")
     args = parser.parse_args()
 
@@ -130,6 +134,9 @@ def main() -> int:
     try:
         with httpx.Client(timeout=30) as client:
             for court in args.courts:
+                if args.resume and courts.get(court):
+                    print(f"{court}: already in the catalog, skipped", file=sys.stderr)
+                    continue
                 courts.setdefault(court, {}).update(_collect(client, court, args.days))
                 save()
     except httpx.HTTPError as failure:

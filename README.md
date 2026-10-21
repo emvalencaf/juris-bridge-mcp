@@ -200,6 +200,10 @@ The rate limit and cache are explained further in [docs/known-limits.md](docs/kn
   several instances can together exceed a Source's limit (DataJud: 120 req/min).
 - The in-memory cache is **per warm environment**: it is lost on cold start and
   not shared between instances.
+- A DJEN day at the 10,000-item cap is split by Issuing body from a catalog shipped with the
+  server. A body missing from both the catalog and the day's first page goes unnoticed; see
+  [docs/known-limits.md](docs/known-limits.md). The maintainer refreshes the catalog with
+  `scripts/build_issuing_body_catalog.py` (ADR 0007).
 - The `revoked` and `superseded` flags of a norm article rest on the Planalto markup (a
   `(Revogado ...)` note, or a struck-through opening line). Older pages mark them
   inconsistently, so a revoked article can be missed or a current one flagged.

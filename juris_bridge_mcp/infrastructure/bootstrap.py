@@ -17,6 +17,7 @@ from juris_bridge_mcp.adapters.djen.publication_repository import (
     RETRIED_STATUSES as DJEN_RETRIED_STATUSES,
 )
 from juris_bridge_mcp.adapters.djen.publication_repository import DjenPublicationRepository
+from juris_bridge_mcp.adapters.djen.static_issuing_body_catalog import StaticIssuingBodyCatalog
 from juris_bridge_mcp.adapters.http_client import (
     RETRYABLE_STATUSES,
     UpstreamClient,
@@ -126,7 +127,10 @@ def build_server(
     app.mount(build_coverage_server(StaticCoverageCatalog()))
     app.mount(build_cases_server(cases))
     app.mount(
-        build_publications_server(DjenPublicationRepository(djen_upstream, base_url=djen.base_url))
+        build_publications_server(
+            DjenPublicationRepository(djen_upstream, base_url=djen.base_url),
+            StaticIssuingBodyCatalog(),
+        )
     )
     app.mount(
         build_legislation_server(

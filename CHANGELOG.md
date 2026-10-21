@@ -9,6 +9,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Issuing body catalog (#77): a capped DJEN day is split by every known `orgaoId` of the Court,
+  from `issuing_bodies.json` shipped with the server, plus any body seen on page 1 that the
+  catalog lacks; `slice_cap` is reported only when a slice itself reaches the cap or such a body
+  appears. `scripts/build_issuing_body_catalog.py` builds the catalog by hand (ADR 0007). The
+  Cursor now carries the catalog position and version (**Break:** earlier publication cursors
+  are `invalid_argument`; one from another catalog version asks to restart). The shipped catalog
+  starts empty, so Courts behave as before until the script is run.
 - List the DJEN Coverage (#73): `list_coverage` adds the `djen` Source (Publications) with the
   Courts that publish there, the `available_from` date known for each and the Courts that are
   `not_covered` (STF and the TREs) with a `reason`. It reads the same module as

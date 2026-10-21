@@ -278,19 +278,23 @@ def _cursor(position, key=None):
 @pytest.mark.parametrize(
     "position",
     [
-        ("2026-10-15", 0, "", 0, 0, ""),
-        ("2026-10-15", 0, "", MAX_DJEN_PAGE + 1, 0, ""),
-        ("2026-10-15", 0, "", 1, -1, ""),
-        ("2026-10-15", 0, "", 1, 0, "other"),
-        ("2026-10-15", 0, "x", 1, 0, ""),
-        ("2026-10-14", 0, "", 1, 0, ""),
-        ("2026-10-16", 0, "", 1, 0, ""),
-        ("yesterday", 0, "", 1, 0, ""),
-        ("2026-10-15", 0, "", 1, 0),
-        (1, 0, "", 1, 0, ""),
-        ("2026-10-15", 0, "", "a", 0, ""),
-        ("2026-10-15", 1, "", 1, 0, ""),
-        ("2026-10-15", -1, "", 1, 0, ""),
+        ("2026-10-15", 0, -1, "", 0, 0, "", ""),
+        ("2026-10-15", 0, -1, "", MAX_DJEN_PAGE + 1, 0, "", ""),
+        ("2026-10-15", 0, -1, "", 1, -1, "", ""),
+        ("2026-10-15", 0, -1, "", 1, 0, "other", ""),
+        ("2026-10-15", 0, -1, "", 1, 0, "", "x"),
+        ("2026-10-15", 0, -1, "", 1, 0, "", "7"),
+        ("2026-10-15", 0, 0, "1", 1, 0, "", "0"),
+        ("2026-10-15", 0, 5, "1", 1, 0, "", ""),
+        ("2026-10-15", 0, -2, "", 1, 0, "", ""),
+        ("2026-10-14", 0, -1, "", 1, 0, "", ""),
+        ("2026-10-16", 0, -1, "", 1, 0, "", ""),
+        ("yesterday", 0, -1, "", 1, 0, "", ""),
+        ("2026-10-15", 0, -1, "", 1, 0, ""),
+        (1, 0, -1, "", 1, 0, "", ""),
+        ("2026-10-15", 0, -1, "", "a", 0, "", ""),
+        ("2026-10-15", 1, -1, "", 1, 0, "", ""),
+        ("2026-10-15", -1, -1, "", 1, 0, "", ""),
     ],
 )
 async def test_a_cursor_with_a_malformed_position_is_invalid(position):
@@ -421,6 +425,121 @@ async def test_a_capped_day_with_no_orgao_to_split_by_is_read_as_it_is_and_slice
     assert result.incomplete_reason == "slice_cap" and len(result.publications) == 2
 
 
+class _Catalog:
+    """A catalog of `courts` (Court alias to `orgaoId`s) at `version`."""
+
+    def __init__(self, courts, version="v1"):
+        self.courts = courts
+        self.version = version
+
+    def organ_ids(self, court):
+        return self.courts.get(court, ())
+
+
+async def test_a_capped_day_is_split_by_every_catalog_body_even_one_absent_from_page_1():
+    days = _Days(
+        {
+            (DAY, None, 1): _capped(DAY, 1001),
+            (DAY, 1001, 1): _page(SENTENCA),
+            (DAY, 1002, 1): _page(SENTENCA, SENTENCA),
+            (DAY, 1003, 1): PublicationPage(publications=(), total=0),
+        }
+    )
+    catalog = _Catalog({"tjsp": (1001, 1002, 1003)})
+
+    result = await _search(days, issuing_bodies=catalog)
+
+    assert days.asked == [(DAY, None, 1), (DAY, 1001, 1), (DAY, 1002, 1), (DAY, 1003, 1)]
+    assert len(result.publications) == 3
+    assert (result.complete, result.incomplete_reason, result.hint) == (True, None, None)
+
+
+async def test_a_body_on_page_1_missing_from_the_catalog_is_read_and_slice_cap():
+    days = _Days(
+        {
+            (DAY, None, 1): _capped(DAY, 1001, 9999),
+            (DAY, 1001, 1): _page(SENTENCA),
+            (DAY, 9999, 1): _page(SENTENCA),
+        }
+    )
+
+    result = await _search(days, issuing_bodies=_Catalog({"tjsp": (1001,)}))
+
+    assert days.asked == [(DAY, None, 1), (DAY, 1001, 1), (DAY, 9999, 1)]
+    assert len(result.publications) == 2
+    assert (result.complete, result.incomplete_reason) == (False, "slice_cap")
+
+
+async def test_a_catalog_slice_that_reaches_the_cap_is_slice_cap():
+    days = _Days({(DAY, None, 1): _capped(DAY, 1001), (DAY, 1001, 1): _capped(DAY, 1001)})
+
+    result = await _search(days, issuing_bodies=_Catalog({"tjsp": (1001,)}))
+
+    assert (result.complete, result.incomplete_reason) == (False, "slice_cap")
+
+
+async def test_a_court_without_a_catalog_entry_is_split_by_the_page_1_bodies_as_before():
+    days = _Days(
+        {
+            (DAY, None, 1): _capped(DAY, 1001),
+            (DAY, 1001, 1): _page(SENTENCA),
+        }
+    )
+
+    result = await _search(days, issuing_bodies=_Catalog({"tjmg": (5,)}))
+
+    assert days.asked == [(DAY, None, 1), (DAY, 1001, 1)]
+    assert (result.complete, result.incomplete_reason) == (False, "slice_cap")
+
+
+async def test_a_cursor_walks_the_catalog_and_keeps_the_unknown_bodies_of_page_1():
+    days = _Days(
+        {
+            (DAY, None, 1): _capped(DAY, 9999),
+            (DAY, 1001, 1): _page(SENTENCA),
+            (DAY, 1002, 1): _page(SENTENCA),
+            (DAY, 9999, 1): _page(SENTENCA),
+        }
+    )
+    catalog = _Catalog({"tjsp": (1001, 1002)})
+
+    first = await _search(days, limit=1, issuing_bodies=catalog)
+    second = await _search(days, limit=1, cursor=first.next_cursor, issuing_bodies=catalog)
+    third = await _search(days, limit=1, cursor=second.next_cursor, issuing_bodies=catalog)
+
+    assert days.asked == [(DAY, None, 1), (DAY, 1001, 1), (DAY, 1002, 1), (DAY, 9999, 1)]
+    assert [len(r.publications) for r in (first, second, third)] == [1, 1, 1]
+    assert third.next_cursor is None
+    assert (third.complete, third.incomplete_reason) == (False, "slice_cap")
+
+
+async def test_a_call_over_a_big_catalog_stops_at_the_budget_and_the_cursor_carries_on():
+    organs = tuple(range(1, 16))
+    script = {(DAY, None, 1): _capped(DAY, 1)}
+    days = _Days(script)
+    catalog = _Catalog({"tjsp": organs})
+
+    first = await _search(days, issuing_bodies=catalog)
+    second = await _search(days, cursor=first.next_cursor, issuing_bodies=catalog)
+
+    assert (first.complete, first.incomplete_reason) == (False, "budget")
+    assert (second.complete, second.incomplete_reason) == (True, None)
+    assert [key[1] for key in days.asked if key[1]] == list(organs)
+
+
+async def test_a_cursor_issued_under_another_catalog_version_is_invalid():
+    days = _Days({(DAY, None, 1): _capped(DAY, 1001), (DAY, 1001, 1): _page(SENTENCA, SENTENCA)})
+    first = await _search(days, limit=1, issuing_bodies=_Catalog({"tjsp": (1001,)}, "v1"))
+
+    with pytest.raises(ToolFailure) as caught:
+        await _search(
+            days, cursor=first.next_cursor, issuing_bodies=_Catalog({"tjsp": (1001,)}, "v2")
+        )
+
+    assert caught.value.code is ErrorCode.INVALID_ARGUMENT
+    assert "restart" in (caught.value.hint or "")
+
+
 async def test_the_depth_ceiling_is_truncation_not_an_error():
     days = _Days(
         {
@@ -437,7 +556,7 @@ async def test_the_depth_ceiling_is_truncation_not_an_error():
 
 async def test_the_last_page_the_source_serves_is_the_depth_ceiling():
     days = _Days({(DAY, None, MAX_DJEN_PAGE): _page(SENTENCA, more=True)})
-    cursor = _cursor((DAY.isoformat(), 0, "", MAX_DJEN_PAGE, 0, ""))
+    cursor = _cursor((DAY.isoformat(), 0, -1, "", MAX_DJEN_PAGE, 0, "", ""))
 
     result = await _search(days, cursor=cursor)
 

@@ -17,6 +17,7 @@ from juris_bridge_mcp.domain.publication_courts import resolve_djen_court
 from juris_bridge_mcp.domain.publication_kind import DECISION_KINDS, PublicationKind
 from juris_bridge_mcp.domain.publication_query import group_returns, parse_local_query, parse_query
 from juris_bridge_mcp.domain.publication_ranking import query_terms, rank_publications
+from juris_bridge_mcp.ports.issuing_body_catalog import IssuingBodyCatalog
 from juris_bridge_mcp.ports.publication_repository import PublicationRepository
 
 DEFAULT_LIMIT = 10
@@ -42,8 +43,8 @@ _HINTS = {
     IncompleteReason.BUDGET: "More follows: pass next_cursor to read on.",
     IncompleteReason.SLICE_CAP: (
         f"A day matched {COUNT_CAP} or more items, where the Source stops counting; it was "
-        "split by issuing body from the ids seen on its first page, so some may be missing. "
-        "Narrow the query to reach them."
+        "split by issuing body, but a body's slice still reached that count or an issuing body "
+        "is missing from the catalog, so some may be missing. Narrow the query to reach them."
     ),
     IncompleteReason.DEPTH_CEILING: (
         f"The Source stops after about {MAX_DJEN_PAGE * 100} matches of a slice; narrow the "
@@ -73,36 +74,64 @@ class PublicationSearchResult:
 
 @dataclass(frozen=True)
 class _Position:
-    """Where a search is: a day, the OR group, the issuing bodies still to read, a page.
+    """Where a search is: a day, the OR group, the issuing body slice, a page.
 
-    The first of `organs` is the current one. `skip` is how many kept items of the page were
-    already returned. Within a day the groups are read in turn.
+    A capped day is split by the Court's catalog `catalog` plus the `extras` its first page
+    showed that the catalog lacks; `index` is the current slice of that list, or -1 while the
+    day is read whole. `skip` is how many kept items of the page were already returned. Within
+    a day the groups are read in turn.
     """
 
     day: date
     group: int = 0
-    organs: tuple[int, ...] = ()
+    catalog: tuple[int, ...] = ()
+    extras: tuple[int, ...] = ()
+    index: int = -1
     page: int = 1
     skip: int = 0
 
+    @property
+    def organ(self) -> int | None:
+        """Return the `orgaoId` being read, or `None` while the day is read whole."""
+        return (self.catalog + self.extras)[self.index] if self.index >= 0 else None
+
     def next_slice(self, date_from: date, groups: int) -> "_Position | None":
         """Return the position of the next slice, or `None` past the oldest day."""
-        if self.organs[1:]:
-            return replace(self, organs=self.organs[1:], page=1, skip=0)
+        if 0 <= self.index < len(self.catalog) + len(self.extras) - 1:
+            return replace(self, index=self.index + 1, page=1, skip=0)
+        whole = replace(self, extras=(), index=-1, page=1, skip=0)
         if self.group + 1 < groups:
-            return _Position(self.day, self.group + 1)
+            return replace(whole, group=self.group + 1)
         day = self.day - timedelta(days=1)
-        return _Position(day) if day >= date_from else None
+        return replace(whole, day=day, group=0) if day >= date_from else None
 
-    def encode(self, scope: str, key: str, truncation: IncompleteReason | None) -> str:
+    def encode(
+        self, scope: str, key: str, version: str, truncation: IncompleteReason | None
+    ) -> str:
         """Return the Cursor token for this position and the truncation met so far."""
-        organs = ",".join(str(organ) for organ in self.organs)
-        parts = (self.day.isoformat(), self.group, organs, self.page, self.skip, truncation or "")
+        extras = ",".join(str(organ) for organ in self.extras)
+        parts = (
+            self.day.isoformat(),
+            self.group,
+            self.index,
+            version,
+            self.page,
+            self.skip,
+            truncation or "",
+            extras,
+        )
         return Cursor(scope, parts, key).encode()
 
     @classmethod
     def decode(
-        cls, token: str, scope: str, key: str, date_from: date, date_to: date, groups: int
+        cls,
+        token: str,
+        scope: str,
+        key: str,
+        window: tuple[date, date],
+        groups: int,
+        catalog: tuple[int, ...],
+        version: str,
     ) -> "tuple[_Position, IncompleteReason | None]":
         """Parse a token issued for this search, or raise `invalid_argument`."""
         decoded = Cursor.decode(token, scopes=(scope,))
@@ -116,15 +145,19 @@ class _Position:
                 case (
                     str() as day,
                     int() as group,
-                    str() as organs,
+                    int() as index,
+                    str() as issued_with,
                     int() as page,
                     int() as skip,
                     str() as met,
+                    str() as extras,
                 ):
                     position = cls(
                         date.fromisoformat(day),
                         group,
-                        tuple(int(organ) for organ in organs.split(",")) if organs else (),
+                        catalog,
+                        tuple(int(organ) for organ in extras.split(",")) if extras else (),
+                        index,
                         page,
                         skip,
                     )
@@ -133,13 +166,21 @@ class _Position:
                     raise ValueError
         except ValueError:
             raise invalid_argument("The cursor is not valid.") from None
+        if issued_with != version:
+            raise invalid_argument(
+                "The cursor was issued under another issuing body catalog.",
+                hint="The server's catalog changed since the cursor was issued: restart the "
+                "search without a cursor.",
+            )
         if (
-            not date_from <= position.day <= date_to
+            not window[0] <= position.day <= window[1]
             or not 0 <= group < groups
+            or not -1 <= index < len(catalog) + len(position.extras)
+            or (index < 0 and position.extras)
             or not 1 <= page <= MAX_DJEN_PAGE
             or skip < 0
             or truncation is IncompleteReason.BUDGET
-            or any(organ <= 0 for organ in position.organs)
+            or any(organ <= 0 for organ in position.extras)
         ):
             raise invalid_argument("The cursor is not valid.")
         return position, truncation
@@ -166,6 +207,7 @@ async def search_publications(
     kind: str | None = None,
     limit: int = DEFAULT_LIMIT,
     cursor: str | None = None,
+    issuing_bodies: IssuingBodyCatalog | None = None,
 ) -> PublicationSearchResult:
     """Return a page of the Court's decisions in the window, matching `query` or of one Case.
 
@@ -185,6 +227,12 @@ async def search_publications(
     that a Case is asked for over the whole window in one slice, and at most
     `MAX_REQUESTS_PER_CALL` requests are made; `next_cursor` resumes where the call
     stopped and must come back with the same Court, window, query and kind.
+
+    A capped day is split by every `orgaoId` the `issuing_bodies` catalog knows for the Court,
+    plus any body its first page shows that the catalog lacks. `slice_cap` is reported when a
+    slice itself reaches the cap or such a missing body shows up; a body absent from both the
+    catalog and the first page cannot be detected (docs/known-limits.md). A Cursor issued under
+    another catalog version is `invalid_argument`.
     """
     wanted = _parse_kind(kind)
     case_number = CnjNumber.parse(cnj_number) if cnj_number is not None else None
@@ -202,13 +250,17 @@ async def search_publications(
         raise invalid_argument("query is required without cnj_number.")
     groups = parse_query(text) if case_number is None else parse_local_query(text)
     alias = _resolve_court(court, case_number, date_to)
+    known = issuing_bodies.organ_ids(alias) if issuing_bodies else ()
+    version = issuing_bodies.version if issuing_bodies else ""
     key = _search_key(date_from, date_to, text, wanted, case_number)
     # A Case is asked for over the whole window in one slice; a text search walks it by day.
     oldest = date_to if case_number else date_from
-    position: _Position | None = _Position(date_to)
+    position: _Position | None = _Position(date_to, catalog=known)
     truncation: IncompleteReason | None = None
     if cursor is not None:
-        position, truncation = _Position.decode(cursor, alias, key, date_from, date_to, len(groups))
+        position, truncation = _Position.decode(
+            cursor, alias, key, (date_from, date_to), len(groups), known, version
+        )
     chosen: list[Publication] = []
     dropped = 0
     requests = 0
@@ -222,7 +274,7 @@ async def search_publications(
                 date_from=date_from if case_number else position.day,
                 date_to=position.day,
                 page=position.page,
-                organ_id=position.organs[0] if position.organs else None,
+                organ_id=position.organ,
                 cnj_number=case_number,
             )
         )
@@ -233,9 +285,13 @@ async def search_publications(
             position = position.next_slice(oldest, len(groups))
             continue
         if position.page == 1 and page.total >= COUNT_CAP:
-            truncation = truncation or IncompleteReason.SLICE_CAP
-            if not position.organs and page.organ_ids:
-                position = _Position(position.day, position.group, page.organ_ids)
+            extras = tuple(organ for organ in page.organ_ids if organ not in known)
+            if position.index >= 0 or not (known or extras):
+                truncation = truncation or IncompleteReason.SLICE_CAP
+            else:
+                if extras:
+                    truncation = truncation or IncompleteReason.SLICE_CAP
+                position = replace(position, extras=extras, index=0)
                 continue
         decisions = [p for p in page.publications if p.kind is not PublicationKind.NOT_A_DECISION]
         dropped += len(page.publications) - len(decisions)
@@ -259,7 +315,7 @@ async def search_publications(
         publications=ranked,
         complete=incomplete is None,
         incomplete_reason=incomplete,
-        next_cursor=position.encode(alias, key, truncation) if position else None,
+        next_cursor=position.encode(alias, key, version, truncation) if position else None,
         retrieved_at=retrieved_at or datetime.now(UTC),
         not_decisions_dropped=dropped,
         hint=_HINTS[incomplete] if incomplete else None,

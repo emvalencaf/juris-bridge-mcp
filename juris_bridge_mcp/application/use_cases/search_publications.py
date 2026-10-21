@@ -9,7 +9,7 @@ from juris_bridge_mcp.domain.errors import invalid_argument
 from juris_bridge_mcp.domain.publication import COUNT_CAP, Publication, PublicationPage
 from juris_bridge_mcp.domain.publication_courts import resolve_djen_court
 from juris_bridge_mcp.domain.publication_kind import DECISION_KINDS, PublicationKind
-from juris_bridge_mcp.domain.publication_query import QueryGroup, normalized_words, parse_query
+from juris_bridge_mcp.domain.publication_query import group_returns, parse_query
 from juris_bridge_mcp.ports.publication_repository import PublicationRepository
 
 DEFAULT_LIMIT = 10
@@ -90,7 +90,7 @@ class _Position:
     def encode(self, scope: str, key: str, truncation: IncompleteReason | None) -> str:
         """Return the Cursor token for this position and the truncation met so far."""
         organs = ",".join(str(organ) for organ in self.organs)
-        parts = (self.day.isoformat(), organs, self.page, self.skip, truncation or "", self.group)
+        parts = (self.day.isoformat(), self.group, organs, self.page, self.skip, truncation or "")
         return Cursor(scope, parts, key).encode()
 
     @classmethod
@@ -108,11 +108,11 @@ class _Position:
             match decoded.position:
                 case (
                     str() as day,
+                    int() as group,
                     str() as organs,
                     int() as page,
                     int() as skip,
                     str() as met,
-                    int() as group,
                 ):
                     position = cls(
                         date.fromisoformat(day),
@@ -219,10 +219,12 @@ async def search_publications(
         available = [
             p
             for p in decisions
-            if (wanted is None or p.kind is wanted) and _belongs_to(p, groups, position.group)
+            if (wanted is None or p.kind is wanted)
+            and group_returns(groups, position.group, p.text)
         ][position.skip :]
         room = limit - len(chosen)
-        chosen.extend(available[:room])
+        # The text was only needed to filter; it is not carried into the result.
+        chosen.extend(replace(p, text="") for p in available[:room])
         if len(available) > room:
             position = replace(position, skip=position.skip + room)
             continue
@@ -239,12 +241,6 @@ async def search_publications(
         not_decisions_dropped=dropped,
         hint=_HINTS[incomplete] if incomplete else None,
     )
-
-
-def _belongs_to(publication: Publication, groups: tuple[QueryGroup, ...], current: int) -> bool:
-    """Return whether the group matches the text and no earlier group already returned it."""
-    words = normalized_words(publication.text)
-    return groups[current].matches(words) and not any(g.claims(words) for g in groups[:current])
 
 
 def _parse_kind(kind: str | None) -> PublicationKind | None:

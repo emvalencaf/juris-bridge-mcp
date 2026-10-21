@@ -263,19 +263,19 @@ def _cursor(position, key=None):
 @pytest.mark.parametrize(
     "position",
     [
-        ("2026-10-15", "", 0, 0, "", 0),
-        ("2026-10-15", "", MAX_DJEN_PAGE + 1, 0, "", 0),
-        ("2026-10-15", "", 1, -1, "", 0),
-        ("2026-10-15", "", 1, 0, "other", 0),
-        ("2026-10-15", "x", 1, 0, "", 0),
-        ("2026-10-14", "", 1, 0, "", 0),
-        ("2026-10-16", "", 1, 0, "", 0),
-        ("yesterday", "", 1, 0, "", 0),
-        ("2026-10-15", "", 1, 0, ""),
-        (1, "", 1, 0, "", 0),
-        ("2026-10-15", "", "a", 0, "", 0),
-        ("2026-10-15", "", 1, 0, "", 1),
-        ("2026-10-15", "", 1, 0, "", -1),
+        ("2026-10-15", 0, "", 0, 0, ""),
+        ("2026-10-15", 0, "", MAX_DJEN_PAGE + 1, 0, ""),
+        ("2026-10-15", 0, "", 1, -1, ""),
+        ("2026-10-15", 0, "", 1, 0, "other"),
+        ("2026-10-15", 0, "x", 1, 0, ""),
+        ("2026-10-14", 0, "", 1, 0, ""),
+        ("2026-10-16", 0, "", 1, 0, ""),
+        ("yesterday", 0, "", 1, 0, ""),
+        ("2026-10-15", 0, "", 1, 0),
+        (1, 0, "", 1, 0, ""),
+        ("2026-10-15", 0, "", "a", 0, ""),
+        ("2026-10-15", 1, "", 1, 0, ""),
+        ("2026-10-15", -1, "", 1, 0, ""),
     ],
 )
 async def test_a_cursor_with_a_malformed_position_is_invalid(position):
@@ -422,7 +422,7 @@ async def test_the_depth_ceiling_is_truncation_not_an_error():
 
 async def test_the_last_page_the_source_serves_is_the_depth_ceiling():
     days = _Days({(DAY, None, MAX_DJEN_PAGE): _page(SENTENCA, more=True)})
-    cursor = _cursor((DAY.isoformat(), "", MAX_DJEN_PAGE, 0, "", 0))
+    cursor = _cursor((DAY.isoformat(), 0, "", MAX_DJEN_PAGE, 0, ""))
 
     result = await _search(days, cursor=cursor)
 
@@ -538,6 +538,12 @@ async def test_the_groups_are_read_in_turn_and_a_cursor_resumes_in_the_right_gro
 
     assert [p.item_hash for p in first.publications] == ["hash1", "hash2"]
     assert [p.item_hash for p in second.publications] == ["hash3"] and second.complete
+
+
+async def test_the_result_does_not_carry_the_text_it_was_filtered_on():
+    result = await _search(_Repository(_of(_with_text(1, "recurso especial"))))
+
+    assert result.publications[0].text == ""
 
 
 async def test_a_group_without_a_term_the_source_accepts_never_reaches_it():

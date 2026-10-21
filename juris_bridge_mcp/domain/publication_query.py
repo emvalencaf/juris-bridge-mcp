@@ -76,6 +76,18 @@ class QueryGroup:
         return self.dispatched.found_in(words, exact=True) and self.matches(words)
 
 
+def group_returns(groups: tuple[QueryGroup, ...], index: int, text: str) -> bool:
+    """Return whether group `index` holds `text` and no earlier group already returned it.
+
+    Groups are read in turn within a day and a cursor keeps no memory of what they returned, so
+    the union is deduplicated by asking again what each earlier group's Source request would
+    have matched. Should an earlier group have been truncated by the Source, the search reports
+    it as incomplete.
+    """
+    words = normalized_words(text)
+    return groups[index].matches(words) and not any(g.claims(words) for g in groups[:index])
+
+
 def parse_query(query: str) -> tuple[QueryGroup, ...]:
     """Parse `query` into OR groups, or raise `invalid_argument` explaining what is wrong."""
     if query.count('"') % 2:

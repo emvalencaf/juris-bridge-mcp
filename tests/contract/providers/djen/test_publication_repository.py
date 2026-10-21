@@ -61,6 +61,8 @@ async def test_maps_the_recorded_publications():
     assert first.number.formatted == "1234567-76.2025.8.26.0100"
     assert first.excerpt.startswith("DECISÃO Vistos. Trata-se de recurso especial")
     assert first.text_length == len(first.excerpt)
+    assert first.text.startswith("DECISÃO Vistos. Trata-se de recurso especial")
+    assert len(first.text) == first.text_length
     assert first.url == "https://dje.example.test/publicacao/900000001"
     assert second.excerpt == (
         "Relator Fulano de Tal EMENTA: RECURSO ESPECIAL & honorários. "

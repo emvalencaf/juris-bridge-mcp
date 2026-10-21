@@ -51,7 +51,9 @@ def build_publications_server(repository: PublicationRepository) -> FastMCP:
         other words and the exclusions filter the text here, ignoring case and accents and
         matching by word prefix (`recurso` finds `recursos`; no stemming). The groups' results are
         united without duplicates. The word asked of the Source is matched exactly by it, so a
-        plural of that word is not found: put the likelier form in the query or add an OR group.
+        plural of that word is not found: put the likelier form in the query or add an OR group. An
+        item two OR groups both match is returned once, by the first; if that group was truncated
+        by the Source, `incomplete_reason` says so.
         `kind` keeps one kind only: `acordao`, `sentenca`, `decisao_monocratica`,
         `decisao_interlocutoria` or `ambiguous`; by default every decision is returned,
         `ambiguous` included.

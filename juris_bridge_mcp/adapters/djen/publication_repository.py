@@ -2,7 +2,6 @@
 
 import asyncio
 from collections.abc import Awaitable, Callable
-from datetime import date
 from typing import Any
 
 import httpx
@@ -10,14 +9,18 @@ import httpx
 from juris_bridge_mcp.adapters.djen.publication_mapper import map_publication
 from juris_bridge_mcp.adapters.http_client import UpstreamClient
 from juris_bridge_mcp.adapters.schema_drift import SchemaDrift
-from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import (
     ErrorCode,
     rate_limited,
     source_changed,
     source_failure,
 )
-from juris_bridge_mcp.domain.publication import COUNT_CAP, SOURCE, PublicationPage
+from juris_bridge_mcp.domain.publication import (
+    COUNT_CAP,
+    SOURCE,
+    PublicationPage,
+    PublicationSearch,
+)
 
 # The DJEN documents a page size of 5 or 100 and nothing else. The largest is asked for, since
 # despachos and notices are dropped afterwards and a small page could leave nothing to show.
@@ -51,31 +54,22 @@ class DjenPublicationRepository:
         self._base_url = base_url.rstrip("/")
         self._sleep = sleep or asyncio.sleep
 
-    async def search(
-        self,
-        court: str,
-        query: str,
-        date_from: date,
-        date_to: date,
-        *,
-        page: int = 1,
-        organ_id: int | None = None,
-        number: CnjNumber | None = None,
-    ) -> PublicationPage:
-        """Fetch page `page` of the Court's Publications in the window, `query` as it is."""
+    async def search(self, request: PublicationSearch) -> PublicationPage:
+        """Fetch the page of the Court's Publications that `request` asks for."""
+        page = request.page
         params: dict[str, Any] = {
-            "siglaTribunal": court.upper(),
-            "dataDisponibilizacaoInicio": date_from.isoformat(),
-            "dataDisponibilizacaoFim": date_to.isoformat(),
+            "siglaTribunal": request.court.upper(),
+            "dataDisponibilizacaoInicio": request.date_from.isoformat(),
+            "dataDisponibilizacaoFim": request.date_to.isoformat(),
             "itensPorPagina": _PAGE_SIZE,
             "pagina": page,
         }
-        if query:
-            params["texto"] = query
-        if number is not None:
-            params["numeroProcesso"] = number.digits
-        if organ_id is not None:
-            params["orgaoId"] = organ_id
+        if request.query:
+            params["texto"] = request.query
+        if request.cnj_number is not None:
+            params["numeroProcesso"] = request.cnj_number.digits
+        if request.organ_id is not None:
+            params["orgaoId"] = request.organ_id
         try:
             body, requests = await self._get(params, ceiling_possible=page > 1)
         except _DepthCeiling as ceiling:
@@ -88,7 +82,7 @@ class DjenPublicationRepository:
                 raise SchemaDrift("items is not a list")
             if isinstance(count, bool) or not isinstance(count, int):
                 raise SchemaDrift("count is not a number")
-            publications = tuple(map_publication(item, court=court) for item in items)
+            publications = tuple(map_publication(item, court=request.court) for item in items)
         except (SchemaDrift, KeyError, TypeError) as drift:
             raise source_changed(SOURCE, "DJEN", str(drift)) from None
         return PublicationPage(

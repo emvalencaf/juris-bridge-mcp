@@ -7,10 +7,15 @@ from enum import StrEnum
 from juris_bridge_mcp.domain.cnj_number import CnjNumber, derive_court
 from juris_bridge_mcp.domain.cursor import Cursor
 from juris_bridge_mcp.domain.errors import invalid_argument
-from juris_bridge_mcp.domain.publication import COUNT_CAP, Publication, PublicationPage
+from juris_bridge_mcp.domain.publication import (
+    COUNT_CAP,
+    Publication,
+    PublicationPage,
+    PublicationSearch,
+)
 from juris_bridge_mcp.domain.publication_courts import resolve_djen_court
 from juris_bridge_mcp.domain.publication_kind import DECISION_KINDS, PublicationKind
-from juris_bridge_mcp.domain.publication_query import group_returns, parse_query
+from juris_bridge_mcp.domain.publication_query import group_returns, parse_local_query, parse_query
 from juris_bridge_mcp.domain.publication_ranking import query_terms, rank_publications
 from juris_bridge_mcp.ports.publication_repository import PublicationRepository
 
@@ -181,7 +186,7 @@ async def search_publications(
     stopped and must come back with the same Court, window, query and kind.
     """
     wanted = _parse_kind(kind)
-    number = CnjNumber.parse(cnj_number) if cnj_number is not None else None
+    case_number = CnjNumber.parse(cnj_number) if cnj_number is not None else None
     if not 1 <= limit <= MAX_LIMIT:
         raise invalid_argument(f"limit must be between 1 and {MAX_LIMIT}.")
     if date_from > date_to:
@@ -192,19 +197,11 @@ async def search_publications(
             hint="Search a shorter window and repeat it for the next one.",
         )
     text = (query or "").strip()
-    if number is None and not text:
+    if case_number is None and not text:
         raise invalid_argument("query is required without cnj_number.")
-    groups = parse_query(text, dispatch=number is None)
-    alias = _resolve_court(court, number, date_to)
-    key = "|".join(
-        (
-            date_from.isoformat(),
-            date_to.isoformat(),
-            text,
-            wanted or "",
-            number.digits if number else "",
-        )
-    )
+    groups = parse_query(text) if case_number is None else parse_local_query(text)
+    alias = _resolve_court(court, case_number, date_to)
+    key = _search_key(date_from, date_to, text, wanted, case_number)
     position: _Position | None = _Position(date_to)
     truncation: IncompleteReason | None = None
     if cursor is not None:
@@ -216,13 +213,15 @@ async def search_publications(
     while position is not None and len(chosen) < limit and requests < MAX_REQUESTS_PER_CALL:
         group = groups[position.group]
         page = await repository.search(
-            alias,
-            group.dispatched.text if group.dispatched else "",
-            position.day,
-            position.day,
-            page=position.page,
-            organ_id=position.organs[0] if position.organs else None,
-            number=number,
+            PublicationSearch(
+                court=alias,
+                query=group.source_text,
+                date_from=position.day,
+                date_to=position.day,
+                page=position.page,
+                organ_id=position.organs[0] if position.organs else None,
+                cnj_number=case_number,
+            )
         )
         requests += page.requests
         retrieved_at = page.retrieved_at
@@ -264,19 +263,32 @@ async def search_publications(
     )
 
 
-def _resolve_court(court: str | None, number: CnjNumber | None, date_to: date) -> str:
-    """Return the Court of the search: the one given, the one `number` derives, or both agreeing."""
-    given = resolve_djen_court(court, date_to) if court is not None else None
-    derived = resolve_djen_court(derive_court(number), date_to) if number is not None else None
-    if given is not None and derived is not None and given != derived:
+def _search_key(
+    date_from: date,
+    date_to: date,
+    text: str,
+    kind: PublicationKind | None,
+    case_number: CnjNumber | None,
+) -> str:
+    """Return what a Cursor must agree on with the search that issued it (empty if unset)."""
+    digits = case_number.digits if case_number else ""
+    return "|".join((date_from.isoformat(), date_to.isoformat(), text, kind or "", digits))
+
+
+def _resolve_court(court: str | None, case_number: CnjNumber | None, date_to: date) -> str:
+    """Return the Court of the search: the one given, the one the number derives, or both."""
+    named = [court] if court is not None else []
+    if case_number is not None:
+        named.append(derive_court(case_number))
+    if not named:
+        raise invalid_argument("court is required without cnj_number.")
+    aliases = [resolve_djen_court(alias, date_to) for alias in named]
+    if len(set(aliases)) > 1:
         raise invalid_argument(
-            f"The CNJ number belongs to {derived.upper()}, not {given.upper()}.",
+            f"The CNJ number belongs to {aliases[1].upper()}, not {aliases[0].upper()}.",
             hint="Omit court, or pass the one in the number.",
         )
-    alias = given or derived
-    if alias is None:
-        raise invalid_argument("court is required without cnj_number.")
-    return alias
+    return aliases[0]
 
 
 def _parse_kind(kind: str | None) -> PublicationKind | None:

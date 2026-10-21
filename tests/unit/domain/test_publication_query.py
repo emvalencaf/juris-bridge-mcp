@@ -5,6 +5,7 @@ from juris_bridge_mcp.domain.publication_query import (
     MAX_EXCLUSIONS,
     MAX_GROUPS,
     normalized_words,
+    parse_local_query,
     parse_query,
 )
 
@@ -151,19 +152,26 @@ def test_claims_asks_the_source_term_exactly_and_the_rest_locally():
     assert not group.claims(normalized_words("especial"))
 
 
-def test_without_dispatch_nothing_is_sent_and_short_terms_are_allowed():
-    (group,) = parse_query("de dano -outro", dispatch=False)
+def test_a_local_query_nothing_is_sent_and_short_terms_are_allowed():
+    (group,) = parse_local_query("de dano -outro")
 
     assert group.dispatched is None
     assert group.matches(("de", "dano")) and not group.matches(("dano", "outro"))
 
 
-def test_without_dispatch_an_empty_query_matches_everything():
-    (group,) = parse_query("  ", dispatch=False)
+def test_a_local_query_an_empty_query_matches_everything():
+    (group,) = parse_local_query("  ")
 
     assert group.matches(("qualquer", "coisa"))
 
 
-def test_without_dispatch_an_empty_or_group_is_still_invalid():
+def test_a_local_query_an_empty_or_group_is_still_invalid():
     with pytest.raises(ToolFailure):
-        parse_query("dano OR", dispatch=False)
+        parse_local_query("dano OR")
+
+
+def test_the_source_text_is_the_dispatched_term_or_nothing():
+    (sent,) = parse_query("recurso especial")
+    (local,) = parse_local_query("recurso")
+
+    assert sent.source_text == "especial" and local.source_text == ""

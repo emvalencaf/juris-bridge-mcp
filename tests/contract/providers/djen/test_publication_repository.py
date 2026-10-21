@@ -12,6 +12,7 @@ from juris_bridge_mcp.adapters.djen.publication_repository import (
 from juris_bridge_mcp.adapters.http_client import UpstreamClient, build_http_client
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import ErrorCode, ToolFailure
+from juris_bridge_mcp.domain.publication import PublicationSearch
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DAY = date(2026, 10, 15)
@@ -45,12 +46,17 @@ def _repository(handler, sleep=None) -> DjenPublicationRepository:
     )
 
 
+def _request(**overrides) -> PublicationSearch:
+    fields = {"court": "tjsp", "query": "recurso", "date_from": DAY, "date_to": DAY, **overrides}
+    return PublicationSearch(**fields)
+
+
 def _respond(status: int, body=None, **kwargs):
     return lambda request: httpx.Response(status, json=body, **kwargs)
 
 
 async def _search(handler):
-    return await _repository(handler).search("tjsp", "recurso", DAY, DAY)
+    return await _repository(handler).search(_request())
 
 
 async def test_maps_the_recorded_publications():
@@ -123,7 +129,7 @@ async def test_asks_for_the_page_and_knows_when_it_is_the_last():
         seen.append(request.url.params["pagina"])
         return httpx.Response(200, json=body)
 
-    second = await _repository(handler).search("tjsp", "recurso", DAY, DAY, page=2)
+    second = await _repository(handler).search(_request(page=2))
 
     assert seen == ["2"] and second.more is False
 
@@ -160,9 +166,7 @@ async def test_a_429_backs_off_60_seconds_and_asks_again_once():
     async def sleep(seconds):
         slept.append(seconds)
 
-    page = await _repository(lambda request: next(answers), sleep).search(
-        "tjsp", "recurso", DAY, DAY
-    )
+    page = await _repository(lambda request: next(answers), sleep).search(_request())
 
     assert slept == [60] and page.publications == ()
     assert page.requests == 2
@@ -182,7 +186,7 @@ async def test_a_429_that_persists_asks_only_twice():
         return httpx.Response(429)
 
     with pytest.raises(ToolFailure) as caught:
-        await _repository(handler).search("tjsp", "recurso", DAY, DAY)
+        await _repository(handler).search(_request())
 
     assert caught.value.code is ErrorCode.RATE_LIMITED and len(asked) == 2
 
@@ -194,7 +198,7 @@ async def test_asks_for_one_orgao_and_reports_the_orgaos_it_saw():
         seen.append(dict(request.url.params))
         return httpx.Response(200, json=_fixture("tjsp_decisions.json"))
 
-    page = await _repository(handler).search("tjsp", "recurso", DAY, DAY, organ_id=1002)
+    page = await _repository(handler).search(_request(organ_id=1002))
 
     assert seen[0]["orgaoId"] == "1002"
     assert page.organ_ids == (1001, 1002)
@@ -207,13 +211,13 @@ async def test_no_orgao_is_sent_by_default():
         seen.append(dict(request.url.params))
         return httpx.Response(200, json=_fixture("empty.json"))
 
-    await _repository(handler).search("tjsp", "recurso", DAY, DAY)
+    await _repository(handler).search(_request())
 
     assert "orgaoId" not in seen[0]
 
 
 async def test_a_500_past_the_first_page_is_the_depth_ceiling_not_an_error():
-    page = await _repository(_respond(500)).search("tjsp", "recurso", DAY, DAY, page=101)
+    page = await _repository(_respond(500)).search(_request(page=101))
 
     assert page.truncated is True and page.publications == () and page.more is False
 
@@ -270,8 +274,8 @@ async def test_a_cnj_number_is_asked_as_digits_and_the_text_is_left_out_when_emp
         return httpx.Response(200, json=_fixture("empty.json"))
 
     number = CnjNumber("12345677620258260100")
-    await _repository(handler).search("tjsp", "", DAY, DAY, number=number)
-    await _repository(handler).search("tjsp", "recurso", DAY, DAY)
+    await _repository(handler).search(_request(query="", cnj_number=number))
+    await _repository(handler).search(_request())
 
     assert seen[0]["numeroProcesso"] == number.digits and "texto" not in seen[0]
     assert "numeroProcesso" not in seen[1] and seen[1]["texto"] == "recurso"

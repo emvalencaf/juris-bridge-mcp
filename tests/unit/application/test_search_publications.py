@@ -552,3 +552,16 @@ async def test_a_group_without_a_term_the_source_accepts_never_reaches_it():
     assert await _code(repository, query="recurso OR de ao") is ErrorCode.INVALID_ARGUMENT
     assert await _code(repository, query='recurso "especial') is ErrorCode.INVALID_ARGUMENT
     assert await _code(repository, query="a OR b OR c OR d recurso") is ErrorCode.INVALID_ARGUMENT
+
+
+async def test_scores_the_items_of_the_page_but_keeps_them_in_date_order():
+    weak = _publication(0, text="recurso especial " + "x " * 50)
+    strong = _publication(1, text="recurso especial recurso especial")
+    repository = _Repository(PublicationPage(publications=(weak, strong), total=2))
+
+    result = await _search(repository, query="recurso especial")
+
+    assert [p.item_hash for p in result.publications] == ["hash0", "hash1"]
+    assert result.publications[1].relevance.score > result.publications[0].relevance.score > 0
+    assert result.publications[0].relevance.matched_terms == ("recurso", "especial")
+    assert all(p.text == "" for p in result.publications)

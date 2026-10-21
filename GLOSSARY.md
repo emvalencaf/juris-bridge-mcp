@@ -28,6 +28,10 @@ _Avoid_: jurisprudence
 A decision or ruling (_decisão_, _acórdão_) as released in a Diário da Justiça Eletrônico, with its release date and text; distinct from the Case it belongs to.
 _Avoid_: intimação, notice, case law (when a single released item is meant)
 
+**Relevance**:
+How a Publication fits a search query among the others of the same page: a `score` from 0 to 1 (BM25 scaled so the page's best item is 1.0) and the `matched_terms` found in its text. It is only meaningful within one response; results stay ordered by date and no global relevance ordering exists.
+_Avoid_: rank, ranking (the order is by date), global score
+
 **Legislation**:
 Statutes and other normative acts (_legislação_), identified by a URN Lex and catalogued by the Senado.
 _Avoid_: laws

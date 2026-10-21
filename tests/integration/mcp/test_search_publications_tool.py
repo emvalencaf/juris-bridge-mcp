@@ -43,6 +43,7 @@ async def test_returns_a_normalized_page_of_publications(djen: FakeDjen, mcp_cli
     assert first["published_on"] == "2026-10-15"
     assert first["excerpt"].startswith("DECISÃO Vistos.")
     assert first["text_length"] > 0
+    assert isinstance(first["score"], float) and isinstance(first["matched_terms"], list)
     assert first["content_kind"] == "metadata" and first["source"] == "djen"
     assert first["citation"] == {
         "text": "TJSP, DESPACHO/DECISÃO, proc. 1234567-76.2025.8.26.0100, "
@@ -137,3 +138,11 @@ async def test_a_day_at_the_count_cap_is_split_by_orgao_and_reported_as_slice_ca
     assert page["complete"] is False and page["incomplete_reason"] == "slice_cap"
     assert page["next_cursor"] is None and "hint" in page
     assert len(page["items"]) == 4
+
+
+async def test_the_tool_description_says_the_score_is_page_relative(mcp_client):
+    tool = next(t for t in await mcp_client.list_tools() if t.name == "search_publications")
+
+    description = " ".join(tool.description.split())
+    assert "not comparable across pages" in description
+    assert "no global relevance ordering" in description

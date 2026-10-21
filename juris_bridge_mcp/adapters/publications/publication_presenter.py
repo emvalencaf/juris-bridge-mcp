@@ -33,6 +33,7 @@ def present_search(result: PublicationSearchResult) -> dict[str, Any]:
 
 
 def _item(publication: Publication) -> dict[str, Any]:
+    relevance = publication.relevance
     return {
         "id": publication.id,
         "source": SOURCE,
@@ -46,4 +47,6 @@ def _item(publication: Publication) -> dict[str, Any]:
         "published_on": publication.day.isoformat(),
         "excerpt": publication.excerpt,
         "text_length": publication.text_length,
+        "score": relevance.score if relevance else None,
+        "matched_terms": list(relevance.matched_terms) if relevance else [],
     }

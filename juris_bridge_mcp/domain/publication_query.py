@@ -20,22 +20,37 @@ MIN_TERM_LENGTH = 5
 
 _TOKEN = re.compile(r'(-?)"([^"]*)"|([^\s"]+)')
 _WORD = re.compile(r"\w+")
+_ACCENTS = re.compile("[\u0300-\u036f]")
 _RESERVED = {"AND": "a space already means AND", "NOT": "write -term to exclude a word"}
 
 
 def normalized_words(text: str) -> tuple[str, ...]:
     """Return the words of `text` lowercased and without accents, in order."""
     folded = unicodedata.normalize("NFKD", text.casefold())
-    return tuple(_WORD.findall("".join(c for c in folded if not unicodedata.combining(c))))
+    return tuple(_WORD.findall(_ACCENTS.sub("", folded)))
+
+
+def _starts(haystack: tuple[str, ...], needle: tuple[str, ...], *, exact: bool) -> list[int]:
+    first, rest = needle[0], needle[1:]
+    last = len(haystack) - len(needle) + 1
+    if exact:
+        found = [i for i in range(last) if haystack[i] == first]
+    else:
+        found = [i for i in range(last) if haystack[i].startswith(first)]
+    if not rest:
+        return found
+    return [
+        i
+        for i in found
+        if all(
+            w == n if exact else w.startswith(n)
+            for w, n in zip(haystack[i + 1 : i + len(needle)], rest, strict=True)
+        )
+    ]
 
 
 def _contains(haystack: tuple[str, ...], needle: tuple[str, ...], *, exact: bool) -> bool:
-    size = len(needle)
-    for start in range(len(haystack) - size + 1):
-        window = haystack[start : start + size]
-        if all(w == n if exact else w.startswith(n) for w, n in zip(window, needle, strict=True)):
-            return True
-    return False
+    return bool(_starts(haystack, needle, exact=exact))
 
 
 @dataclass(frozen=True)
@@ -48,6 +63,10 @@ class Term:
     def found_in(self, words: tuple[str, ...], *, exact: bool = False) -> bool:
         """Return whether the term's words appear adjacent and in order, by prefix unless exact."""
         return _contains(words, self.words, exact=exact)
+
+    def positions(self, words: tuple[str, ...]) -> list[int]:
+        """Return the index in `words` where each occurrence of the term starts, by prefix."""
+        return _starts(words, self.words, exact=False)
 
 
 @dataclass(frozen=True)

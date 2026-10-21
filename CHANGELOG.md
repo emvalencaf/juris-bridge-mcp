@@ -7,6 +7,14 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Added
+
+- Publication ranking (#70): every item of `search_publications` carries `score`, a page-relative
+  BM25 computed in pure Python over the texts fetched in the call (accents and case folded, the
+  start of the text and the ementa weighted higher) and scaled so the page's best item is 1.0,
+  and `matched_terms`. The weights were checked against live DJEN pages. Results stay ordered by
+  date; the score is not comparable across pages and there is no global relevance ordering.
+
 ### Changed
 
 - Publication query (#69): `search_publications` interprets `query` itself: a space is AND,

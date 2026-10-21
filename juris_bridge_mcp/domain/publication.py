@@ -14,6 +14,18 @@ COUNT_CAP = 10000
 
 
 @dataclass(frozen=True)
+class Relevance:
+    """How a Publication fits the query among the others of its page.
+
+    `score` is a BM25 value that only means something within the page it was computed in.
+    `matched_terms` are the query terms found in the text, as typed.
+    """
+
+    score: float
+    matched_terms: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Publication:
     """One item of a Diário, with a plain-text excerpt of its text.
 
@@ -24,6 +36,7 @@ class Publication:
     `item_hash` is the DJEN's hash of the item, which tells it apart from the others of the
     same Court, day and Case. `organ_id` is the DJEN's id of the issuing body, when it gives one.
     `text` is the whole plain text, kept so a search can filter on it; it is never presented.
+    `relevance` is set by a search (see `publication_ranking`).
     """
 
     court: str
@@ -37,6 +50,7 @@ class Publication:
     url: str | None = None
     organ_id: int | None = None
     text: str = field(default="", repr=False, compare=False)
+    relevance: Relevance | None = None
 
     @property
     def id(self) -> str:

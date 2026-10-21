@@ -177,6 +177,13 @@ With `cnj_number` (masked or 20 digits) the search lists the Publications of tha
 court is derived from the number (or checked against `court`), `query` is optional and filters
 here only, with no minimum term length. For the Case itself, call `get_case`.
 
+The window is read one day at a time, newest first, with at most 10 DJEN requests per call.
+`complete` is true when the search reached the end of the window; otherwise
+`incomplete_reason` says why: `budget` (more follows, pass `next_cursor` back as `cursor`),
+`slice_cap` or `depth_ceiling` (the DJEN stops counting at 10,000 matches of a day and paging
+after about 10,000 of a slice, so narrow the query). A day at the count cap is split by Issuing
+body, using the catalog shipped with the server ([ADR 0007](docs/adr/0007-issuing-body-catalog-from-a-maintainer-script.md)).
+
 ### Coverage
 
 `list_coverage` states, per Source and Court, what can be answered, with no network call.
@@ -203,7 +210,7 @@ The rate limit and cache are explained further in [docs/known-limits.md](docs/kn
 - A DJEN day at the 10,000-item cap is split by Issuing body from a catalog shipped with the
   server. A body missing from both the catalog and the day's first page goes unnoticed; see
   [docs/known-limits.md](docs/known-limits.md). The maintainer refreshes the catalog with
-  `scripts/build_issuing_body_catalog.py` (ADR 0007).
+  `scripts/build_issuing_body_catalog.py`.
 - The `revoked` and `superseded` flags of a norm article rest on the Planalto markup (a
   `(Revogado ...)` note, or a struck-through opening line). Older pages mark them
   inconsistently, so a revoked article can be missed or a current one flagged.

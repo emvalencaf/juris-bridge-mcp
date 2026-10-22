@@ -19,6 +19,8 @@ from assayer.runner import Runner
 
 from evals.agent import DEFAULT_MAX_STEPS, IN_SCOPE_TOOLS, run_agent
 from evals.cassette import CASSETTES_DIR, Cassette, cassette_path, replay_session
+from evals.citation_existence import CITATION_EXISTENCE
+from evals.citation_existence import register_metrics as register_citation_metrics
 from evals.llm import (
     EvalLLMSettings,
     GeminiClient,
@@ -87,6 +89,7 @@ def run_eval(
     """
     registry = Registry()
     register_metrics(registry)
+    register_citation_metrics(registry)
 
     def target(case_input: dict[str, Any]) -> Trajectory:
         return asyncio.run(
@@ -101,7 +104,9 @@ def run_eval(
             )
         )
 
-    runner = Runner(target=target, metrics=[registry.get(TOOL_USE)])
+    runner = Runner(
+        target=target, metrics=[registry.get(TOOL_USE), registry.get(CITATION_EXISTENCE)]
+    )
     return runner.run(prepare(dataset))
 
 
@@ -135,6 +140,9 @@ def format_experiment(experiment: Experiment) -> str:
     ]
     for trajectory in experiment.trajectories:
         lines.append("  " + _case_line(experiment, trajectory))
+    citation = [s.value for s in experiment.scores if s.name == CITATION_EXISTENCE]
+    if citation:
+        lines.append(f"  mean citation_existence: {sum(citation) / len(citation):.2f}")
     tool_use = [s.value for s in experiment.scores if s.name == TOOL_USE]
     if tool_use:
         lines.append(f"  mean tool_use: {sum(tool_use) / len(tool_use):.2f}")
@@ -165,4 +173,21 @@ def _case_line(experiment: Experiment, trajectory: Trajectory) -> str:
     )
     if score and score.comment:
         line += f" | {score.comment}"
+    line += _citation_note(experiment, trajectory)
     return line
+
+
+def _citation_note(experiment: Experiment, trajectory: Trajectory) -> str:
+    found = next(
+        (
+            s
+            for s in experiment.scores
+            if s.name == CITATION_EXISTENCE and s.target_id == trajectory.case_id
+        ),
+        None,
+    )
+    if not found:
+        return ""
+    return f" | citation_existence {found.value:.2f}" + (
+        f" ({found.comment})" if found.comment else ""
+    )

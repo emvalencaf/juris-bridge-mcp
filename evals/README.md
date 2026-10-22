@@ -60,6 +60,7 @@ tickets of the spec.
 | `agent.py` | The agent loop: lists the server's real tools, converts them for the model, loops model, tool calls and results, and returns an assayer Trajectory |
 | `run.py` | `run_eval`: Eval cases to an Experiment (one Cassette, session and Trajectory per case); `format_experiment` |
 | `tool_use.py` | The `tool_use` Metric, loose on the route |
+| `citation_existence.py` | The `citation_existence` Metric: each CNJ number or Precedent cited in the answer must appear in a tool result |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
 | `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
@@ -158,6 +159,23 @@ each expected call is met by the best matching call of the Trajectory, arguments
 only on the keys the Eval case lists (strings ignoring case and surrounding space), and extra
 calls or another route listed with `any_of` are never marked wrong. The Score is the mean over
 the requirements. Seed Cassettes are rebuilt with `uv run --group evals python -m evals.seed`.
+
+### Citation existence Score
+
+`citation_existence` reads the final answer for CNJ numbers (with or without punctuation) and
+Precedent identifiers (`Tema 1002`, `Súmula 331`, `IRDR 12`, `RG 1002`) and checks that each one
+appears in the output of a tool call of the same Trajectory (a failed call is not a source). Both
+sides are normalised: a CNJ number to its 20 digits, a Precedent to kind sigla and number, so an
+unpunctuated number in the answer matches a punctuated one in the results, and `Tema 1.002`
+matches the id `stf-rg-1002`. The issuing body is not compared, and `Tema` matches `RG`, `RR`
+or `IRR`; `Súmula Vinculante` is only `SV`.
+
+The Score is the share of distinct citations found in the results (1.0 when all are). A citation
+absent from them is named in the Score's comment (`fabricated citation: CNJ ...`), and the report
+shows it on the case line. An answer with no citation is **not applicable** (no Score, no
+failure), like `tool_use` for a case that expects no tool call. It only informs; nothing is
+blocked. Citations are found by pattern, so a kind written in a form the patterns do not know
+(`PN`, `CT`, a name in full) is not checked.
 
 ### Model client
 

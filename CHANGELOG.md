@@ -22,6 +22,13 @@ heading when `development` is released to `master`.
 - Cassette replay (#93): `evals/cassette.py` stores dated, recorded Source responses per Eval case and
   replays them through the Source transport under the real server; a request with no recording is
   counted as a cassette miss and surfaces as `source_unavailable`, never reaching the network.
+- Agent loop and tool-use Score (#97): `python -m evals run [--split NAME]` puts each Eval case to an
+  agent that lists the server's real tools over the in-memory MCP client, converts them for the
+  model, loops model, tool calls and results up to a step cap, and keeps the Trajectory (calls,
+  arguments, results, errors, answer, tokens). A registered `tool_use` Metric scores tool and
+  arguments against the expected calls and accepts alternative routes. Adds a seed set of three Eval
+  cases (`evals/cases/seed/`) with hand-made seed Cassettes, and states in `RESPONSIBLE_USE.md` that
+  redacted Source text goes to a free-tier model provider.
 
 ## [0.1.0] - 2026-10-22
 

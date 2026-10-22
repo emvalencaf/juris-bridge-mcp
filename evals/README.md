@@ -59,6 +59,7 @@ Cassettes and the metrics arrive in later tickets of the spec.
 | `__main__.py` | The command (`python -m evals`) |
 | `dataset.py` | Loads Eval cases from the split folders |
 | `cases/tuning/`, `cases/validation/`, `cases/drafts/` | Eval cases as plain JSON lists, split by folder; drafts count toward no result |
+| `llm/` | The `LLMClient` Protocol, the Gemini client, rate limits, settings and test doubles |
 | `tests/` | Tests of the evaluation itself, run on request only |
 | `results/` | Local results; git-ignored |
 
@@ -103,6 +104,29 @@ the tests of the evaluation itself (the default `pytest` run skips them):
 ```bash
 uv run --group evals pytest evals
 ```
+
+### Model client
+
+The agent and the judge reach the model through `evals.llm.LLMClient`, a narrow Protocol
+(`chat(messages, tools, system=) -> ChatResult` with text, tool calls and token usage). It is
+injected, so tests use `ScriptedLLMClient` and never the Gemini API. `GeminiClient` is the only
+implementation, over the REST API with httpx.
+
+Configuration is read from the environment or `.env` (see `.env.example`): the agent, judge and
+calibration model names, `EVALS_REQUESTS_PER_MINUTE`, `EVALS_TOKENS_PER_MINUTE`,
+`EVALS_REQUESTS_PER_DAY`, `EVALS_MAX_REQUESTS_PER_RUN` and `GEMINI_API_KEY`. Copy the limits
+from the AI Studio rate-limit page of your project; they are per project and per model
+([research](../docs/research/gemini-free-tier-rate-limits.md)).
+
+* Before each request the client waits so neither requests nor tokens per minute are exceeded
+  (a one-minute sliding window; tokens are estimated, then corrected with the real usage).
+* A 429 (or 503) is retried with exponential backoff, since no retry header is documented
+  (`EVALS_MAX_RETRIES`, `EVALS_BACKOFF_BASE_SECONDS`, `EVALS_BACKOFF_MAX_SECONDS`).
+* Every attempt counts toward the run cap, `min(EVALS_MAX_REQUESTS_PER_RUN,
+  EVALS_REQUESTS_PER_DAY)`; past it the client raises `RequestCapReached`.
+* The key travels in a header and is never in a log, error, `repr` or result; calls are
+  identified by a key alias. Key rotation and resuming a stopped run are a later ticket (#96);
+  `KeySource` is the seam for it.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

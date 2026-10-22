@@ -13,6 +13,9 @@ heading when `development` is released to `master`.
   test run, with `assayer` in a separate `evals` dependency group. `uv run --group evals python -m evals`
   loads an empty Dataset and prints an empty Experiment. Adds ADR 0009, the Eval case and Cassette
   terms in the glossary and the research notes behind the spec.
+- Evaluation model client (#95): `evals/llm` with an injected `LLMClient` Protocol, a Gemini REST
+  implementation that waits on requests and tokens per minute, retries 429 with backoff and stops
+  at a per-run request cap, settings read from the environment, and a scripted client for tests.
 
 ## [0.1.0] - 2026-10-22
 

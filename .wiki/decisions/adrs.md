@@ -1,6 +1,6 @@
 ---
 type: Decision Summary
-title: "Architecture decisions (ADR 0001–0007)"
+title: "Architecture decisions (ADR 0001–0008)"
 description: "One-paragraph digest of each ADR in docs/adr/ and how they shape the code."
 tags: [decisions, adr]
 status: stable
@@ -27,6 +27,9 @@ sources:
   - id: adr7
     resource: docs/adr/0007-issuing-body-catalog-from-a-maintainer-script.md
     title: ADR 0007
+  - id: adr8
+    resource: docs/adr/0008-bnp-as-the-source-of-precedents.md
+    title: ADR 0008
 ---
 
 # ADR 0001 — vertical slices (superseded)
@@ -50,6 +53,9 @@ Self-hosted per user like 0002; fans out over court/day/orgaoId, classifies kind
 # ADR 0007
 The DJEN lists no Issuing bodies of a Court, so a catalog (`orgaoId`, name) ships as `adapters/djen/issuing_bodies.json` with a `version` and `generated_on`, built by hand with `scripts/build_issuing_body_catalog.py`. A day at the 10,000 cap is split by every catalog body plus any seen on page 1 that the catalog lacks. The Cursor carries the catalog index and `version`; a different version is `invalid_argument`. `slice_cap` is reported only when a body slice itself caps or page 1 shows a missing body. Residual gap: a body missing from both is undetectable.[^adr7]
 
+# ADR 0008
+Precedents come from the Banco Nacional de Precedentes through the JSON backend of its public app, which is undocumented and has no terms for programmatic use. It is treated as a public service (CNJ Res. 444 art. 1) without waiting for a CNJ authorization, with the ADR 0006 pattern: keyless, read-only, self-hosted per user, no public instance, a `PrecedentSource` port, a recorded cassette and an opt-in drift check. The STJ CKAN dataset is the fallback behind the same port.[^adr8] See [BNP source](/adapters/bnp-source.md).
+
 [^adr1]: ADR 0001
 [^adr2]: ADR 0002
 [^adr3]: ADR 0003
@@ -57,3 +63,4 @@ The DJEN lists no Issuing bodies of a Court, so a catalog (`orgaoId`, name) ship
 [^adr5]: ADR 0005
 [^adr6]: ADR 0006
 [^adr7]: ADR 0007
+[^adr8]: ADR 0008

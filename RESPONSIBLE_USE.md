@@ -20,6 +20,8 @@ original terms and ask a lawyer.
 - Do not use the server to profile individuals. It has no party, judge or CPF
   search, and you must not work around that.
 - Do not log case numbers, search text or payloads.
+- The BNP (Precedents) has no documented API and no terms for programmatic use:
+  keep your volume low and run your own instance.
 
 ## DataJud: non-commercial use
 
@@ -100,6 +102,28 @@ The project follows from this:
   sensitive.
 - You are the data controller of what you do with the results. The LGPD
   obligations that apply to your use are yours.
+
+## BNP: an undocumented public service
+
+Precedents come from the Banco Nacional de Precedentes (BNP) of the CNJ, which
+CNJ Res. 444/2022 makes public for citizens, lawyers, magistrates and
+researchers ([ADR 0008](docs/adr/0008-bnp-as-the-source-of-precedents.md), research note
+[BNP](docs/research/bnp-precedentes-access.md)). It publishes no API and no terms
+for programmatic use: the server reads the JSON backend that the BNP web app
+itself calls, without a key. Silence is not a grant, so:
+
+- Run your own instance and keep your volume low. The server limits itself to
+  60 requests per minute by default and identifies itself with an honest
+  User-Agent; do not raise it to bulk-download the BNP.
+- Do not run a public instance for others. A shared one needs written CNJ
+  confirmation, as for the DJEN.
+- The backend can change or stop without notice; an answer in an unknown shape
+  is reported as `source_changed`, not guessed.
+- A Precedent is law-level text, but its leading-Case links point to court
+  documents that may contain party names. Treat those as personal data under the
+  LGPD, as for Publications.
+- The BNP holds only what courts send it, so an empty result is not proof that no
+  Precedent exists.
 
 ## Logging
 

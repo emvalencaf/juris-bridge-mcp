@@ -18,7 +18,9 @@ LOGGER_NAME = "juris_bridge_mcp.wide_event"
 MAX_UPSTREAM_ENTRIES = 10
 
 # The only keys a call shape may carry: names and sizes, never values from the request.
-CALL_SHAPE_KEYS = frozenset({"filters", "limit", "cursor_sent", "court_alias", "norm_type", "year"})
+CALL_SHAPE_KEYS = frozenset(
+    {"filters", "limit", "cursor_sent", "court_alias", "norm_type", "year", "precedent_kind"}
+)
 
 _logger = logging.getLogger(LOGGER_NAME)
 _cold_start = True
@@ -110,6 +112,8 @@ def annotate(
     source: str | None = None,
     court: str | None = None,
     result_count: int | None = None,
+    result_total: int | None = None,
+    total_is_capped: bool | None = None,
     cache: Literal["hit", "miss"] | None = None,
     paginated: bool | None = None,
     call_shape: Mapping[str, Any] | None = None,
@@ -125,6 +129,8 @@ def annotate(
         ("source", source),
         ("court", court),
         ("result_count", result_count),
+        ("result_total", result_total),
+        ("total_is_capped", total_is_capped),
         ("cache", cache),
         ("paginated", paginated),
     ):

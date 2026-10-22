@@ -3,11 +3,16 @@
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
+from urllib.parse import urlencode
 
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import ToolFailure, invalid_argument
 
 SOURCE = "bnp"
+
+# The public page of the BNP app; it opens one Precedent from these query parameters, which is
+# the link its own "copy link" button builds.
+PUBLIC_PAGE = "https://bnp.pdpj.jus.br/pesquisa"
 
 # The BNP stops counting matches here, so a total at this value is a lower bound.
 COUNT_CAP = 10000
@@ -110,6 +115,12 @@ class Precedent:
     matched_terms: tuple[str, ...] = ()
 
 
+def public_url(precedent: Precedent) -> str:
+    """Return the link that opens the Precedent in the BNP's public app."""
+    query = {"orgao": precedent.body.lower(), "tipo": precedent.kind, "nr": precedent.number}
+    return f"{PUBLIC_PAGE}?{urlencode(query)}"
+
+
 @dataclass(frozen=True)
 class PrecedentDecisions:
     """The decisions the BNP shows for a Precedent; `texts` is often empty."""
@@ -147,16 +158,14 @@ class PrecedentFilters:
 
 @dataclass(frozen=True)
 class PrecedentPage:
-    """One page of a search, with how many matched overall and per body.
+    """One page of a search, with how many matched overall.
 
     `total_is_capped` is true when the Source stopped counting at `COUNT_CAP`.
-    `body_counts` pairs a BNP sigla with its hits, as the Source aggregated them.
     """
 
     precedents: tuple[Precedent, ...]
     total: int
     total_is_capped: bool
-    body_counts: tuple[tuple[str, int], ...] = ()
     retrieved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 

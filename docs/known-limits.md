@@ -48,6 +48,27 @@ or when an unexpected `slice_cap` shows up. The shipped catalog does not cover e
 complete it). A Court with no catalog entry is split
 by the bodies of the first page only and always reports `slice_cap`.
 
+## BNP: an undocumented backend
+
+Precedents come from the JSON backend that the BNP web app calls (ADR 0008). It
+has no documented API, no version and no stated rate limit, so:
+
+- It can change or stop without notice. An answer in an unknown shape is
+  `source_changed`; run the opt-in check
+  `JURIS_BRIDGE_LIVE_BNP=1 uv run pytest tests/contract/providers/bnp` to see
+  whether the live service still matches the recorded one.
+- It counts no further than 10,000 matches (`total_is_capped`) and shows no
+  results past them, so narrow a broad search by Court, kind or update date.
+- Coverage is uneven: it holds only what courts send it, STF and STJ far more
+  than most TJs, so an empty result proves nothing. It is updated about twice a
+  month, which is why answers are cached for an hour.
+- It has no read-by-id endpoint and gives no per-query counts per body, so
+  `get_precedent` searches by body, kind and number and searches show no
+  per-body counts.
+- Its date filter reads `DD/MM/YYYY` only; the server converts your ISO dates.
+- Decision texts are often empty; `get_precedent` then returns the Precedent with
+  a warning and `content_kind: "metadata"`.
+
 ## Other limits
 
 Limits of the norm text (revoked and superseded flags, article boundaries,

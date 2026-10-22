@@ -1,7 +1,7 @@
 ---
 type: Adapters
 title: "Sources and their adapters"
-description: "The five upstream Sources, what each serves, and how each adapter maps it."
+description: "The six upstream Sources, what each serves, and how each adapter maps it."
 tags: [adapters, sources]
 status: stable
 generated: { by: claude-code/sonnet-5.5, at: '2026-10-21T00:00:00Z' }
@@ -32,6 +32,7 @@ sources:
 |--------|--------|---------|-------|
 | **DataJud** (CNJ) | Cases | `adapters/datajud/` | One Elasticsearch `_search` per lookup; needs the user's own API key. `case_mapper.map_case` checks every field and raises `SchemaDrift` on an unexpected shape (beta API, compact filing dates, codes number-or-string).[^dj] |
 | **DJEN** | Publications | `adapters/djen/` | Keyless `comunicacao` search; `publication_mapper` maps items; shipped `issuing_bodies.json` ([ADR 0007](/decisions/adrs.md#adr-0007)).[^djen] |
+| **BNP** | Precedents | `adapters/bnp/` | Keyless JSON backend of the BNP public app, undocumented; see [BNP source](/adapters/bnp-source.md) ([ADR 0008](/decisions/adrs.md#adr-0008)). |
 | **Senado** | Norm metadata | `adapters/senado/` | `legislacao/lista` to search, `urn` to fetch; no free-text.[^sen] |
 | **Planalto** | Norm text | `adapters/planalto/` | Static pages with no URN index; `candidate_paths` lists likely paths by convention, most likely first.[^plan] |
 | **Câmara Legin** | Norm text fallback | `adapters/legin/` | LexML URN page → Legin data sheet → text page; `ChallengePage` detects the portal's proof-of-work challenge, which is **not** circumvented; `is_gateway_error` spots a proxy 504 served as 200.[^leg] |
@@ -44,7 +45,7 @@ No browser automation or portal scraping: challenges are not circumvented, and a
 
 # Presenters
 
-`case_presenter`, `publication_presenter` and `legislation_presenter` turn use-case results into Normalized results; `presentation.iso_utc` formats UTC timestamps with a `Z`.
+`case_presenter`, `publication_presenter`, `precedent_presenter` and `legislation_presenter` turn use-case results into Normalized results; `presentation.iso_utc` formats UTC timestamps with a `Z`.
 
 [^dj]: DatajudCaseRepository
 [^djen]: DjenPublicationRepository

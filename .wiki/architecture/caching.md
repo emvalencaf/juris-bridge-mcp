@@ -23,6 +23,7 @@ sources:
 |-----------|--------|-------|
 | `CachedCaseRepository` | found Cases | A missing Case is asked again. TTL `cache_ttl_seconds` (300 s). `retrieved_at` stays the time the Source was asked. |
 | `CachedLegislationRepository` | the whole match list per filters | Sliced into pages, so paging costs one request.[^cl] 300 s, 64 entries. |
+| `CachedPrecedentSource` | searches, found Precedents and decisions with text | A missing, failing or empty answer is asked again. 3600 s / 256 entries: the BNP updates about twice a month. |
 | `CachedNormTextSource` | parsed norm texts | Only found texts. 3600 s, 16 entries because pages weigh megabytes once parsed. |
 
 Publications are not cached: the [Cursor](/domain/cursor.md) is stateless and the search is a time-bounded fan-out.

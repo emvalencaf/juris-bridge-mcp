@@ -60,7 +60,7 @@
 
 Um servidor MCP remoto, extensível e testável que dá a agentes de IA acesso a dados judiciais brasileiros por uma interface unificada. Uma ponte entre agentes de IA e o ecossistema judicial do Brasil.
 
-Ele expõe sete ferramentas somente de leitura sobre três Fontes (Sources), e todo resultado é um resultado normalizado (Normalized result) com a sua Fonte, uma Citação (Citation) e um tipo de conteúdo (Content kind):
+Ele expõe nove ferramentas somente de leitura sobre quatro Fontes (Sources), e todo resultado é um resultado normalizado (Normalized result) com a sua Fonte, uma Citação (Citation) e um tipo de conteúdo (Content kind):
 
 | Ferramenta | O que faz |
 |---|---|
@@ -68,6 +68,8 @@ Ele expõe sete ferramentas somente de leitura sobre três Fontes (Sources), e t
 | `get_case` | Busca um Processo pelo número CNJ; o Tribunal é derivado do número |
 | `search_publications` | Busca as Publicações (Publications) de um Tribunal divulgadas numa janela de até 31 dias, do dia mais recente ao mais antigo, com cursor e `complete`/`incomplete_reason` (DJEN, metadados e um trecho em texto simples, classificadas por `kind`, com despachos e avisos descartados; nomes de partes são dados pessoais pela LGPD) |
 | `get_publication` | Lê o texto simples completo de uma Publicação pelo `id` que uma busca devolveu, em fatias encadeadas por um cursor (DJEN, `full_text`) |
+| `search_precedents` | Busca os Precedentes (Precedents: súmulas, temas de repercussão geral, repetitivos, IRDRs, IACs...) do Banco Nacional de Precedentes por texto, Tribunal, espécie, número e data de atualização, com cursor e `total_is_capped` (BNP, metadados; a situação é o texto da própria Fonte) |
+| `get_precedent` | Busca um Precedente pelo `id` que uma busca devolveu, com o histórico de situação, os sobrestamentos, os processos paradigma (um `cnj_number` só quando válido, para encadear no `get_case`) e, quando a BNP os tem, as decisões |
 | `search_legislation` | Encontra uma Norma por tipo, número e ano (Senado) |
 | `get_legislation` | Busca uma Norma por URN Lex, com o texto do Planalto ou, como alternativa, da Câmara Legin |
 | `list_coverage` | Informa o que o servidor pode e não pode responder, por Fonte e Tribunal |
@@ -205,12 +207,18 @@ O `list_coverage` informa, por Fonte e Tribunal, o que pode ser respondido, sem 
 |---|---|---|---|
 | DataJud | Processos | 91 Tribunais por alias (`tjsp`, `trf1`, `tre-sp`...) | STF |
 | DJEN | Publicações | todo Tribunal do DataJud, menos os TREs; `available_from` dá o primeiro dia com dados conhecido | STF e os TREs: `not_covered`, sem alternativa em portais |
+| BNP | Precedentes | 93 órgãos (STF, STJ, TST, TRFs, TRTs, TJs...); o TNU aparece pela sigla | guarda só o que os tribunais enviam, então a cobertura é muito desigual e um resultado vazio não prova nada |
 | Senado | Legislação | normas federais | |
 
 O DJEN não é um arquivo: ele guarda Publicações de cerca de 2021 em diante, e de mais tarde para
 muitos Tribunais (TJSP a partir de 2025-03, STJ a partir de 2024-12), e um Tribunal sem
 `available_from` não tem início conhecido. Uma janela que termina antes do início de um Tribunal
 é `not_covered`. Os resultados podem não ser exaustivos.
+
+A BNP não tem API documentada: o servidor lê o backend JSON que o seu aplicativo web público chama,
+sem chave (ADR 0008). Esse backend pode mudar sem aviso, e uma resposta em formato desconhecido
+vira `source_changed`. Ele não conta além de 10.000 resultados, é atualizado cerca de duas vezes
+por mês, e o seu filtro de data só lê `DD/MM/AAAA` (o servidor converte para você).
 
 ### Limites conhecidos
 
@@ -247,7 +255,7 @@ O limite de taxa e o cache são explicados melhor em [docs/known-limits.md](docs
 
 ## Roteiro
 
-- [x] Sete ferramentas somente de leitura sobre DataJud, DJEN e Senado, com texto do Planalto e da Câmara Legin
+- [x] Nove ferramentas somente de leitura sobre DataJud, DJEN, BNP e Senado, com texto do Planalto e da Câmara Legin
 - [x] Contêiner e deploy de referência na AWS
 - [x] Documentação, uso responsável e diagramas (#32)
 - [ ] Catálogo de órgãos emissores para os demais Tribunais do DJEN (#84)

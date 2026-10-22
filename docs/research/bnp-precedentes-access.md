@@ -208,3 +208,6 @@ About 25 read-only requests, honest User-Agent, no volume. Corrections to sectio
 - `textos` of `/decisoes` was empty again in the cases tried (STF RG 1002, STJ RR 328).
 - **`cancelados: true` includes** the cancelled records (STF SUM: 734 against 726 with `false`),
   so it is a superset and not a "only cancelled" filter.
+- **A link per Precedent exists**: the app's own "copy link" button (read in its lazy-loaded
+  `pesquisa` module) builds `https://bnp.pdpj.jus.br/pesquisa?orgao=<body lowercase>&tipo=<KIND>&nr=<number>`,
+  without a hash route, and the page answers 200. The server uses it as the Citation `url`.

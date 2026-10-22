@@ -13,6 +13,7 @@ from juris_bridge_mcp.domain.precedent import (
     PrecedentDecisions,
     StatusEntry,
     Suspension,
+    public_url,
 )
 
 
@@ -58,7 +59,10 @@ def _item(precedent: Precedent) -> dict[str, Any]:
         "id": precedent.id,
         "source": SOURCE,
         "content_kind": "metadata",
-        "citation": {"text": f"{precedent.body} {precedent.kind} {precedent.number}", "url": None},
+        "citation": {
+            "text": f"{precedent.body} {precedent.kind} {precedent.number}",
+            "url": public_url(precedent),
+        },
         "court": precedent.court,
         "body": precedent.body,
         "kind": precedent.kind,

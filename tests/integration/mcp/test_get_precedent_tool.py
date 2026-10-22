@@ -25,6 +25,9 @@ async def test_returns_the_precedent_in_full(bnp: FakeBnp, mcp_client):
     ]
     assert precedent["status_history"][0]["recorded_at"] == "2026-10-13T03:00:00Z"
     assert precedent["suspensions"] == []
+    assert precedent["citation"]["url"] == (
+        "https://bnp.pdpj.jus.br/pesquisa?orgao=stf&tipo=RG&nr=1002"
+    )
 
 
 async def test_an_stf_incident_number_is_not_offered_as_a_cnj_number(bnp: FakeBnp, mcp_client):

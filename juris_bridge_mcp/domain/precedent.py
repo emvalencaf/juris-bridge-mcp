@@ -3,11 +3,16 @@
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
+from urllib.parse import urlencode
 
 from juris_bridge_mcp.domain.cnj_number import CnjNumber
 from juris_bridge_mcp.domain.errors import ToolFailure, invalid_argument
 
 SOURCE = "bnp"
+
+# The public page of the BNP app; it opens one Precedent from these query parameters, which is
+# the link its own "copy link" button builds.
+PUBLIC_PAGE = "https://bnp.pdpj.jus.br/pesquisa"
 
 # The BNP stops counting matches here, so a total at this value is a lower bound.
 COUNT_CAP = 10000
@@ -108,6 +113,12 @@ class Precedent:
     suspensions: tuple[Suspension, ...] = ()
     updated_on: date | None = None
     matched_terms: tuple[str, ...] = ()
+
+
+def public_url(precedent: Precedent) -> str:
+    """Return the link that opens the Precedent in the BNP's public app."""
+    query = {"orgao": precedent.body.lower(), "tipo": precedent.kind, "nr": precedent.number}
+    return f"{PUBLIC_PAGE}?{urlencode(query)}"
 
 
 @dataclass(frozen=True)

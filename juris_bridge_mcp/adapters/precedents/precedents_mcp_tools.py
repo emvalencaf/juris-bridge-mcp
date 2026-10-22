@@ -65,7 +65,7 @@ def build_precedents_server(source: PrecedentSource) -> FastMCP:
         such as the TNU) and `body` (the BNP sigla), `kind`, `number`, `status` (the Source's own
         text, never normalized), `question`, `thesis` (plain text), `updated_on`, `matched_terms`
         (the query terms the BNP highlighted; there is no score), `content_kind: "metadata"` and
-        a `citation` whose `url` is null, since the BNP gives no stable link of its own.
+        a `citation` whose `url` opens the Precedent in the BNP's public app.
 
         `total` is how many matched. The BNP counts no further than 10,000, so `total_is_capped`
         true means "at least"; narrow the search then. Pass `next_cursor` back as `cursor` with

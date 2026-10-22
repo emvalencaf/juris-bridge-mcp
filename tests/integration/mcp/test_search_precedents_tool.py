@@ -29,7 +29,21 @@ async def test_returns_a_normalized_page_of_precedents(bnp: FakeBnp, mcp_client)
     assert item["thesis"].startswith("1. É devido o pagamento de honorários sucumbenciais")
     assert item["updated_on"] == "2026-10-15"
     assert item["content_kind"] == "metadata"
-    assert item["citation"]["text"] == "STF RG 1002" and item["citation"]["url"] is None
+    assert item["citation"] == {
+        "text": "STF RG 1002",
+        "url": "https://bnp.pdpj.jus.br/pesquisa?orgao=stf&tipo=RG&nr=1002",
+    }
+
+
+async def test_the_citation_link_names_the_body_kind_and_number_the_way_the_bnp_app_does(
+    bnp: FakeBnp, mcp_client
+):
+    bnp.search_body = bnp.fixture("trt04_oj_11.json")
+
+    page = await _call(mcp_client, query="x")
+
+    url = page["items"][0]["citation"]["url"]
+    assert url == "https://bnp.pdpj.jus.br/pesquisa?orgao=trt04&tipo=OJ&nr=11"
 
 
 async def test_sends_the_filters_the_way_the_bnp_reads_them(bnp: FakeBnp, mcp_client):

@@ -61,6 +61,7 @@ tickets of the spec.
 | `run.py` | `run_eval`: Eval cases to an Experiment (one Cassette, session and Trajectory per case); `format_experiment` |
 | `consistency.py`, `report.py`, `store.py`, `compare.py` | All-pass / at-least-one by case kind and efficiency; the report with its limits; saving and loading a run; comparing two runs |
 | `tool_use.py` | The `tool_use` Metric, loose on the route |
+| `citation_existence.py` | The `citation_existence` Metric: each CNJ number or Precedent cited in the answer must appear in a tool result |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
 | `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
@@ -201,6 +202,22 @@ uv run --group evals python -m evals compare seed-20261022-093005 seed-20261022-
 Names resolve under `evals/results/`, or give a path. It prints the delta of each metric's mean
 Score, of tokens and tool calls per Eval case (only cases both runs have) and of the share of
 cases that pass by their rule, using assayer's `compare` for metrics and tokens.
+### Citation existence Score
+
+`citation_existence` reads the final answer for CNJ numbers (with or without punctuation) and
+Precedent identifiers (`Tema 1002`, `Súmula 331`, `IRDR 12`, `RG 1002`) and checks that each one
+appears in the output of a tool call of the same Trajectory (a failed call is not a source). Both
+sides are normalised: a CNJ number to its 20 digits, a Precedent to kind sigla and number, so an
+unpunctuated number in the answer matches a punctuated one in the results, and `Tema 1.002`
+matches the id `stf-rg-1002`. The issuing body is not compared, and `Tema` matches `RG`, `RR`
+or `IRR`; `Súmula Vinculante` is only `SV`.
+
+The Score is the share of distinct citations found in the results (1.0 when all are). A citation
+absent from them is named in the Score's comment (`fabricated citation: CNJ ...`), and the report
+shows it on the case line. An answer with no citation is **not applicable** (no Score, no
+failure), like `tool_use` for a case that expects no tool call. It only informs; nothing is
+blocked. Citations are found by pattern, so a kind written in a form the patterns do not know
+(`PN`, `CT`, a name in full) is not checked.
 
 ### Model client
 
@@ -245,7 +262,7 @@ is used exactly as before. To opt in, set `EVALS_ROTATE_KEYS=true` and give two 
 `evals.progress.Progress` is the resumable store the runner wraps around each unit of work:
 
 ```python
-progress = Progress(Path("evals/results/progress-tuning.json"))   # git-ignored
+progress = Progress(Path("evals/results/progress-tuning.json"))  # git-ignored
 try:
     for case in cases:
         for repetition in range(3):

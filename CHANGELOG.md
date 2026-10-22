@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Citation-existence Score (#98): the `citation_existence` Metric in `evals/` checks that each CNJ
+  number and Precedent identifier cited in the agent's final answer appears in a tool result of the
+  same Trajectory, normalising punctuation and kind wordings. Absent ones are flagged as fabricated
+  in the report; an answer with no citation is not applicable. It is registered with the others and
+  shown in the Experiment report; it blocks nothing.
 - Evaluation skeleton (#91): a top-level `evals/` directory, outside the package and the default
   test run, with `assayer` in a separate `evals` dependency group. `uv run --group evals python -m evals`
   loads an empty Dataset and prints an empty Experiment. Adds ADR 0009, the Eval case and Cassette

@@ -61,6 +61,7 @@ tickets of the spec.
 | `run.py` | `run_eval`: Eval cases to an Experiment (one Cassette, session and Trajectory per case); `format_experiment` |
 | `consistency.py`, `report.py`, `store.py`, `compare.py` | All-pass / at-least-one by case kind and efficiency; the report with its limits; saving and loading a run; comparing two runs |
 | `tool_use.py` | The `tool_use` Metric, loose on the route |
+| `judge.py` | The rubric judge Metric (opt-in `--judge`): correctness by grounding, repeated, uncalibrated |
 | `citation_existence.py` | The `citation_existence` Metric: each CNJ number or Precedent cited in the answer must appear in a tool result |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
@@ -161,6 +162,26 @@ only on the keys the Eval case lists (strings ignoring case and surrounding spac
 calls or another route listed with `any_of` are never marked wrong. The Score is the mean over
 the requirements. Seed Cassettes are rebuilt with `uv run --group evals python -m evals.seed`.
 
+### Rubric judge
+
+`python -m evals run --split seed --judge` also asks the judge model (`EVALS_JUDGE_MODEL`) to grade
+each answer. It is opt-in: without `--judge` no judge call is spent. The `judge` Metric
+(`evals.judge.make_rubric_judge`, an assayer judge-based Metric over `LLMClientJudge`, which adapts
+an `LLMClient` to assayer's `Judge`) gets the question, the expected outcome, the tool results and the
+final answer, and rates the Stanford legal-AI rubric: correctness (`correct`, `incorrect`, `refusal`)
+and grounding (`grounded`, `misgrounded`, `ungrounded`). It may answer `unknown`; output that is not
+valid JSON, or uses another label, counts as `unknown` and never crashes the run.
+
+Each judgment is repeated three times (`make_rubric_judge(judge, repetitions=N)`), so a run spends
+3 judge calls per case. The report shows the majority verdict, the count per label and the
+agreement per axis. A tie is `unknown`. The Score value is the share of repetitions that were correct
+and grounded. The verdict is stored in the Score's `metadata` (`correctness`, `grounding`, `counts`,
+`agreement`, `repetitions`, `uncalibrated`, `prompt`, `prompt_hash`) for the calibration to read.
+
+Results are marked `[UNCALIBRATED]` until a calibration record exists at
+`evals/results/calibration.json` (`evals.judge.load_calibration` reads it; absent or unreadable means
+uncalibrated). Do not read an uncalibrated verdict as a measure of the server.
+
 ### Repetitions, consistency and the report
 
 `python -m evals run` runs each Eval case `--repetitions N` times (default 3), each run kept as
@@ -202,6 +223,7 @@ uv run --group evals python -m evals compare seed-20261022-093005 seed-20261022-
 Names resolve under `evals/results/`, or give a path. It prints the delta of each metric's mean
 Score, of tokens and tool calls per Eval case (only cases both runs have) and of the share of
 cases that pass by their rule, using assayer's `compare` for metrics and tokens.
+
 ### Citation existence Score
 
 `citation_existence` reads the final answer for CNJ numbers (with or without punctuation) and

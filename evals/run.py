@@ -21,6 +21,7 @@ from evals.agent import DEFAULT_MAX_STEPS, IN_SCOPE_TOOLS, run_agent
 from evals.cassette import CASSETTES_DIR, Cassette, cassette_path, replay_session
 from evals.citation_existence import CITATION_EXISTENCE
 from evals.citation_existence import register_metrics as register_citation_metrics
+from evals.judge import DEFAULT_REPETITIONS, JUDGE, format_judge_line, register_judge
 from evals.llm import (
     AllKeysExhausted,
     EvalLLMSettings,
@@ -79,6 +80,8 @@ def run_eval(
     model: str | None = None,
     repetitions: int = 1,
     progress: Progress | None = None,
+    judge: LLMClient | None = None,
+    judge_repetitions: int = DEFAULT_REPETITIONS,
 ) -> Experiment:
     """Run every Eval case of the Dataset `repetitions` times and score its tool use.
 
@@ -89,6 +92,9 @@ def run_eval(
         tool_names: The server tools offered to the agent.
         max_steps: The most model calls per case.
         model: The model name kept on the model Steps.
+        judge: The judge model's client; when given (opt-in) the rubric judge also scores
+            each answer, `judge_repetitions` times. None spends no judge call.
+        judge_repetitions: Judgments per answer.
         repetitions: How many times each Eval case runs, each kept as its own Trajectory.
         progress: When given, each `case#repetition` unit is wrapped in it: a finished unit is
             reused, a new one is saved as soon as it ends.
@@ -132,11 +138,11 @@ def run_eval(
         except (AllKeysExhausted, RequestCapReached) as stop:
             raise _Stop(unit_key(case_id, repetition), stop) from stop
 
-    runner = Runner(
-        target=target,
-        metrics=[registry.get(TOOL_USE), registry.get(CITATION_EXISTENCE)],
-        repetitions=repetitions,
-    )
+    metrics = [registry.get(TOOL_USE), registry.get(CITATION_EXISTENCE)]
+    if judge is not None:
+        register_judge(registry, judge, judge_repetitions)
+        metrics.append(registry.get(JUDGE))
+    runner = Runner(target=target, metrics=metrics, repetitions=repetitions)
     try:
         return runner.run(prepare(dataset))
     except _Stop as stop:
@@ -167,11 +173,24 @@ def gemini_agent_client(settings: EvalLLMSettings) -> GeminiClient:
     Raises:
         ValueError: When no `GEMINI_API_KEY` is set.
     """
+    return _gemini_client(settings, settings.agent_model)
+
+
+def gemini_judge_client(settings: EvalLLMSettings) -> GeminiClient:
+    """Build the judge's Gemini client (the judge model) the same way as the agent's.
+
+    Raises:
+        ValueError: When no `GEMINI_API_KEY` is set.
+    """
+    return _gemini_client(settings, settings.judge_model)
+
+
+def _gemini_client(settings: EvalLLMSettings, model: str) -> GeminiClient:
     limiter = RateLimiter(
         settings.requests_per_minute, settings.tokens_per_minute, time.monotonic, time.sleep
     )
     return GeminiClient(
-        settings.agent_model,
+        model,
         key_source_from(settings),
         limiter,
         RequestBudget(settings.request_cap),
@@ -218,6 +237,10 @@ def _case_line(experiment: Experiment, trajectory: Trajectory) -> str:
     usage = trajectory.total_usage()
     misses = (trajectory.final_state or {}).get("cassette_misses", 0)
     shown = f"tool_use {score.value:.2f}" if score else "tool_use n/a"
+    judged = next(
+        (s for s in experiment.scores if s.name == JUDGE and s.target_id == trajectory.case_id),
+        None,
+    )
     line = (
         f"{trajectory.case_id}: {shown} | calls {len(tools)} | errors {errors} | "
         f"tokens {usage.input_tokens + usage.output_tokens} | cassette misses {misses}"
@@ -225,6 +248,8 @@ def _case_line(experiment: Experiment, trajectory: Trajectory) -> str:
     if score and score.comment:
         line += f" | {score.comment}"
     line += _citation_note(experiment, trajectory)
+    if judged:
+        line += "\n    " + format_judge_line(judged)
     return line
 
 

@@ -10,14 +10,18 @@ from evals.dataset import SPLITS, load_split
 from evals.llm import EvalLLMSettings, LLMClient
 from evals.progress import Progress
 from evals.report import format_report
-from evals.run import RunStopped, gemini_agent_client, run_eval
+from evals.run import RunStopped, gemini_agent_client, gemini_judge_client, run_eval
 from evals.store import RESULTS_DIR, StoreError, load_run, save_run
 
 DEFAULT_REPETITIONS = 3
 
 
 def main(
-    argv: Sequence[str], *, llm: LLMClient | None = None, results_dir: Path = RESULTS_DIR
+    argv: Sequence[str],
+    *,
+    llm: LLMClient | None = None,
+    judge_llm: LLMClient | None = None,
+    results_dir: Path = RESULTS_DIR,
 ) -> int:
     """Run a split of Eval cases through the agent, or compare two saved runs.
 
@@ -25,8 +29,10 @@ def main(
 
     Args:
         argv: Command-line arguments after the program name: `run [--split NAME]
-            [--repetitions N] [--fresh]`, `compare A B`, or none (a `run` of `tuning`).
+            [--repetitions N] [--fresh] [--judge]`, `compare A B`, or none (a `run` of `tuning`).
         llm: The model client; built from settings (Gemini) when None. Tests pass a scripted one.
+        judge_llm: The judge model's client, used only with `--judge`; built from settings
+            (the judge model) when None.
         results_dir: Where runs and the progress file are kept (git-ignored by default).
 
     Returns:
@@ -41,6 +47,11 @@ def main(
         type=int,
         default=DEFAULT_REPETITIONS,
         help=f"runs of each Eval case (default: {DEFAULT_REPETITIONS})",
+    )
+    run.add_argument(
+        "--judge",
+        action="store_true",
+        help="also score answers with the rubric judge (uncalibrated; spends judge calls)",
     )
     run.add_argument("--fresh", action="store_true", help="ignore saved progress, start over")
     compared = commands.add_parser("compare", help="compare two saved runs (B minus A)")
@@ -58,9 +69,13 @@ def main(
     dataset = load_split(split)
     settings = None
     model = None
-    if dataset.cases and llm is None:
+    use_judge = getattr(args, "judge", False)
+    if dataset.cases and (llm is None or (use_judge and judge_llm is None)):
         settings = EvalLLMSettings()
-        llm, model = gemini_agent_client(settings), settings.agent_model
+        if llm is None:
+            llm, model = gemini_agent_client(settings), settings.agent_model
+        if use_judge and judge_llm is None:
+            judge_llm = gemini_judge_client(settings)
     progress = Progress(results_dir / f"progress-{split}.json") if dataset.cases else None
     if progress is not None and getattr(args, "fresh", False):
         progress.clear()
@@ -71,6 +86,7 @@ def main(
             model=model,
             repetitions=repetitions,
             progress=progress,
+            judge=judge_llm if use_judge else None,
         )
     except RunStopped as stopped:
         print(f"Run stopped: {stopped}")

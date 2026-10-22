@@ -38,6 +38,10 @@ heading when `development` is released to `master`.
   arguments against the expected calls and accepts alternative routes. Adds a seed set of three Eval
   cases (`evals/cases/seed/`) with hand-made seed Cassettes, and states in `RESPONSIBLE_USE.md` that
   redacted Source text goes to a free-tier model provider.
+- Rubric judge (#104): opt-in `python -m evals run --judge` grades each answer on the judge model as
+  correct / incorrect / refusal by grounded / misgrounded / ungrounded, or `unknown` (also for invalid
+  output), repeats each judgment three times and reports the verdict counts and agreement. Results
+  are marked UNCALIBRATED until `evals/results/calibration.json` exists.
 - Consistency, efficiency and the honest report (#103): each Eval case runs `--repetitions` times
   (default 3) as separate Trajectories, wrapped per `case#repetition` in `Progress` so exhausted keys
   stop the run cleanly and the same command resumes it. Lookups pass only if every run passes, open

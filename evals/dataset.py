@@ -7,14 +7,16 @@ from assayer.models import Dataset
 from assayer.runner import load_cases
 
 CASES_ROOT = Path(__file__).parent / "cases"
-SPLITS = ("tuning", "validation", "drafts")
+SPLITS = ("tuning", "validation", "drafts", "seed")
 
 
 def load_split(split: str, root: Path = CASES_ROOT) -> Dataset:
     """Load every `*.json` file of one split folder into a single Dataset.
 
     Args:
-        split: A folder name under `root`: `tuning`, `validation` or `drafts`.
+        split: A folder name under `root`: `tuning`, `validation`, `drafts` or `seed`. The
+            `seed` folder holds Eval cases for the hand-made seed Cassettes; it counts toward
+            no result, like drafts.
         root: The folder holding the splits.
 
     Returns:

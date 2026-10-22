@@ -147,16 +147,14 @@ class PrecedentFilters:
 
 @dataclass(frozen=True)
 class PrecedentPage:
-    """One page of a search, with how many matched overall and per body.
+    """One page of a search, with how many matched overall.
 
     `total_is_capped` is true when the Source stopped counting at `COUNT_CAP`.
-    `body_counts` pairs a BNP sigla with its hits, as the Source aggregated them.
     """
 
     precedents: tuple[Precedent, ...]
     total: int
     total_is_capped: bool
-    body_counts: tuple[tuple[str, int], ...] = ()
     retrieved_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 

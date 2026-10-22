@@ -7,6 +7,7 @@ import httpx
 import pytest
 from fastmcp import Client
 
+from juris_bridge_mcp.config.bnp import BnpSettings
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.djen import DjenSettings
 from juris_bridge_mcp.config.http import HttpSettings
@@ -21,6 +22,7 @@ SENADO_FIXTURES = Path(__file__).parents[2] / "contract/providers/senado/fixture
 PLANALTO_FIXTURES = Path(__file__).parents[2] / "contract/providers/planalto/fixtures"
 LEGIN_FIXTURES = Path(__file__).parents[2] / "contract/providers/legin/fixtures"
 DJEN_FIXTURES = Path(__file__).parents[2] / "contract/providers/djen/fixtures"
+BNP_FIXTURES = Path(__file__).parents[2] / "contract/providers/bnp/fixtures"
 
 
 def datajud_fixture(name: str) -> dict:
@@ -62,6 +64,44 @@ class FakeDjen:
         self.requests.append(request)
         body = self.responder(request) if self.responder else self.body
         return httpx.Response(self.status, json=body)
+
+
+class FakeBnp:
+    """Scripted BNP: replace `search_body`/`decisions_body` or the statuses to change the answers.
+
+    `requests` records every call; `filters` is the `filtro` of the last search.
+    """
+
+    def __init__(self) -> None:
+        self.requests: list[httpx.Request] = []
+        self.search_status = 200
+        self.search_body: dict | str = self.fixture("stf_rg_1002.json")
+        self.decisions_status = 200
+        self.decisions_body: dict | str = self.fixture("decisoes_stf_rg_1002.json")
+        # When set, answers each search with the `filtro` it received instead of `search_body`.
+        self.responder: Callable[[dict], dict] | None = None
+
+    @staticmethod
+    def fixture(name: str) -> dict:
+        return json.loads((BNP_FIXTURES / name).read_text())
+
+    @property
+    def filters(self) -> dict:
+        searches = [r for r in self.requests if r.method == "POST"]
+        return json.loads(searches[-1].content)["filtro"]
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        if request.method == "POST":
+            body = self.responder(self.filters) if self.responder else self.search_body
+            return self._answer(self.search_status, body)
+        return self._answer(self.decisions_status, self.decisions_body)
+
+    @staticmethod
+    def _answer(status: int, body: dict | str) -> httpx.Response:
+        if isinstance(body, str):
+            return httpx.Response(status, content=body.encode())
+        return httpx.Response(status, json=body)
 
 
 class FakeSenado:
@@ -158,6 +198,11 @@ def senado() -> FakeSenado:
 
 
 @pytest.fixture
+def bnp() -> FakeBnp:
+    return FakeBnp()
+
+
+@pytest.fixture
 def djen() -> FakeDjen:
     return FakeDjen()
 
@@ -168,11 +213,12 @@ def datajud() -> FakeDatajud:
 
 
 @pytest.fixture
-def server_args(datajud, djen, senado, planalto, legin) -> dict:
+def server_args(datajud, djen, bnp, senado, planalto, legin) -> dict:
     """Settings and transport the root server is built with: no network, fake Sources."""
     senado_host = httpx.URL(SenadoSettings().base_url).host
     planalto_host = httpx.URL(PlanaltoSettings().base_url).host
     djen_host = httpx.URL(DjenSettings().base_url).host
+    bnp_host = httpx.URL(BnpSettings().base_url).host
     legin_hosts = {httpx.URL(LeginSettings().lexml_base_url).host, "www2.camara.leg.br"}
 
     def route(request: httpx.Request) -> httpx.Response:
@@ -180,6 +226,8 @@ def server_args(datajud, djen, senado, planalto, legin) -> dict:
             return senado(request)
         if request.url.host == djen_host:
             return djen(request)
+        if request.url.host == bnp_host:
+            return bnp(request)
         if request.url.host in legin_hosts:
             return legin(request)
         return planalto(request) if request.url.host == planalto_host else datajud(request)
@@ -187,6 +235,7 @@ def server_args(datajud, djen, senado, planalto, legin) -> dict:
     return {
         "datajud": DatajudSettings(api_key="test-key"),
         "djen": DjenSettings(),
+        "bnp": BnpSettings(),
         "http": HttpSettings(),
         "senado": SenadoSettings(),
         "planalto": PlanaltoSettings(),

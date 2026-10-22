@@ -6,6 +6,7 @@ import uvicorn
 from pydantic import ValidationError
 
 from juris_bridge_mcp.adapters.wide_event import configure_logger
+from juris_bridge_mcp.config.bnp import BnpSettings
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.djen import DjenSettings
 from juris_bridge_mcp.config.http import HttpSettings
@@ -35,6 +36,7 @@ def main() -> None:
         LogSettings().environment(),
         datajud=DatajudSettings(),
         djen=DjenSettings(),
+        bnp=BnpSettings(),
         senado=SenadoSettings(),
         planalto=PlanaltoSettings(),
         legin=LeginSettings(),

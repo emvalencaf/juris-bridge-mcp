@@ -26,7 +26,6 @@ class PrecedentSearchResult:
     precedents: tuple[Precedent, ...]
     total: int
     total_is_capped: bool
-    body_counts: tuple[tuple[str, int], ...]
     next_cursor: str | None
     retrieved_at: datetime
     hint: str | None = None
@@ -92,7 +91,6 @@ async def search_precedents(
         precedents=page.precedents,
         total=page.total,
         total_is_capped=page.total_is_capped,
-        body_counts=page.body_counts,
         next_cursor=next_cursor,
         retrieved_at=page.retrieved_at,
         hint=hint,

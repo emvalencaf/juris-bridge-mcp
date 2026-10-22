@@ -9,6 +9,8 @@ from starlette.middleware import Middleware
 from starlette.types import ASGIApp
 
 from juris_bridge_mcp.adapters.bearer_auth import BearerAuthMiddleware
+from juris_bridge_mcp.adapters.bnp.cached_precedent_source import CachedPrecedentSource
+from juris_bridge_mcp.adapters.bnp.precedent_source import BnpPrecedentSource
 from juris_bridge_mcp.adapters.cases.cached_case_repository import CachedCaseRepository
 from juris_bridge_mcp.adapters.cases.cases_mcp_tools import build_cases_server
 from juris_bridge_mcp.adapters.coverage_mcp_tools import build_coverage_server
@@ -31,6 +33,7 @@ from juris_bridge_mcp.adapters.legislation.fallback_norm_text_source import (
 from juris_bridge_mcp.adapters.legislation.legislation_mcp_tools import build_legislation_server
 from juris_bridge_mcp.adapters.planalto.cached_norm_text_source import CachedNormTextSource
 from juris_bridge_mcp.adapters.planalto.norm_text_source import PlanaltoNormTextSource
+from juris_bridge_mcp.adapters.precedents.precedents_mcp_tools import build_precedents_server
 from juris_bridge_mcp.adapters.publications.publications_mcp_tools import (
     build_publications_server,
 )
@@ -41,6 +44,7 @@ from juris_bridge_mcp.adapters.senado.cached_legislation_repository import (
 from juris_bridge_mcp.adapters.senado.legislation_repository import SenadoLegislationRepository
 from juris_bridge_mcp.adapters.static_coverage_catalog import StaticCoverageCatalog
 from juris_bridge_mcp.adapters.wide_event_middleware import WideEventMiddleware
+from juris_bridge_mcp.config.bnp import BnpSettings
 from juris_bridge_mcp.config.datajud import DatajudSettings
 from juris_bridge_mcp.config.djen import DjenSettings
 from juris_bridge_mcp.config.http import HttpSettings
@@ -51,6 +55,7 @@ from juris_bridge_mcp.domain.courts import SOURCE as DATAJUD
 from juris_bridge_mcp.domain.legislation import SOURCE as SENADO
 from juris_bridge_mcp.domain.legislation_text import LEGIN_SOURCE as LEGIN
 from juris_bridge_mcp.domain.legislation_text import TEXT_SOURCE as PLANALTO
+from juris_bridge_mcp.domain.precedent import SOURCE as BNP
 from juris_bridge_mcp.domain.publication import SOURCE as DJEN
 
 
@@ -58,6 +63,7 @@ def build_server(
     *,
     datajud: DatajudSettings,
     djen: DjenSettings,
+    bnp: BnpSettings,
     http: HttpSettings,
     senado: SenadoSettings,
     planalto: PlanaltoSettings,
@@ -101,6 +107,11 @@ def build_server(
         requests_per_minute=djen.requests_per_minute,
         retried_statuses=DJEN_RETRIED_STATUSES,
     )
+    bnp_upstream = upstream_for(
+        BNP,
+        timeout_seconds=bnp.timeout_seconds,
+        requests_per_minute=bnp.requests_per_minute,
+    )
     senado_upstream = upstream_for(
         SENADO,
         timeout_seconds=senado.timeout_seconds,
@@ -133,6 +144,15 @@ def build_server(
         )
     )
     app.mount(
+        build_precedents_server(
+            CachedPrecedentSource(
+                BnpPrecedentSource(bnp_upstream, base_url=bnp.base_url),
+                InMemoryTtlCache(max_entries=bnp.cache_max_entries),
+                ttl_seconds=bnp.cache_ttl_seconds,
+            )
+        )
+    )
+    app.mount(
         build_legislation_server(
             CachedLegislationRepository(
                 SenadoLegislationRepository(senado_upstream, base_url=senado.base_url),
@@ -158,6 +178,7 @@ def build_http_app(
     *,
     datajud: DatajudSettings,
     djen: DjenSettings,
+    bnp: BnpSettings,
     http: HttpSettings,
     senado: SenadoSettings,
     planalto: PlanaltoSettings,
@@ -168,6 +189,7 @@ def build_http_app(
     server = build_server(
         datajud=datajud,
         djen=djen,
+        bnp=bnp,
         http=http,
         senado=senado,
         planalto=planalto,

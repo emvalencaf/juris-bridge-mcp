@@ -17,7 +17,7 @@ def _coverage():
 def test_states_each_source_with_its_supported_operations():
     coverage = {s["source"]: s for s in _coverage()["sources"]}
 
-    assert set(coverage) == {"datajud", "djen", "senado"}
+    assert set(coverage) == {"datajud", "djen", "senado", "bnp"}
     assert coverage["datajud"]["kind"] == "cases"
     assert coverage["senado"]["kind"] == "legislation"
 

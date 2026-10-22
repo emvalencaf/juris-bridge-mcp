@@ -32,10 +32,12 @@ async def test_tools_are_exposed_and_read_only(mcp_client):
     assert sorted(t.name for t in tools) == [
         "get_case",
         "get_legislation",
+        "get_precedent",
         "get_publication",
         "list_coverage",
         "search_cases",
         "search_legislation",
+        "search_precedents",
         "search_publications",
     ]
     assert all(t.annotations.read_only_hint is True for t in tools)
@@ -44,7 +46,17 @@ async def test_tools_are_exposed_and_read_only(mcp_client):
 async def test_list_coverage_reports_sources(mcp_client):
     result = await mcp_client.call_tool("list_coverage", {})
 
-    assert {s["source"] for s in result.data["sources"]} == {"datajud", "djen", "senado"}
+    assert {s["source"] for s in result.data["sources"]} == {"datajud", "djen", "senado", "bnp"}
+
+
+async def test_list_coverage_reports_the_bnp_bodies(mcp_client):
+    result = await mcp_client.call_tool("list_coverage", {})
+
+    bnp = next(s for s in result.data["sources"] if s["source"] == "bnp")
+    courts = {c["alias"]: c for c in bnp["courts"]}
+    assert bnp["kind"] == "precedents" and len(courts) == 93
+    assert courts["stf"]["supported"] is True and courts["trf1"]["supported"] is True
+    assert courts["TNU"]["supported"] is True and "no Court alias" in courts["TNU"]["reason"]
 
 
 async def test_missing_key_gets_401(asgi_client):

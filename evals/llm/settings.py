@@ -23,6 +23,7 @@ class EvalLLMSettings(BaseSettings):
     tokens_per_minute: int = Field(gt=0)
     requests_per_day: int = Field(gt=0)
     max_requests_per_run: int = Field(gt=0)
+    rotate_keys: bool = False  # EVALS_ROTATE_KEYS; helps only across keys of different projects
     base_url: str = "https://generativelanguage.googleapis.com/v1beta"
     timeout_seconds: float = 60.0
     max_retries: int = Field(default=6, ge=0)

@@ -16,6 +16,9 @@ heading when `development` is released to `master`.
 - Redaction of personal data (#92): `evals.redaction.redact` replaces CPF, CNPJ and, by documented
   heuristics, names of people in Source text, leaving CNJ numbers, Court aliases and Precedent kind
   siglas untouched.
+- Cassette replay (#93): `evals/cassette.py` stores dated, recorded Source responses per Eval case and
+  replays them through the Source transport under the real server; a request with no recording is
+  counted as a cassette miss and surfaces as `source_unavailable`, never reaching the network.
 
 ## [0.1.0] - 2026-10-22
 

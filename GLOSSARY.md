@@ -32,8 +32,16 @@ _Avoid_: intimação, notice, case law (when a single released item is meant)
 The unit of a Court (_órgão_, such as a chamber, panel or office) that issues a Publication, identified by an `orgaoId` in the DJEN.
 _Avoid_: organ, chamber, vara (these are kinds of Issuing body, not the concept)
 
+**Precedent**:
+A record of the Banco Nacional de Precedentes (_precedente_) that fixes a thesis, such as a súmula, a repercussão geral theme, a repetitive appeal, an IRDR or an IAC, with its question, thesis, status and leading Cases; distinct from a Publication (the text of one ruling) and from a Case (one proceeding).
+_Avoid_: jurisprudence, case law (when a thesis record is meant), súmula (only one Precedent kind)
+
+**Precedent kind**:
+The species of a Precedent (_espécie_), identified by the BNP sigla such as `SUM`, `SV`, `RG`, `RR`, `IRDR`, `IAC` or `OJ`.
+_Avoid_: type, category
+
 **Relevance**:
-How a Publication fits a search query among the others of the same page: a `score` from 0 to 1 (BM25 scaled so the page's best item is 1.0) and the `matched_terms` found in its text. It is only meaningful within one response; results stay ordered by date and no global relevance ordering exists.
+How a Publication fits a search query among the others of the same page: a `score` from 0 to 1 (BM25 scaled so the page's best item is 1.0) and the `matched_terms` found in its text. It is only meaningful within one response; results stay ordered by date and no global relevance ordering exists. A Precedent carries only the `matched_terms` the Source highlights and no `score`, because the BNP returns none.
 _Avoid_: rank, ranking (the order is by date), global score
 
 **Legislation**:

@@ -67,3 +67,12 @@ async def test_decisions_with_text_are_kept_and_empty_ones_are_asked_again():
         await source.decisions("stf-rg-1")
 
     assert with_text.calls == ["decisions"] and empty.calls == ["decisions", "decisions"]
+
+
+async def test_a_cached_page_keeps_the_moment_the_source_was_asked():
+    source = _cached(_Source())
+
+    first = await source.search(PrecedentFilters(), page=1, limit=10)
+    second = await source.search(PrecedentFilters(), page=1, limit=10)
+
+    assert second.retrieved_at == first.retrieved_at

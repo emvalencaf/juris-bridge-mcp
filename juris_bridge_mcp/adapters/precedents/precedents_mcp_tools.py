@@ -89,12 +89,29 @@ def build_precedents_server(source: PrecedentSource) -> FastMCP:
             )
         except ToolFailure as failure:
             raise _reported(failure) from None
+        filters = {
+            "query": query,
+            "court": court,
+            "kind": kind,
+            "number": number,
+            "updated_from": updated_from,
+            "updated_to": updated_to,
+            "include_cancelled": include_cancelled or None,
+        }
         wide_event.annotate(
             source=SOURCE,
             court=court,
             result_count=len(outcome.precedents),
+            result_total=outcome.total,
+            total_is_capped=outcome.total_is_capped,
             paginated=cursor is not None,
-            call_shape={"court_alias": court, "limit": limit, "cursor_sent": cursor is not None},
+            call_shape={
+                "filters": sorted(name for name, value in filters.items() if value),
+                "precedent_kind": kind.strip().upper() if kind else None,
+                "court_alias": court,
+                "limit": limit,
+                "cursor_sent": cursor is not None,
+            },
         )
         return present_search(outcome)
 

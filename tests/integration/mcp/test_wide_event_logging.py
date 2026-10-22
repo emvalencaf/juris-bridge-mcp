@@ -278,3 +278,39 @@ async def test_search_publications_records_its_shape_but_not_the_query(events, s
     assert event["result_count"] == 2
     assert event["call_shape"] == {"court_alias": "tjsp", "limit": 5, "cursor_sent": False}
     assert "especial" not in json.dumps(event)
+
+
+async def test_search_precedents_records_its_shape_and_totals_but_not_the_query(
+    events, server_args
+):
+    app = build_http_app(("key-one",), ENVIRONMENT, **server_args)
+    arguments = {"court": "stf", "kind": "RG", "number": "1002", "query": "honorários", "limit": 5}
+    async with _client(app) as client:
+        await client.post("/mcp", json=_call("search_precedents", arguments), headers=_auth())
+
+    (event,) = events()
+    assert event["tool"] == {"name": "search_precedents"}
+    assert event["source"] == "bnp" and event["court"] == "stf"
+    assert event["result_count"] == 1 and event["result_total"] == 1
+    assert event["total_is_capped"] is False
+    assert event["call_shape"] == {
+        "filters": ["court", "kind", "number", "query"],
+        "precedent_kind": "RG",
+        "court_alias": "stf",
+        "limit": 5,
+        "cursor_sent": False,
+    }
+    assert "honorários" not in json.dumps(event, ensure_ascii=False)
+
+
+async def test_get_precedent_records_the_cache_outcome_of_its_lookups(events, server_args):
+    app = build_http_app(("key-one",), ENVIRONMENT, **server_args)
+    async with _client(app) as client:
+        await client.post(
+            "/mcp", json=_call("get_precedent", {"id": "stf-rg-1002"}), headers=_auth()
+        )
+
+    (event,) = events()
+    assert event["tool"] == {"name": "get_precedent"}
+    assert event["source"] == "bnp" and event["court"] == "stf" and event["result_count"] == 1
+    assert event["cache"] == "miss"

@@ -13,6 +13,9 @@ heading when `development` is released to `master`.
   test run, with `assayer` in a separate `evals` dependency group. `uv run --group evals python -m evals`
   loads an empty Dataset and prints an empty Experiment. Adds ADR 0009, the Eval case and Cassette
   terms in the glossary and the research notes behind the spec.
+- Cassette replay (#93): `evals/cassette.py` stores dated, recorded Source responses per Eval case and
+  replays them through the Source transport under the real server; a request with no recording is
+  counted as a cassette miss and surfaces as `source_unavailable`, never reaching the network.
 
 ## [0.1.0] - 2026-10-22
 

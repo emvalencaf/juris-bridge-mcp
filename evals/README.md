@@ -58,6 +58,8 @@ Cassettes and the metrics arrive in later tickets of the spec.
 |---|---|
 | `__main__.py` | The command (`python -m evals`) |
 | `dataset.py` | Loads Eval cases from the split folders |
+| `cassette.py` | The Cassette format and the transport that replays it in place of the network; a request with no recording is a counted miss answered as `source_unavailable` |
+| `cassettes/` | One `<case id>.json` Cassette per Eval case, with its recording date |
 | `cases/tuning/`, `cases/validation/`, `cases/drafts/` | Eval cases as plain JSON lists, split by folder; drafts count toward no result |
 | `tests/` | Tests of the evaluation itself, run on request only |
 | `results/` | Local results; git-ignored |

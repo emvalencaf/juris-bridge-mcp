@@ -8,7 +8,8 @@
 The DJEN has no endpoint listing them, so this reads `idOrgao` and `nomeOrgao` from the first
 page of recent days of each Court and merges them into `issuing_bodies.json`. A page shows
 only 100 items, so a day with more is also probed with common words, each surfacing other
-bodies. The file is saved after each Court, so an interrupted run keeps what it read.
+bodies. The file is saved after each day read, so an interrupted run keeps what it read, and
+a 429, a 5xx or a network error is retried with a growing wait before the run gives up.
 Only ids and body names are kept: no publication text, no party names.
 
 Run it by hand, paced to the DJEN limit of about 20 requests per window:
@@ -27,6 +28,7 @@ import argparse
 import json
 import sys
 import time
+from collections.abc import Callable
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -55,17 +57,28 @@ PROBES = (
     "embargos",
 )
 PAGE_SIZE = 100
+# A 429, a 5xx or a dropped connection is retried with a doubling wait: 30 s, 60 s, 120 s, 240 s.
+RETRIES = 5
+BACKOFF_SECONDS = 30.0
 
 
 def _fetch(client: httpx.Client, params: dict[str, str | int]) -> dict:
-    time.sleep(PACE_SECONDS)
-    response = client.get(BASE_URL, params=params)
-    if response.status_code == 429:
-        print("429: waiting 60 s", file=sys.stderr)
-        time.sleep(60)
-        response = client.get(BASE_URL, params=params)
-    response.raise_for_status()
-    return response.json()
+    for attempt in range(1, RETRIES + 1):
+        time.sleep(PACE_SECONDS)
+        try:
+            response = client.get(BASE_URL, params=params)
+            response.raise_for_status()
+            return response.json()
+        except (httpx.TransportError, httpx.HTTPStatusError) as failure:
+            retryable = isinstance(failure, httpx.TransportError) or (
+                failure.response.status_code == 429 or failure.response.status_code >= 500
+            )
+            if not retryable or attempt == RETRIES:
+                raise
+            wait = BACKOFF_SECONDS * 2 ** (attempt - 1)
+            print(f"{failure}: retry {attempt}/{RETRIES - 1} in {wait:.0f} s", file=sys.stderr)
+            time.sleep(wait)
+    raise AssertionError("unreachable")
 
 
 def _bodies(body: dict) -> dict[int, str]:
@@ -77,8 +90,9 @@ def _bodies(body: dict) -> dict[int, str]:
     return found
 
 
-def _collect(client: httpx.Client, court: str, days: int) -> dict[int, str]:
-    found: dict[int, str] = {}
+def _collect(
+    client: httpx.Client, court: str, days: int, found: dict[int, str], save: Callable[[], None]
+) -> None:
     for offset in range(1, days + 1):
         day = (date.today() - timedelta(days=offset)).isoformat()
         params: dict[str, str | int] = {
@@ -94,8 +108,8 @@ def _collect(client: httpx.Client, court: str, days: int) -> dict[int, str]:
         if body.get("count", 0) >= PAGE_SIZE:
             for word in PROBES:
                 found |= _bodies(_fetch(client, {**params, "texto": word}))
+        save()
         print(f"{court} {day}: {len(found)} bodies so far", file=sys.stderr)
-    return found
 
 
 def main() -> int:
@@ -137,8 +151,7 @@ def main() -> int:
                 if args.resume and courts.get(court):
                     print(f"{court}: already in the catalog, skipped", file=sys.stderr)
                     continue
-                courts.setdefault(court, {}).update(_collect(client, court, args.days))
-                save()
+                _collect(client, court, args.days, courts.setdefault(court, {}), save)
     except httpx.HTTPError as failure:
         print(f"DJEN request failed: {failure}", file=sys.stderr)
         return 1

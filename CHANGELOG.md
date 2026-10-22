@@ -22,6 +22,9 @@ heading when `development` is released to `master`.
 - Cassette replay (#93): `evals/cassette.py` stores dated, recorded Source responses per Eval case and
   replays them through the Source transport under the real server; a request with no recording is
   counted as a cassette miss and surfaces as `source_unavailable`, never reaching the network.
+- Record mode (#94): `evals/record.py` records Cassettes from the live Sources behind
+  `JURIS_BRIDGE_EVALS_RECORD=1`, redacting each response, pacing requests and naming the dated
+  Cassette after its Eval case; refused without the variable. `record_case(case_id, run)` is the helper.
 
 ## [0.1.0] - 2026-10-22
 

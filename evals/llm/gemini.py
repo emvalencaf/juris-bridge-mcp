@@ -77,7 +77,8 @@ class GeminiClient:
         estimate = len(json.dumps(body)) // CHARS_PER_TOKEN + 1
         delay = self._settings.backoff_base_seconds
         attempts = self._settings.max_retries + 1
-        for attempt in range(attempts):
+        attempt = 0
+        while attempt < attempts:
             self._budget.take()
             ticket = self._limiter.acquire(estimate)
             key = self._keys.current()
@@ -91,9 +92,13 @@ class GeminiClient:
                 # An httpx message may name the URL; keep only the error type.
                 raise GeminiAPIError(0, f"transport failure ({type(error).__name__})") from None
             if response.status_code in RETRYABLE_STATUSES:
-                if response.status_code == 429:
+                if response.status_code == 429 and _is_daily_quota(response):
                     self._keys.mark_exhausted(key)
-                if attempt < attempts - 1:
+                    # Raises AllKeysExhausted when rotation has no key left.
+                    if self._keys.current().alias != key.alias:
+                        continue  # moved to the next key: no wait, no retry spent
+                attempt += 1
+                if attempt < attempts:
                     self._sleep(delay)
                     delay = min(delay * 2, self._settings.backoff_max_seconds)
                 continue
@@ -103,6 +108,18 @@ class GeminiClient:
             self._limiter.settle(ticket, result.usage.total_tokens)
             return result
         raise RateLimitRetriesExhausted(f"{attempts} attempts for {self._model} all met 429 or 503")
+
+
+def _is_daily_quota(response: httpx.Response) -> bool:
+    """Whether a 429 says the daily quota is spent (not a per-minute limit).
+
+    Assumption (research note, section 3): the API maps 429 to `quota_exceeded` (daily) and
+    `rate_limit_exceeded` (per minute), but the live body shape is not documented. We treat a
+    429 as daily when its body names a `...PerDay...` quota id or says "per day"/"daily".
+    Anything else counts as per-minute and is only retried with backoff.
+    """
+    text = response.text.lower()
+    return "perday" in text or "per day" in text or "daily" in text
 
 
 def _build_body(

@@ -128,8 +128,45 @@ from the AI Studio rate-limit page of your project; they are per project and per
 * Every attempt counts toward the run cap, `min(EVALS_MAX_REQUESTS_PER_RUN,
   EVALS_REQUESTS_PER_DAY)`; past it the client raises `RequestCapReached`.
 * The key travels in a header and is never in a log, error, `repr` or result; calls are
-  identified by a key alias. Key rotation and resuming a stopped run are a later ticket (#96);
-  `KeySource` is the seam for it.
+  identified by a key alias (`ChatResult.key_alias`).
+
+### Key rotation and resuming a run
+
+Rotation is **off by default**: with `GEMINI_API_KEY` alone, or with rotation off, the first key
+is used exactly as before. To opt in, set `EVALS_ROTATE_KEYS=true` and give two or more keys in
+`GEMINI_API_KEYS` (comma-separated). `key_source_from(settings)` builds the right `KeySource`.
+
+* **Quotas are per project, not per key.** Rotation helps only across keys that belong to
+  **different** Google projects; several keys of one project share one quota and gain nothing.
+* A 429 is treated as daily-quota exhaustion when its body names a per-day quota (`...PerDay...`,
+  "per day" or "daily"); the key is then skipped for the rest of the run and the call moves to the
+  next key at once, without waiting or spending a retry. This is an **assumption**: the docs map
+  429 to `quota_exceeded` (daily) and `rate_limit_exceeded` (per minute) but do not publish the
+  body shape ([research](../docs/research/gemini-free-tier-rate-limits.md)). Any other 429 is a
+  per-minute limit and is retried with backoff on the same key.
+* When every key is exhausted the client raises `AllKeysExhausted`. The runner stops there; the
+  daily quota resets at midnight Pacific time, so resume after that.
+* Aliases are `key-1`, `key-2`, ... by position. Only the alias is recorded, never the key.
+
+`evals.progress.Progress` is the resumable store the runner wraps around each unit of work:
+
+```python
+progress = Progress(Path("evals/results/progress-tuning.json"))   # git-ignored
+try:
+    for case in cases:
+        for repetition in range(3):
+            output = progress.run(unit_key(case.id, repetition), lambda: run_agent(case))
+except AllKeysExhausted:
+    ...  # progress is already saved; run the same command again after the quota resets
+```
+
+`run(key, work)` returns the stored output for a finished unit and otherwise calls `work`, saves
+its JSON-serializable output (atomically, after every unit) and returns it. A unit that raises is
+not recorded, so a resumed run repeats only the unfinished calls. Also available: `is_done`,
+`get`, `record`, `clear` and `len`.
+
+**Risk.** Using several keys to widen a free quota is the maintainer's own risk: Google's wider
+terms of service were not read for this feature, and may restrict it.
 
 ### Redaction of personal data
 

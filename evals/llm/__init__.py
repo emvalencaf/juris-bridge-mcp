@@ -9,6 +9,7 @@ from evals.llm.client import (
     Usage,
 )
 from evals.llm.errors import (
+    AllKeysExhausted,
     GeminiAPIError,
     LLMError,
     RateLimitRetriesExhausted,
@@ -16,11 +17,12 @@ from evals.llm.errors import (
 )
 from evals.llm.fakes import FakeClock, ScriptedLLMClient
 from evals.llm.gemini import GeminiClient
-from evals.llm.keys import ApiKey, KeySource, SingleKeySource
+from evals.llm.keys import ApiKey, KeySource, RotatingKeySource, SingleKeySource, key_source_from
 from evals.llm.limits import RateLimiter, RequestBudget
 from evals.llm.settings import EvalLLMSettings
 
 __all__ = [
+    "AllKeysExhausted",
     "ApiKey",
     "ChatResult",
     "EvalLLMSettings",
@@ -35,9 +37,11 @@ __all__ = [
     "RateLimiter",
     "RequestBudget",
     "RequestCapReached",
+    "RotatingKeySource",
     "ScriptedLLMClient",
     "SingleKeySource",
     "ToolCall",
     "ToolDeclaration",
     "Usage",
+    "key_source_from",
 ]

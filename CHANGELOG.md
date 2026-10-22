@@ -16,6 +16,10 @@ heading when `development` is released to `master`.
 - Evaluation model client (#95): `evals/llm` with an injected `LLMClient` Protocol, a Gemini REST
   implementation that waits on requests and tokens per minute, retries 429 with backoff and stops
   at a per-run request cap, settings read from the environment, and a scripted client for tests.
+- Key rotation and resumable runs (#96): opt-in `RotatingKeySource` (`EVALS_ROTATE_KEYS`, off by
+  default) that moves to the next key on a daily-quota 429, `AllKeysExhausted` when none is left,
+  and `evals.progress.Progress`, a JSON store of finished units so a stopped run resumes without
+  repeating calls. Documents that quotas are per project and the maintainer's risk.
 - Redaction of personal data (#92): `evals.redaction.redact` replaces CPF, CNPJ and, by documented
   heuristics, names of people in Source text, leaving CNJ numbers, Court aliases and Precedent kind
   siglas untouched.

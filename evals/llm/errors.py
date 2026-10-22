@@ -9,6 +9,10 @@ class RequestCapReached(LLMError):  # noqa: N818
     """The run reached its cap of requests; nothing more was sent."""
 
 
+class AllKeysExhausted(LLMError):  # noqa: N818
+    """Every configured key is out of daily quota; the run should stop and save its progress."""
+
+
 class RateLimitRetriesExhausted(LLMError):  # noqa: N818
     """Every retry of a request met a 429 (or 503)."""
 

@@ -141,11 +141,15 @@ def test_the_report_lists_each_case_with_its_score_and_the_caveats():
     assert "tokens 42" in text and "calls 1" in text and "cassette misses 0" in text
 
 
-def test_main_runs_the_split_with_an_injected_client(capsys):
+def test_main_runs_the_split_with_an_injected_client(capsys, tmp_path):
     dataset_ids = [c.id for c in load_split("seed").cases]
     script = [item for _ in dataset_ids for item in (calls(("list_coverage", {})), answer())]
 
-    code = main(["run", "--split", "seed"], llm=ScriptedLLMClient(script))
+    code = main(
+        ["run", "--split", "seed", "--repetitions", "1"],
+        llm=ScriptedLLMClient(script),
+        results_dir=tmp_path,
+    )
 
     out = capsys.readouterr().out
     assert code == 0
@@ -169,4 +173,5 @@ def test_cases_are_plain_json_in_assayers_loader_format():
                 "expected_tool_calls",
                 "reference_context_ids",
                 "expected_outcome",
+                "expected_state",
             }

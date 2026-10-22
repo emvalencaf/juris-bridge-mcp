@@ -59,6 +59,7 @@ tickets of the spec.
 | `__main__.py` | The command (`python -m evals run`) |
 | `agent.py` | The agent loop: lists the server's real tools, converts them for the model, loops model, tool calls and results, and returns an assayer Trajectory |
 | `run.py` | `run_eval`: Eval cases to an Experiment (one Cassette, session and Trajectory per case); `format_experiment` |
+| `consistency.py`, `report.py`, `store.py`, `compare.py` | All-pass / at-least-one by case kind and efficiency; the report with its limits; saving and loading a run; comparing two runs |
 | `tool_use.py` | The `tool_use` Metric, loose on the route |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
@@ -158,6 +159,48 @@ each expected call is met by the best matching call of the Trajectory, arguments
 only on the keys the Eval case lists (strings ignoring case and surrounding space), and extra
 calls or another route listed with `any_of` are never marked wrong. The Score is the mean over
 the requirements. Seed Cassettes are rebuilt with `uv run --group evals python -m evals.seed`.
+
+### Repetitions, consistency and the report
+
+`python -m evals run` runs each Eval case `--repetitions N` times (default 3), each run kept as
+its own Trajectory (`Trajectory.repetition`). Every `case#repetition` unit goes through
+`Progress` (`evals/results/progress-<split>.json`): if the keys run out (`AllKeysExhausted`) or
+the request cap is reached, the run stops with `Run stopped: ...` and exit code 1, the finished
+units stay saved, and running the same command again resumes (after midnight Pacific time for a
+daily quota). `--fresh` discards saved progress; a finished run clears it.
+
+A run *passes* when its `tool_use` Score is 1.00. The Eval case declares its kind in the
+`expected_state` field (assayer's loader has no tags field and accepts this one):
+
+```json
+{"id": "...", "input": "...", "expected_state": {"kind": "search"}}
+```
+
+* `lookup` (by CNJ number or id): **all-pass**, every run must pass.
+* `search` (an open query): **at-least-one**, one passing run is enough.
+* Unspecified means `lookup`: the strict rule is the default, so a missing declaration cannot
+  hide an inconsistent agent. Any other value is an error.
+
+The report prints the Experiment, then **Consistency** (passing runs and PASS/FAIL per case),
+**Efficiency** (mean tool calls, tokens and tool errors per run, per case), and **Limits**.
+A tool that failed twice or more with the same arguments inside a case is flagged `FLAG`: the
+model tried the same thing again, which points at a tool description that does not say how to
+call it (a failure naming `source_unavailable` is a Source, not arguments, and is not counted).
+The limits state that name redaction is heuristic, that the agent is a small model whose scores
+do not transfer to a stronger one, how many cassette misses occurred, and, when the agent and
+judge model names share a family prefix (`gemini-...`), that the judge may favour the agent.
+Sections are plain functions in `evals.report.SECTIONS`; a new metric appends its own.
+
+The Experiment is saved to `evals/results/<split>-<YYYYmmdd-HHMMSS>.json` (git-ignored) with
+its meta (split, repetitions, models). Compare two saved runs, the second minus the first:
+
+```bash
+uv run --group evals python -m evals compare seed-20261022-093005 seed-20261022-101500
+```
+
+Names resolve under `evals/results/`, or give a path. It prints the delta of each metric's mean
+Score, of tokens and tool calls per Eval case (only cases both runs have) and of the share of
+cases that pass by their rule, using assayer's `compare` for metrics and tokens.
 
 ### Model client
 

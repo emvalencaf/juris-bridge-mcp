@@ -60,6 +60,7 @@ Cassettes and the metrics arrive in later tickets of the spec.
 | `dataset.py` | Loads Eval cases from the split folders |
 | `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
 | `cassette.py` | The Cassette format and the transport that replays it in place of the network; a request with no recording is a counted miss answered as `source_unavailable` |
+| `record.py` | Record mode: `record_case()` forwards the server's requests to the live Sources (opt-in), redacts and paces them, and saves a Cassette |
 | `cassettes/` | One `<case id>.json` Cassette per Eval case, with its recording date |
 | `cases/tuning/`, `cases/validation/`, `cases/drafts/` | Eval cases as plain JSON lists, split by folder; drafts count toward no result |
 | `llm/` | The `LLMClient` Protocol, the Gemini client, rate limits, settings and test doubles |
@@ -197,6 +198,38 @@ What the name redaction misses (names that stay in the text):
 It also over-redacts: a capitalised run that is not a person (a street, a company, a
 place such as `Praça Tiradentes`, a sentence start followed by a proper noun) becomes
 `[NOME]`, and runs of whitespace inside a redacted run collapse to one space.
+
+### Recording Cassettes
+
+Record mode is off by default and never runs in tests (they use a scripted upstream). To
+record the Cassette of an Eval case from the live DJEN, BNP and other Sources, opt in with
+`JURIS_BRIDGE_EVALS_RECORD=1` (same style as `JURIS_BRIDGE_LIVE_BNP`):
+
+```python
+from evals.record import record_case
+
+async def run(client):
+    await client.call_tool("search_publications", {"court": "tjsp", ...})
+
+path = await record_case("my-case-id", run)   # evals/cassettes/my-case-id.json
+```
+
+Without the variable `recording_session` / `record_case` raise `RecordingDisabledError` before
+any transport exists, so no live request is possible. `run` gets an MCP client on the real
+server; the recording transport sits under it (as the replay one does), keys requests with
+`request_key`, redacts each response with `redact` (JSON bodies keep keys and structure; only
+string values change), keeps only the `content-type` header and writes a Cassette dated with
+the day of recording. A run that raises saves nothing. Replay it with `replay_session`.
+
+Responsible use ([RESPONSIBLE_USE.md](../RESPONSIBLE_USE.md)):
+
+* Recording is read-only: it forwards only what the server's read tools request.
+* Requests are spaced at least `min_interval` seconds apart (default 1 s, under DataJud's 120
+  per minute; the BNP and DJEN limits are undocumented), on top of the server's own limiter.
+  Keep the number of cases and calls low.
+* Redaction of names is heuristic: read a new Cassette before committing it. The request key
+  is stored verbatim, so never record a query containing personal data.
+* Do not redistribute DataJud-derived Cassettes outside your own non-commercial use.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

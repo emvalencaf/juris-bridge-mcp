@@ -33,6 +33,13 @@ heading when `development` is released to `master`.
   arguments against the expected calls and accepts alternative routes. Adds a seed set of three Eval
   cases (`evals/cases/seed/`) with hand-made seed Cassettes, and states in `RESPONSIBLE_USE.md` that
   redacted Source text goes to a free-tier model provider.
+- Consistency, efficiency and the honest report (#103): each Eval case runs `--repetitions` times
+  (default 3) as separate Trajectories, wrapped per `case#repetition` in `Progress` so exhausted keys
+  stop the run cleanly and the same command resumes it. Lookups pass only if every run passes, open
+  searches if one does (declared as `expected_state.kind`, strict by default). The report gives calls,
+  tokens and tool errors per Eval case, flags repeated invalid arguments as a likely bad tool
+  description, and states its limits (heuristic redaction, small agent, shared model family,
+  cassette misses). Runs are saved to `evals/results/` and `python -m evals compare A B` compares two.
 - Record mode (#94): `evals/record.py` records Cassettes from the live Sources behind
   `JURIS_BRIDGE_EVALS_RECORD=1`, redacting each response, pacing requests and naming the dated
   Cassette after its Eval case; refused without the variable. `record_case(case_id, run)` is the helper.

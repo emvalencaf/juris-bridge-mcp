@@ -20,13 +20,17 @@ from assayer.runner import Runner
 from evals.agent import DEFAULT_MAX_STEPS, IN_SCOPE_TOOLS, run_agent
 from evals.cassette import CASSETTES_DIR, Cassette, cassette_path, replay_session
 from evals.llm import (
+    AllKeysExhausted,
     EvalLLMSettings,
     GeminiClient,
     LLMClient,
     RateLimiter,
     RequestBudget,
+    RequestCapReached,
     key_source_from,
 )
+from evals.progress import Progress, unit_key
+from evals.store import trajectory_from_dict, trajectory_to_dict
 from evals.tool_use import TOOL_USE, register_metrics
 
 
@@ -71,8 +75,10 @@ def run_eval(
     tool_names: Collection[str] | None = IN_SCOPE_TOOLS,
     max_steps: int = DEFAULT_MAX_STEPS,
     model: str | None = None,
+    repetitions: int = 1,
+    progress: Progress | None = None,
 ) -> Experiment:
-    """Run every Eval case of the Dataset and score its tool use.
+    """Run every Eval case of the Dataset `repetitions` times and score its tool use.
 
     Args:
         dataset: Eval cases as loaded by `evals.dataset.load_split`.
@@ -81,14 +87,22 @@ def run_eval(
         tool_names: The server tools offered to the agent.
         max_steps: The most model calls per case.
         model: The model name kept on the model Steps.
+        repetitions: How many times each Eval case runs, each kept as its own Trajectory.
+        progress: When given, each `case#repetition` unit is wrapped in it: a finished unit is
+            reused, a new one is saved as soon as it ends.
 
     Returns:
-        The Experiment: a Trajectory and a `tool_use` Score per Eval case.
+        The Experiment: a Trajectory per repetition and a `tool_use` Score for each.
+
+    Raises:
+        RunStopped: When the keys are exhausted or the request cap is reached; the finished
+            units are in `progress` (when given), so the same call resumes the run.
     """
     registry = Registry()
     register_metrics(registry)
+    done: dict[str, int] = {}
 
-    def target(case_input: dict[str, Any]) -> Trajectory:
+    def work(case_input: dict[str, Any]) -> Trajectory:
         return asyncio.run(
             run_case(
                 case_input["case_id"],
@@ -101,8 +115,43 @@ def run_eval(
             )
         )
 
-    runner = Runner(target=target, metrics=[registry.get(TOOL_USE)])
-    return runner.run(prepare(dataset))
+    def target(case_input: dict[str, Any]) -> Trajectory:
+        case_id = case_input["case_id"]
+        repetition = done.get(case_id, 0)
+        done[case_id] = repetition + 1
+        try:
+            if progress is None:
+                return work(case_input)
+            stored = progress.run(
+                unit_key(case_id, repetition), lambda: trajectory_to_dict(work(case_input))
+            )
+            return trajectory_from_dict(stored)
+        except (AllKeysExhausted, RequestCapReached) as stop:
+            raise _Stop(unit_key(case_id, repetition), stop) from stop
+
+    runner = Runner(target=target, metrics=[registry.get(TOOL_USE)], repetitions=repetitions)
+    try:
+        return runner.run(prepare(dataset))
+    except _Stop as stop:
+        finished = len(progress) if progress is not None else 0
+        raise RunStopped(
+            f"stopped at {stop.unit} ({type(stop.reason).__name__}); {finished} unit(s) saved. "
+            "Run the same command again to resume (after midnight Pacific time if the daily "
+            "quota ran out)."
+        ) from stop.reason
+
+
+class RunStopped(Exception):  # noqa: N818
+    """The run stopped on exhausted keys or the request cap; finished units stay in Progress."""
+
+
+class _Stop(BaseException):
+    """Carries a stop out of assayer's Runner, which turns any `Exception` into an error Step."""
+
+    def __init__(self, unit: str, reason: Exception) -> None:
+        super().__init__(unit)
+        self.unit = unit
+        self.reason = reason
 
 
 def gemini_agent_client(settings: EvalLLMSettings) -> GeminiClient:

@@ -29,10 +29,12 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlencode
 
 import httpx
 from fastmcp import Client
+from pydantic import SecretStr
 
 from juris_bridge_mcp.config.bnp import BnpSettings
 from juris_bridge_mcp.config.datajud import DatajudSettings
@@ -77,9 +79,9 @@ class CassetteEntry:
         """Build an entry from the parts of a response."""
         return cls(key=key, status=status, headers=dict(headers), body=body)
 
-    def to_json(self) -> dict:
+    def to_json(self) -> dict[str, Any]:
         """Return the JSON form: text `body` when UTF-8, else `body_base64`."""
-        data: dict = {"key": self.key, "status": self.status, "headers": self.headers}
+        data: dict[str, Any] = {"key": self.key, "status": self.status, "headers": self.headers}
         try:
             data["body"] = self.body.decode("utf-8")
         except UnicodeDecodeError:
@@ -87,7 +89,7 @@ class CassetteEntry:
         return data
 
     @classmethod
-    def from_json(cls, data: dict) -> "CassetteEntry":
+    def from_json(cls, data: dict[str, Any]) -> "CassetteEntry":
         """Read an entry from its JSON form."""
         if "body_base64" in data:
             body = base64.b64decode(data["body_base64"])
@@ -159,7 +161,7 @@ class ReplayTransport(httpx.AsyncBaseTransport):
 class ReplaySession:
     """An in-memory MCP client over the real server, fed by a Cassette."""
 
-    client: Client
+    client: Client[Any]
     transport: ReplayTransport
 
     @property
@@ -178,7 +180,7 @@ async def replay_session(cassette: Cassette) -> AsyncIterator[ReplaySession]:
     """Build the real server over `cassette` and yield a connected in-memory client."""
     transport = ReplayTransport(cassette)
     server = build_server(
-        datajud=DatajudSettings(api_key="replay-key"),
+        datajud=DatajudSettings(api_key=SecretStr("replay-key")),
         djen=DjenSettings(),
         bnp=BnpSettings(),
         http=HttpSettings(),

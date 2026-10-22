@@ -16,6 +16,9 @@ heading when `development` is released to `master`.
 - Evaluation model client (#95): `evals/llm` with an injected `LLMClient` Protocol, a Gemini REST
   implementation that waits on requests and tokens per minute, retries 429 with backoff and stops
   at a per-run request cap, settings read from the environment, and a scripted client for tests.
+- Redaction of personal data (#92): `evals.redaction.redact` replaces CPF, CNPJ and, by documented
+  heuristics, names of people in Source text, leaving CNJ numbers, Court aliases and Precedent kind
+  siglas untouched.
 
 ## [0.1.0] - 2026-10-22
 

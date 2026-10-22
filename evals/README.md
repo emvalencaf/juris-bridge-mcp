@@ -59,8 +59,10 @@ tickets of the spec.
 | `__main__.py` | The command (`python -m evals run`) |
 | `agent.py` | The agent loop: lists the server's real tools, converts them for the model, loops model, tool calls and results, and returns an assayer Trajectory |
 | `run.py` | `run_eval`: Eval cases to an Experiment (one Cassette, session and Trajectory per case); `format_experiment` |
+| `consistency.py`, `report.py`, `store.py`, `compare.py` | All-pass / at-least-one by case kind and efficiency; the report with its limits; saving and loading a run; comparing two runs |
 | `tool_use.py` | The `tool_use` Metric, loose on the route |
 | `judge.py` | The rubric judge Metric (opt-in `--judge`): correctness by grounding, repeated, uncalibrated |
+| `citation_existence.py` | The `citation_existence` Metric: each CNJ number or Precedent cited in the answer must appear in a tool result |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
 | `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
@@ -180,6 +182,65 @@ Results are marked `[UNCALIBRATED]` until a calibration record exists at
 `evals/results/calibration.json` (`evals.judge.load_calibration` reads it; absent or unreadable means
 uncalibrated). Do not read an uncalibrated verdict as a measure of the server.
 
+### Repetitions, consistency and the report
+
+`python -m evals run` runs each Eval case `--repetitions N` times (default 3), each run kept as
+its own Trajectory (`Trajectory.repetition`). Every `case#repetition` unit goes through
+`Progress` (`evals/results/progress-<split>.json`): if the keys run out (`AllKeysExhausted`) or
+the request cap is reached, the run stops with `Run stopped: ...` and exit code 1, the finished
+units stay saved, and running the same command again resumes (after midnight Pacific time for a
+daily quota). `--fresh` discards saved progress; a finished run clears it.
+
+A run *passes* when its `tool_use` Score is 1.00. The Eval case declares its kind in the
+`expected_state` field (assayer's loader has no tags field and accepts this one):
+
+```json
+{"id": "...", "input": "...", "expected_state": {"kind": "search"}}
+```
+
+* `lookup` (by CNJ number or id): **all-pass**, every run must pass.
+* `search` (an open query): **at-least-one**, one passing run is enough.
+* Unspecified means `lookup`: the strict rule is the default, so a missing declaration cannot
+  hide an inconsistent agent. Any other value is an error.
+
+The report prints the Experiment, then **Consistency** (passing runs and PASS/FAIL per case),
+**Efficiency** (mean tool calls, tokens and tool errors per run, per case), and **Limits**.
+A tool that failed twice or more with the same arguments inside a case is flagged `FLAG`: the
+model tried the same thing again, which points at a tool description that does not say how to
+call it (a failure naming `source_unavailable` is a Source, not arguments, and is not counted).
+The limits state that name redaction is heuristic, that the agent is a small model whose scores
+do not transfer to a stronger one, how many cassette misses occurred, and, when the agent and
+judge model names share a family prefix (`gemini-...`), that the judge may favour the agent.
+Sections are plain functions in `evals.report.SECTIONS`; a new metric appends its own.
+
+The Experiment is saved to `evals/results/<split>-<YYYYmmdd-HHMMSS>.json` (git-ignored) with
+its meta (split, repetitions, models). Compare two saved runs, the second minus the first:
+
+```bash
+uv run --group evals python -m evals compare seed-20261022-093005 seed-20261022-101500
+```
+
+Names resolve under `evals/results/`, or give a path. It prints the delta of each metric's mean
+Score, of tokens and tool calls per Eval case (only cases both runs have) and of the share of
+cases that pass by their rule, using assayer's `compare` for metrics and tokens.
+
+### Citation existence Score
+
+`citation_existence` reads the final answer for CNJ numbers (with or without punctuation) and
+Precedent identifiers (`Tema 1002`, `Súmula 331`, `IRDR 12`, `RG 1002`) and checks that each one
+appears in the output of a tool call of the same Trajectory (a failed call is not a source). Both
+sides are normalised: a CNJ number to its 20 digits, a Precedent to kind sigla and number, so an
+unpunctuated number in the answer matches a punctuated one in the results, and `Tema 1.002`
+matches the id `stf-rg-1002`. The issuing body is not compared, and `Tema` matches `RG`, `RR`
+or `IRR`; `Súmula Vinculante` is only `SV`.
+
+The Score is the share of distinct citations found in the results (1.0 when all are). A citation
+absent from them is named in the Score's comment (`fabricated citation: CNJ ...`), and the report
+shows it on the case line. An answer with no citation is **not applicable** (no Score, no
+failure), like `tool_use` for a case that expects no tool call. It only informs; nothing is
+blocked. Citations are found by pattern, so a kind written in a form the patterns do not know
+(`PN`, `CT`, a name in full) is not checked.
+
 ### Model client
 
 The agent and the judge reach the model through `evals.llm.LLMClient`, a narrow Protocol
@@ -223,7 +284,7 @@ is used exactly as before. To opt in, set `EVALS_ROTATE_KEYS=true` and give two 
 `evals.progress.Progress` is the resumable store the runner wraps around each unit of work:
 
 ```python
-progress = Progress(Path("evals/results/progress-tuning.json"))   # git-ignored
+progress = Progress(Path("evals/results/progress-tuning.json"))  # git-ignored
 try:
     for case in cases:
         for repetition in range(3):

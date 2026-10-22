@@ -9,6 +9,11 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Citation-existence Score (#98): the `citation_existence` Metric in `evals/` checks that each CNJ
+  number and Precedent identifier cited in the agent's final answer appears in a tool result of the
+  same Trajectory, normalising punctuation and kind wordings. Absent ones are flagged as fabricated
+  in the report; an answer with no citation is not applicable. It is registered with the others and
+  shown in the Experiment report; it blocks nothing.
 - Evaluation skeleton (#91): a top-level `evals/` directory, outside the package and the default
   test run, with `assayer` in a separate `evals` dependency group. `uv run --group evals python -m evals`
   loads an empty Dataset and prints an empty Experiment. Adds ADR 0009, the Eval case and Cassette
@@ -37,6 +42,13 @@ heading when `development` is released to `master`.
   correct / incorrect / refusal by grounded / misgrounded / ungrounded, or `unknown` (also for invalid
   output), repeats each judgment three times and reports the verdict counts and agreement. Results
   are marked UNCALIBRATED until `evals/results/calibration.json` exists.
+- Consistency, efficiency and the honest report (#103): each Eval case runs `--repetitions` times
+  (default 3) as separate Trajectories, wrapped per `case#repetition` in `Progress` so exhausted keys
+  stop the run cleanly and the same command resumes it. Lookups pass only if every run passes, open
+  searches if one does (declared as `expected_state.kind`, strict by default). The report gives calls,
+  tokens and tool errors per Eval case, flags repeated invalid arguments as a likely bad tool
+  description, and states its limits (heuristic redaction, small agent, shared model family,
+  cassette misses). Runs are saved to `evals/results/` and `python -m evals compare A B` compares two.
 - Record mode (#94): `evals/record.py` records Cassettes from the live Sources behind
   `JURIS_BRIDGE_EVALS_RECORD=1`, redacting each response, pacing requests and naming the dated
   Cassette after its Eval case; refused without the variable. `record_case(case_id, run)` is the helper.

@@ -200,25 +200,27 @@ def test_format_judge_line_names_agreement():
     assert "agreement 1.00" in line and "UNCALIBRATED" in line
 
 
-def test_the_cli_flag_judges_with_the_judge_client(capsys):
+def test_the_cli_flag_judges_with_the_judge_client(capsys, tmp_path):
     cases = len(load_split("seed").cases)
     agent = ScriptedLLMClient([agent_answer()] * cases)
     judge_llm = ScriptedLLMClient([reply()] * 3 * cases)
 
-    assert main(["run", "--split", "seed", "--judge"], llm=agent, judge_llm=judge_llm) == 0
+    args = ["run", "--split", "seed", "--repetitions", "1", "--judge"]
+    assert main(args, llm=agent, judge_llm=judge_llm, results_dir=tmp_path) == 0
 
     assert len(judge_llm.calls) == 3 * cases
     assert "UNCALIBRATED" in capsys.readouterr().out
 
 
-def test_the_cli_without_the_flag_never_touches_the_judge_client(capsys):
+def test_the_cli_without_the_flag_never_touches_the_judge_client(capsys, tmp_path):
     cases = len(load_split("seed").cases)
     judge_llm = ScriptedLLMClient([])
 
     main(
-        ["run", "--split", "seed"],
+        ["run", "--split", "seed", "--repetitions", "1"],
         llm=ScriptedLLMClient([agent_answer()] * cases),
         judge_llm=judge_llm,
+        results_dir=tmp_path,
     )
 
     assert judge_llm.calls == []

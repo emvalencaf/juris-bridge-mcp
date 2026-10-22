@@ -50,19 +50,24 @@ package, the default `pytest` run and the CI never see it. The Eval case and
 Cassette terms are defined in [GLOSSARY.md](../GLOSSARY.md); the full goals are in
 the [spec (#90)](https://github.com/emvalencaf/juris-bridge-mcp/issues/90).
 
-At this stage only the skeleton exists: the command below loads an empty Dataset
-and prints an empty Experiment, which proves the wiring. The agent loop, the
-Cassettes and the metrics arrive in later tickets of the spec.
+The first end-to-end slice works: the agent loop, a tool-use Score and a seed set run
+offline against seed Cassettes. Recording, the other metrics and the judge arrive in later
+tickets of the spec.
 
 | Path | Holds |
 |---|---|
-| `__main__.py` | The command (`python -m evals`) |
+| `__main__.py` | The command (`python -m evals run`) |
+| `agent.py` | The agent loop: lists the server's real tools, converts them for the model, loops model, tool calls and results, and returns an assayer Trajectory |
+| `run.py` | `run_eval`: Eval cases to an Experiment (one Cassette, session and Trajectory per case); `format_experiment` |
+| `tool_use.py` | The `tool_use` Metric, loose on the route |
+| `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
 | `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
 | `cassette.py` | The Cassette format and the transport that replays it in place of the network; a request with no recording is a counted miss answered as `source_unavailable` |
 | `record.py` | Record mode: `record_case()` forwards the server's requests to the live Sources (opt-in), redacts and paces them, and saves a Cassette |
 | `cassettes/` | One `<case id>.json` Cassette per Eval case, with its recording date |
 | `cases/tuning/`, `cases/validation/`, `cases/drafts/` | Eval cases as plain JSON lists, split by folder; drafts count toward no result |
+| `cases/seed/` | Three fictitious Eval cases that run against the seed Cassettes; they count toward no result |
 | `llm/` | The `LLMClient` Protocol, the Gemini client, rate limits, settings and test doubles |
 | `tests/` | Tests of the evaluation itself, run on request only |
 | `results/` | Local results; git-ignored |
@@ -99,15 +104,60 @@ uv sync --group evals
 From the repository root:
 
 ```bash
-uv run --group evals python -m evals
+uv run --group evals python -m evals run --split seed
 ```
 
-It prints an Experiment with no cases, trajectories, scores or failures. To run
-the tests of the evaluation itself (the default `pytest` run skips them):
+It loads the Eval cases of the split (`tuning` by default; an empty split prints an empty
+Experiment and needs no model), puts each to the agent over the Cassette named after its id,
+and prints the Experiment: per Eval case the `tool_use` Score, the number of tool calls and
+errors, the tokens and the cassette misses. The model is built from the settings below, so
+`GEMINI_API_KEY` and the `EVALS_*` variables must be set. To run the tests of the evaluation
+itself (the default `pytest` run skips them; they use a scripted model and never reach Gemini
+or a Source):
 
 ```bash
 uv run --group evals pytest evals
 ```
+
+### Eval case
+
+A JSON list per file under `cases/<split>/`, in the format of assayer's case loader:
+
+```json
+{
+  "id": "seed-precedent-rg-1002",
+  "input": "Qual é a tese fixada no Tema 1002 da repercussão geral do STF?",
+  "expected_tool_calls": [
+    {"any_of": [
+      {"name": "search_precedents", "arguments": {"number": "1002", "kind": "RG"}},
+      {"name": "get_precedent", "arguments": {"id": "stf-rg-1002"}}
+    ]}
+  ],
+  "reference_context_ids": ["stf-rg-1002"],
+  "expected_outcome": "States the thesis of theme 1002 as the tool returned it."
+}
+```
+
+* `id` names the Cassette (`cassettes/<id>.json`); `input` is the question.
+* `expected_tool_calls` are requirements, each a tool name, `{"name", "arguments"}`
+  (`name` may be a list of equally good tools) or `{"any_of": [...]}` for alternative routes.
+* `reference_context_ids` are the Publication CNJ numbers or Precedent ids that retrieval will
+  be scored against (a later ticket); `expected_outcome` says in words what a good answer does.
+
+### Agent and tool-use Score
+
+`evals.agent.run_agent(question, session, llm, ...)` lists the tools of the real server over the
+in-memory client of a `ReplaySession`, converts their JSON Schema to the OpenAPI subset the model
+accepts (`to_declaration`), and loops until the model answers or `max_steps` model calls. Every
+tool call, its arguments, result or error, the final answer and the tokens go into the
+Trajectory; the cassette-miss count is its `final_state`. The tools offered are those of
+`IN_SCOPE_TOOLS` (Publications, Precedents and `list_coverage`).
+
+The `tool_use` Metric is looser than assayer's `tool_correctness` and `tool_argument_match`:
+each expected call is met by the best matching call of the Trajectory, arguments are compared
+only on the keys the Eval case lists (strings ignoring case and surrounding space), and extra
+calls or another route listed with `any_of` are never marked wrong. The Score is the mean over
+the requirements. Seed Cassettes are rebuilt with `uv run --group evals python -m evals.seed`.
 
 ### Model client
 

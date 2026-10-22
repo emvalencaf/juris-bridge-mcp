@@ -125,6 +125,27 @@ itself calls, without a key. Silence is not a grant, so:
 - The BNP holds only what courts send it, so an empty result is not proof that no
   Precedent exists.
 
+## The evaluation sends redacted Source text to a model provider
+
+The optional evaluation in [`evals/`](evals/README.md) is run by hand by the
+maintainer and is not part of the server. It puts questions to an agent whose
+model is a Gemini model on the **free tier** of a model provider. Everything the
+agent reads, including the text of Publications and Precedents the tools return,
+is sent to that provider as part of the conversation.
+
+- The free-tier terms of the provider allow it to use that content to improve
+  its products and to have it read by human reviewers. Do not run the evaluation
+  with Source text you are not willing to share on those terms.
+- The text is **redacted first**, when a Cassette is recorded: CPF and CNPJ
+  numbers are replaced by placeholders and names of people on a best-effort basis
+  ([redaction](evals/README.md#redaction-of-personal-data)). Name detection is
+  heuristic and misses names; redaction is **not a guarantee** that no personal
+  data leaves the machine.
+- The Cassettes kept in the repository are redacted the same way. The seed
+  Cassettes are built from the fictitious fixtures of the tests and hold no
+  real data.
+- API keys never appear in logs, results or Cassettes.
+
 ## Logging
 
 [ADR 0004](docs/adr/0004-wide-event-logging-to-stdout.md) sets one JSON wide

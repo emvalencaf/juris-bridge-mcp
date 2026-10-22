@@ -19,6 +19,7 @@ from assayer.runner import Runner
 
 from evals.agent import DEFAULT_MAX_STEPS, IN_SCOPE_TOOLS, run_agent
 from evals.cassette import CASSETTES_DIR, Cassette, cassette_path, replay_session
+from evals.judge import DEFAULT_REPETITIONS, JUDGE, format_judge_line, register_judge
 from evals.llm import (
     EvalLLMSettings,
     GeminiClient,
@@ -71,6 +72,8 @@ def run_eval(
     tool_names: Collection[str] | None = IN_SCOPE_TOOLS,
     max_steps: int = DEFAULT_MAX_STEPS,
     model: str | None = None,
+    judge: LLMClient | None = None,
+    judge_repetitions: int = DEFAULT_REPETITIONS,
 ) -> Experiment:
     """Run every Eval case of the Dataset and score its tool use.
 
@@ -81,9 +84,13 @@ def run_eval(
         tool_names: The server tools offered to the agent.
         max_steps: The most model calls per case.
         model: The model name kept on the model Steps.
+        judge: The judge model's client; when given (opt-in) the rubric judge also scores
+            each answer, `judge_repetitions` times. None spends no judge call.
+        judge_repetitions: Judgments per answer.
 
     Returns:
-        The Experiment: a Trajectory and a `tool_use` Score per Eval case.
+        The Experiment: a Trajectory and a `tool_use` Score per Eval case (and a `judge`
+        Score when `judge` is given).
     """
     registry = Registry()
     register_metrics(registry)
@@ -101,7 +108,11 @@ def run_eval(
             )
         )
 
-    runner = Runner(target=target, metrics=[registry.get(TOOL_USE)])
+    metrics = [registry.get(TOOL_USE)]
+    if judge is not None:
+        register_judge(registry, judge, judge_repetitions)
+        metrics.append(registry.get(JUDGE))
+    runner = Runner(target=target, metrics=metrics)
     return runner.run(prepare(dataset))
 
 
@@ -111,11 +122,24 @@ def gemini_agent_client(settings: EvalLLMSettings) -> GeminiClient:
     Raises:
         ValueError: When no `GEMINI_API_KEY` is set.
     """
+    return _gemini_client(settings, settings.agent_model)
+
+
+def gemini_judge_client(settings: EvalLLMSettings) -> GeminiClient:
+    """Build the judge's Gemini client (the judge model) the same way as the agent's.
+
+    Raises:
+        ValueError: When no `GEMINI_API_KEY` is set.
+    """
+    return _gemini_client(settings, settings.judge_model)
+
+
+def _gemini_client(settings: EvalLLMSettings, model: str) -> GeminiClient:
     limiter = RateLimiter(
         settings.requests_per_minute, settings.tokens_per_minute, time.monotonic, time.sleep
     )
     return GeminiClient(
-        settings.agent_model,
+        model,
         key_source_from(settings),
         limiter,
         RequestBudget(settings.request_cap),
@@ -159,10 +183,16 @@ def _case_line(experiment: Experiment, trajectory: Trajectory) -> str:
     usage = trajectory.total_usage()
     misses = (trajectory.final_state or {}).get("cassette_misses", 0)
     shown = f"tool_use {score.value:.2f}" if score else "tool_use n/a"
+    judged = next(
+        (s for s in experiment.scores if s.name == JUDGE and s.target_id == trajectory.case_id),
+        None,
+    )
     line = (
         f"{trajectory.case_id}: {shown} | calls {len(tools)} | errors {errors} | "
         f"tokens {usage.input_tokens + usage.output_tokens} | cassette misses {misses}"
     )
     if score and score.comment:
         line += f" | {score.comment}"
+    if judged:
+        line += "\n    " + format_judge_line(judged)
     return line

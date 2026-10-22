@@ -60,6 +60,7 @@ tickets of the spec.
 | `agent.py` | The agent loop: lists the server's real tools, converts them for the model, loops model, tool calls and results, and returns an assayer Trajectory |
 | `run.py` | `run_eval`: Eval cases to an Experiment (one Cassette, session and Trajectory per case); `format_experiment` |
 | `tool_use.py` | The `tool_use` Metric, loose on the route |
+| `judge.py` | The rubric judge Metric (opt-in `--judge`): correctness by grounding, repeated, uncalibrated |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
 | `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
@@ -158,6 +159,26 @@ each expected call is met by the best matching call of the Trajectory, arguments
 only on the keys the Eval case lists (strings ignoring case and surrounding space), and extra
 calls or another route listed with `any_of` are never marked wrong. The Score is the mean over
 the requirements. Seed Cassettes are rebuilt with `uv run --group evals python -m evals.seed`.
+
+### Rubric judge
+
+`python -m evals run --split seed --judge` also asks the judge model (`EVALS_JUDGE_MODEL`) to grade
+each answer. It is opt-in: without `--judge` no judge call is spent. The `judge` Metric
+(`evals.judge.make_rubric_judge`, an assayer judge-based Metric over `LLMClientJudge`, which adapts
+an `LLMClient` to assayer's `Judge`) gets the question, the expected outcome, the tool results and the
+final answer, and rates the Stanford legal-AI rubric: correctness (`correct`, `incorrect`, `refusal`)
+and grounding (`grounded`, `misgrounded`, `ungrounded`). It may answer `unknown`; output that is not
+valid JSON, or uses another label, counts as `unknown` and never crashes the run.
+
+Each judgment is repeated three times (`make_rubric_judge(judge, repetitions=N)`), so a run spends
+3 judge calls per case. The report shows the majority verdict, the count per label and the
+agreement per axis. A tie is `unknown`. The Score value is the share of repetitions that were correct
+and grounded. The verdict is stored in the Score's `metadata` (`correctness`, `grounding`, `counts`,
+`agreement`, `repetitions`, `uncalibrated`, `prompt`, `prompt_hash`) for the calibration to read.
+
+Results are marked `[UNCALIBRATED]` until a calibration record exists at
+`evals/results/calibration.json` (`evals.judge.load_calibration` reads it; absent or unreadable means
+uncalibrated). Do not read an uncalibrated verdict as a measure of the server.
 
 ### Model client
 

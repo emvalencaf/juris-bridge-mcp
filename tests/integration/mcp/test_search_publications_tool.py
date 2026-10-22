@@ -3,6 +3,8 @@ import json
 
 import pytest
 
+from juris_bridge_mcp.adapters.djen.static_issuing_body_catalog import StaticIssuingBodyCatalog
+from juris_bridge_mcp.infrastructure import bootstrap
 from tests.integration.mcp.conftest import FakeDjen
 
 
@@ -12,6 +14,15 @@ def fast_sleep(monkeypatch):
         return None
 
     monkeypatch.setattr(asyncio, "sleep", no_sleep)
+
+
+@pytest.fixture
+def catalog_without_tjsp(monkeypatch):
+    """Ship a catalog with no entry for the TJSP, whatever the shipped one holds."""
+    document = {"version": "test", "courts": {}}
+    monkeypatch.setattr(
+        bootstrap, "StaticIssuingBodyCatalog", lambda: StaticIssuingBodyCatalog(document)
+    )
 
 
 async def _call(client, **arguments):
@@ -124,7 +135,7 @@ async def test_a_foreign_cursor_is_invalid_argument(djen: FakeDjen, mcp_client):
 
 
 async def test_a_day_at_the_count_cap_is_split_by_orgao_and_reported_as_slice_cap(
-    djen: FakeDjen, mcp_client
+    djen: FakeDjen, catalog_without_tjsp, mcp_client
 ):
     capped = FakeDjen.fixture("tjsp_decisions.json")
     capped["count"] = 10000

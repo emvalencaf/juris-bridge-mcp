@@ -7,6 +7,13 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Added
+
+- Evaluation skeleton (#91): a top-level `evals/` directory, outside the package and the default
+  test run, with `assayer` in a separate `evals` dependency group. `uv run --group evals python -m evals`
+  loads an empty Dataset and prints an empty Experiment. Adds ADR 0009, the Eval case and Cassette
+  terms in the glossary and the research notes behind the spec.
+
 ## [0.1.0] - 2026-10-22
 
 ### Added

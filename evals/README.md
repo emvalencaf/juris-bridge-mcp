@@ -58,6 +58,7 @@ Cassettes and the metrics arrive in later tickets of the spec.
 |---|---|
 | `__main__.py` | The command (`python -m evals`) |
 | `dataset.py` | Loads Eval cases from the split folders |
+| `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
 | `cases/tuning/`, `cases/validation/`, `cases/drafts/` | Eval cases as plain JSON lists, split by folder; drafts count toward no result |
 | `tests/` | Tests of the evaluation itself, run on request only |
 | `results/` | Local results; git-ignored |
@@ -103,6 +104,36 @@ the tests of the evaluation itself (the default `pytest` run skips them):
 ```bash
 uv run --group evals pytest evals
 ```
+
+### Redaction of personal data
+
+`evals.redaction.redact(value)` takes Source text (or a JSON-like structure of it) and
+returns the same shape with personal data replaced, before a response is stored or sent
+to a model.
+
+* **CPF and CNPJ** become `[CPF]` and `[CNPJ]`, by their fixed patterns, with or without
+  punctuation. An unpunctuated run of 11 or 14 digits is taken as one, so an unrelated
+  number of that length is replaced too.
+* **Names of people** become `[NOME]` by **heuristics only, not a guarantee**: a name
+  after a party role (`autor`, `réu`, `requerente`, `advogado`...), and runs of two or
+  more capitalised words. Institutional words (`Tribunal`, `Justiça`, `Ministério`...)
+  split a run and are kept.
+* **Never touched:** CNJ numbers, Court aliases (`TJSP`, `TRF3`...) and Precedent kind
+  siglas (`SUM`, `SV`, `RG`, `RR`, `IRDR`, `IAC`, `OJ`...), so the citation check still
+  has something to compare.
+
+What the name redaction misses (names that stay in the text):
+
+* a single-word name outside a role (`Joana`), nicknames and initials (`J. da Silva`);
+* names written in lower case or all caps outside a role;
+* a name after a role not in the list, or a second party after the first one's name
+  (`Réu: João Silva, Maria Souza`: only the first is certain);
+* names that contain an institutional word (`Maria Justiça Lima` is split);
+* people referred to by position or kinship (`o genitor`, `a síndica`).
+
+It also over-redacts: a capitalised run that is not a person (a street, a company, a
+place such as `Praça Tiradentes`, a sentence start followed by a proper noun) becomes
+`[NOME]`, and runs of whitespace inside a redacted run collapse to one space.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

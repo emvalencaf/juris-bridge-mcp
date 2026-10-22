@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>search_publications and the Issuing body split</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper: #f5f5f5; --color-ink: #2d3142; --color-muted: #4f5d75;
+      --font-sans: 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', 'Noto Serif', serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--color-paper); color: var(--color-ink);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .frame { max-width: 1280px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--color-muted); margin-bottom: 0.5rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem); font-weight: 400;
+      letter-spacing: -0.02em; line-height: 1.15; color: var(--color-ink); margin-bottom: 1.5rem; }
+    svg { width: 100%; min-width: 1280px; display: block; }
+    @media print { .diagram-container { overflow-x: visible; } svg { min-width: 0; } }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Flowchart · Juris Bridge MCP</p>
+    <h1>search_publications: budget, cap and the Issuing body split</h1>
+    <div class="diagram-container">
+<svg viewBox="0 0 1280 800" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="search-publications-title search-publications-desc">
+<title id="search-publications-title">search_publications and the Issuing body split</title>
+<desc id="search-publications-desc">Flowchart of search_publications: the window is read day by day, each request asks the DJEN, a day at the 10,000 cap is split by every Issuing body of the catalog plus those seen on page 1, and the call ends with complete or an incomplete_reason and a next_cursor.</desc>
+<defs>
+<marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+<marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="480" y1="72" x2="480" y2="100" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+<line x1="480" y1="196" x2="480" y2="232" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+<line x1="480" y1="292" x2="480" y2="328" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+<line x1="480" y1="424" x2="480" y2="460" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+<line x1="480" y1="520" x2="480" y2="556" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+<line x1="608" y1="148" x2="760" y2="148" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+<line x1="608" y1="376" x2="760" y2="376" stroke="#bf4520" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+<path d="M 880,328 L 880,270 Q 880,262 872,262 L 608,262" fill="none" stroke="#bf4520" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+<path d="M 608,604 L 1072,604 Q 1080,604 1080,596 L 1080,156 Q 1080,148 1072,148 L 1000,148" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 352,604 L 168,604 Q 160,604 160,596 L 160,156 Q 160,148 168,148 L 352,148" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="488" y="205" width="32" height="12" rx="2" fill="#f5f5f5"/><text x="504" y="214" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle" letter-spacing="0.06em">YES</text>
+<rect x="492" y="433" width="24" height="12" rx="2" fill="#f5f5f5"/><text x="504" y="442" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle" letter-spacing="0.06em">NO</text>
+<rect x="668" y="359" width="32" height="12" rx="2" fill="#f5f5f5"/><text x="684" y="368" fill="#bf4520" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle" letter-spacing="0.06em">YES</text>
+<rect x="664" y="131" width="40" height="12" rx="2" fill="#f5f5f5"/><text x="684" y="140" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle" letter-spacing="0.06em">NO</text>
+<rect x="238" y="587" width="24" height="12" rx="2" fill="#f5f5f5"/><text x="250" y="596" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle" letter-spacing="0.06em">NO</text>
+<rect x="794" y="587" width="92" height="12" rx="2" fill="#f5f5f5"/><text x="840" y="596" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle" letter-spacing="0.06em">LIMIT · BUDGET</text>
+<rect x="698" y="245" width="92" height="12" rx="2" fill="#f5f5f5"/><text x="744" y="254" fill="#bf4520" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle" letter-spacing="0.06em">ONE PER BODY</text>
+<rect x="368" y="24" width="224" height="48" rx="24" fill="#f5f5f5"/><rect x="368" y="24" width="224" height="48" rx="24" fill="rgba(79,93,117,0.10)" stroke="#5a6580" stroke-width="1"/><text x="480.0" y="40" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif" font-weight="600" text-anchor="middle">search_publications</text><text x="480.0" y="56" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">court · window · query · cursor</text>
+<polygon points="480,100 608,148 480,196 352,148" fill="#f5f5f5"/><polygon points="480,100 608,148 480,196 352,148" fill="#ffffff" stroke="#2d3142" stroke-width="1"/><text x="480" y="146" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif" font-weight="600" text-anchor="middle">Days left in the window?</text><text x="480" y="162" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">newest first · Cursor resumes</text>
+<rect x="352" y="232" width="256" height="60" rx="20" fill="#f5f5f5"/><rect x="352" y="232" width="256" height="60" rx="20" fill="#ffffff" stroke="#2d3142" stroke-width="1"/><text x="480.0" y="254" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif" font-weight="600" text-anchor="middle">Ask the DJEN</text><text x="480.0" y="270" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">court · day · OR group · page · orgaoId</text>
+<polygon points="480,328 608,376 480,424 352,376" fill="#f5f5f5"/><polygon points="480,328 608,376 480,424 352,376" fill="#ffffff" stroke="#2d3142" stroke-width="1"/><text x="480" y="374" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif" font-weight="600" text-anchor="middle">Day at the 10,000 cap?</text><text x="480" y="390" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">page 1 of a whole-day read</text>
+<rect x="352" y="460" width="256" height="60" rx="20" fill="#f5f5f5"/><rect x="352" y="460" width="256" height="60" rx="20" fill="#ffffff" stroke="#2d3142" stroke-width="1"/><text x="480.0" y="482" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif" font-weight="600" text-anchor="middle">Keep what is a decision</text><text x="480.0" y="498" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">drop despachos · kind · local query</text>
+<polygon points="480,556 608,604 480,652 352,604" fill="#f5f5f5"/><polygon points="480,556 608,604 480,652 352,604" fill="#ffffff" stroke="#2d3142" stroke-width="1"/><text x="480" y="602" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif" font-weight="600" text-anchor="middle">Limit or 10 requests?</text><text x="480" y="618" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">items kept · requests made</text>
+<rect x="760" y="328" width="240" height="96" rx="20" fill="#f5f5f5"/><rect x="760" y="328" width="240" height="96" rx="20" fill="rgba(191,69,32,0.08)" stroke="#bf4520" stroke-width="1"/><text x="880.0" y="356" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif" font-weight="600" text-anchor="middle">Split by Issuing body</text><text x="880.0" y="372" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">every orgaoId of the catalog</text><text x="880.0" y="384" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">+ page-1 bodies it lacks</text><text x="880.0" y="396" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">one slice each, empties skipped</text>
+<rect x="760" y="100" width="240" height="96" rx="20" fill="#f5f5f5"/><rect x="760" y="100" width="240" height="96" rx="20" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/><text x="880.0" y="128" fill="#2d3142" font-size="12" font-family="'Geist', system-ui, sans-serif" font-weight="600" text-anchor="middle">Result</text><text x="880.0" y="144" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">complete · incomplete_reason</text><text x="880.0" y="156" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">budget · slice_cap · depth_ceiling</text><text x="880.0" y="168" fill="#5a6580" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" text-anchor="middle">next_cursor · hint</text>
+<text x="40" y="700" fill="#2d3142" font-size="14" font-family="'Instrument Serif', 'Noto Serif', serif" font-style="italic">A body missing from the catalog but seen on page 1 is still read, and the result says slice_cap; so does a slice that itself reaches the cap.</text>
+<text x="40" y="720" fill="#2d3142" font-size="14" font-family="'Instrument Serif', 'Noto Serif', serif" font-style="italic">A body missing from both the catalog and page 1 goes unnoticed (docs/known-limits.md). The Cursor holds the slice index and the catalog version.</text>
+<line x1="40" y1="744" x2="1240" y2="744" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/><text x="40" y="764" fill="#4f5d75" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="500" letter-spacing="0.14em">LEGEND</text>
+<rect x="112" y="756" width="16" height="10" rx="2" fill="rgba(79,93,117,0.10)" stroke="#5a6580" stroke-width="1"/><text x="136" y="764" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" letter-spacing="0.04em">entry</text>
+<rect x="200" y="756" width="16" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/><text x="224" y="764" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" letter-spacing="0.04em">step · decision</text>
+<rect x="340" y="756" width="16" height="10" rx="2" fill="rgba(191,69,32,0.08)" stroke="#bf4520" stroke-width="1"/><text x="364" y="764" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" letter-spacing="0.04em">capped day</text>
+<rect x="450" y="756" width="16" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/><text x="474" y="764" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" letter-spacing="0.04em">result</text>
+<line x1="560" y1="761" x2="584" y2="761" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/><text x="592" y="764" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" letter-spacing="0.04em">flow</text><line x1="640" y1="761" x2="664" y2="761" stroke="#bf4520" stroke-width="1.2" marker-end="url(#arrow-accent)"/><text x="672" y="764" fill="#5a6580" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" font-weight="400" letter-spacing="0.04em">split path</text>
+</svg>
+    </div>
+  </div>
+</body>
+</html>

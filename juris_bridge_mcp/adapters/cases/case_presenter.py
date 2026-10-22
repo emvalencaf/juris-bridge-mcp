@@ -1,0 +1,90 @@
+"""Presents a `CaseResult` as the Normalized result an MCP client receives."""
+
+from datetime import date
+from typing import Any
+
+from juris_bridge_mcp.adapters.presentation import iso_utc
+from juris_bridge_mcp.application.use_cases.get_case import CaseResult
+from juris_bridge_mcp.application.use_cases.search_cases import SearchResult
+from juris_bridge_mcp.domain.case import Case, CaseEvent, CodedTerm, EventComplement
+from juris_bridge_mcp.domain.courts import SOURCE
+
+
+def present_case(result: CaseResult) -> dict[str, Any]:
+    """Return the Case with its `source`, Citation (no URL), `retrieved_at` and Content kind."""
+    presented: dict[str, Any] = {
+        "source": SOURCE,
+        "retrieved_at": iso_utc(result.retrieved_at),
+        "content_kind": "metadata",
+        **_fields(result.case),
+        "events": [_event(e) for e in result.case.events],
+        "events_total": result.events_total,
+        "warnings": list(result.warnings),
+    }
+    if result.raw is not None:
+        presented["raw"] = result.raw
+    return presented
+
+
+def present_search(result: SearchResult) -> dict[str, Any]:
+    """Return the page of Cases (without events) with its totals and `next_cursor`."""
+    presented: dict[str, Any] = {
+        "source": SOURCE,
+        "retrieved_at": iso_utc(result.retrieved_at),
+        "content_kind": "metadata",
+        "court": result.court,
+        "items": [_fields(c) for c in result.cases],
+        "total": result.total,
+        "total_is_lower_bound": result.total_is_lower_bound,
+        "next_cursor": result.next_cursor,
+    }
+    if result.hint is not None:
+        presented["hint"] = result.hint
+    return presented
+
+
+def _fields(case: Case) -> dict[str, Any]:
+    return {
+        "citation": {
+            "text": f"DataJud · {case.court.upper()} · {case.number.formatted}",
+            "url": None,
+        },
+        "number": case.number.formatted,
+        "number_digits": case.number.digits,
+        "court": case.court,
+        "instance": case.instance,
+        "filed_on": _day(case.filed_on),
+        "class": _term(case.case_class),
+        "subjects": [_term(t) for t in case.subjects],
+        "judging_body": _term(case.judging_body),
+        "secrecy_level": case.secrecy_level,
+        "source_system": _term(case.source_system),
+        "last_updated_at": iso_utc(case.last_updated_at),
+    }
+
+
+def _day(day: date | None) -> str | None:
+    return day.isoformat() if day else None
+
+
+def _term(term: CodedTerm | None) -> dict[str, Any] | None:
+    return None if term is None else {"code": term.code, "name": term.name}
+
+
+def _event(event: CaseEvent) -> dict[str, Any]:
+    return {
+        "code": event.term.code,
+        "name": event.term.name,
+        "occurred_at": iso_utc(event.occurred_at),
+        "judging_body": _term(event.judging_body),
+        "complements": [_complement(c) for c in event.complements],
+    }
+
+
+def _complement(complement: EventComplement) -> dict[str, Any]:
+    return {
+        "code": complement.term.code,
+        "name": complement.term.name,
+        "kind": complement.kind,
+        "value": complement.value,
+    }

@@ -1,0 +1,11 @@
+{
+  "DetalheDocumento": {
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/DetalheDocumentov3.xsd",
+    "Metadados": {
+      "Versao": "18/10/2026 03:26:40",
+      "VersaoServico": "3",
+      "DataVersaoServico": "2017-02-01",
+      "DescricaoDataSet": "Obtém detalhes de uma Norma Jurídica por meio da sua URN."
+    }
+  }
+}

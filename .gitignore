@@ -16,7 +16,7 @@ node_modules/
 __pycache__/
 dist/
 build/
-coverage/
+/coverage/
 
 # Agent local state
 .claude/settings.local.json
@@ -24,3 +24,6 @@ graphify-out/
 .wiki/viz.html
 .claude/budget
 .claude/usage/
+
+# Playwright MCP output
+.playwright-mcp/

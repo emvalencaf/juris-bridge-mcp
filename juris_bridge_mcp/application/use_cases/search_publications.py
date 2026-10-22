@@ -1,0 +1,371 @@
+"""Use case: search the Publications of a Court released in a window of days."""
+
+from dataclasses import dataclass, replace
+from datetime import UTC, date, datetime, timedelta
+from enum import StrEnum
+
+from juris_bridge_mcp.domain.cnj_number import CnjNumber, derive_court
+from juris_bridge_mcp.domain.cursor import Cursor
+from juris_bridge_mcp.domain.errors import invalid_argument
+from juris_bridge_mcp.domain.publication import (
+    COUNT_CAP,
+    Publication,
+    PublicationPage,
+    PublicationSearch,
+)
+from juris_bridge_mcp.domain.publication_courts import resolve_djen_court
+from juris_bridge_mcp.domain.publication_kind import DECISION_KINDS, PublicationKind
+from juris_bridge_mcp.domain.publication_query import group_returns, parse_local_query, parse_query
+from juris_bridge_mcp.domain.publication_ranking import query_terms, rank_publications
+from juris_bridge_mcp.ports.issuing_body_catalog import IssuingBodyCatalog
+from juris_bridge_mcp.ports.publication_repository import PublicationRepository
+
+DEFAULT_LIMIT = 10
+MAX_LIMIT = 25
+MAX_WINDOW_DAYS = 31
+# The DJEN answers a page of 100 and gives up past its undocumented depth ceiling, which is
+# also where its count stops (`COUNT_CAP`).
+MAX_DJEN_PAGE = COUNT_CAP // 100
+# Requests to the Source for one call, so a quiet window or a filter that keeps little cannot
+# fan out without end; the Cursor carries the search on.
+MAX_REQUESTS_PER_CALL = 10
+
+
+class IncompleteReason(StrEnum):
+    """Why a search did not cover the whole window."""
+
+    BUDGET = "budget"
+    SLICE_CAP = "slice_cap"
+    DEPTH_CEILING = "depth_ceiling"
+
+
+_HINTS = {
+    IncompleteReason.BUDGET: "More follows: pass next_cursor to read on.",
+    IncompleteReason.SLICE_CAP: (
+        f"A day matched {COUNT_CAP} or more items, where the Source stops counting; it was "
+        "split by issuing body, but a body's slice still reached that count or an issuing body "
+        "is missing from the catalog, so some may be missing. Narrow the query to reach them."
+    ),
+    IncompleteReason.DEPTH_CEILING: (
+        f"The Source stops after about {MAX_DJEN_PAGE * 100} matches of a slice; narrow the "
+        "query to reach the rest."
+    ),
+}
+
+
+@dataclass(frozen=True)
+class PublicationSearchResult:
+    """A page of Publications ready to present.
+
+    `complete` is true when the search reached the end of the window without the Source
+    truncating a slice; otherwise `incomplete_reason` says why: `budget` (more follows, see
+    `next_cursor`), `slice_cap` or `depth_ceiling`.
+    """
+
+    court: str
+    publications: tuple[Publication, ...]
+    complete: bool
+    incomplete_reason: IncompleteReason | None
+    next_cursor: str | None
+    retrieved_at: datetime
+    not_decisions_dropped: int = 0
+    hint: str | None = None
+
+
+@dataclass(frozen=True)
+class _KnownBodies:
+    """The Issuing bodies the catalog knows for the Court, and the catalog version."""
+
+    version: str
+    ids: tuple[int, ...]
+
+
+@dataclass(frozen=True)
+class _Position:
+    """Where a search is: a day, the OR group, the issuing body slice, a page.
+
+    A capped day is split by the Court's catalog `catalog` plus the `extras` its first page
+    showed that the catalog lacks; `index` is the current slice of that list, or -1 while the
+    day is read whole. `skip` is how many kept items of the page were already returned. Within
+    a day the groups are read in turn.
+    """
+
+    day: date
+    group: int = 0
+    catalog: tuple[int, ...] = ()
+    extras: tuple[int, ...] = ()
+    index: int = -1
+    page: int = 1
+    skip: int = 0
+
+    @property
+    def body(self) -> int | None:
+        """Return the `orgaoId` being read, or `None` while the day is read whole."""
+        return (self.catalog + self.extras)[self.index] if self.index >= 0 else None
+
+    def next_slice(self, date_from: date, groups: int) -> "_Position | None":
+        """Return the position of the next slice, or `None` past the oldest day."""
+        if 0 <= self.index < len(self.catalog) + len(self.extras) - 1:
+            return replace(self, index=self.index + 1, page=1, skip=0)
+        whole = replace(self, extras=(), index=-1, page=1, skip=0)
+        if self.group + 1 < groups:
+            return replace(whole, group=self.group + 1)
+        day = self.day - timedelta(days=1)
+        return replace(whole, day=day, group=0) if day >= date_from else None
+
+    def encode(
+        self, scope: str, key: str, version: str, truncation: IncompleteReason | None
+    ) -> str:
+        """Return the Cursor token for this position and the truncation met so far."""
+        extras = ",".join(str(body) for body in self.extras)
+        parts = (
+            self.day.isoformat(),
+            self.group,
+            self.index,
+            version,
+            self.page,
+            self.skip,
+            truncation or "",
+            extras,
+        )
+        return Cursor(scope, parts, key).encode()
+
+    @classmethod
+    def decode(
+        cls,
+        token: str,
+        scope: str,
+        key: str,
+        window: tuple[date, date],
+        groups: int,
+        known: "_KnownBodies",
+    ) -> "tuple[_Position, IncompleteReason | None]":
+        """Parse a token issued for this search, or raise `invalid_argument`."""
+        decoded = Cursor.decode(token, scopes=(scope,))
+        if decoded.filters_key != key:
+            raise invalid_argument(
+                "The cursor was issued for a different search.",
+                hint="Repeat the same Court, window, query and kind, or start without a cursor.",
+            )
+        try:
+            match decoded.position:
+                case (
+                    str() as day,
+                    int() as group,
+                    int() as index,
+                    str() as issued_with,
+                    int() as page,
+                    int() as skip,
+                    str() as met,
+                    str() as extras,
+                ):
+                    position = cls(
+                        date.fromisoformat(day),
+                        group,
+                        known.ids,
+                        tuple(int(body) for body in extras.split(",")) if extras else (),
+                        index,
+                        page,
+                        skip,
+                    )
+                    truncation = IncompleteReason(met) if met else None
+                case _:
+                    raise ValueError
+        except ValueError:
+            raise invalid_argument("The cursor is not valid.") from None
+        if issued_with != known.version:
+            raise invalid_argument(
+                "The cursor was issued under another issuing body catalog.",
+                hint="The server's catalog changed since the cursor was issued: restart the "
+                "search without a cursor.",
+            )
+        if (
+            not window[0] <= position.day <= window[1]
+            or not 0 <= group < groups
+            or not -1 <= index < len(known.ids) + len(position.extras)
+            or (index < 0 and position.extras)
+            or not 1 <= page <= MAX_DJEN_PAGE
+            or skip < 0
+            or truncation is IncompleteReason.BUDGET
+            or any(body <= 0 for body in position.extras)
+        ):
+            raise invalid_argument("The cursor is not valid.")
+        return position, truncation
+
+
+def _advance(
+    position: _Position, page: PublicationPage, date_from: date, groups: int
+) -> tuple[_Position | None, IncompleteReason | None]:
+    """Return where to read next once `page` is spent, and the truncation met leaving it."""
+    if page.more and position.page < MAX_DJEN_PAGE:
+        return replace(position, page=position.page + 1, skip=0), None
+    met = IncompleteReason.DEPTH_CEILING if page.more else None
+    return position.next_slice(date_from, groups), met
+
+
+async def search_publications(
+    repository: PublicationRepository,
+    issuing_bodies: IssuingBodyCatalog,
+    *,
+    date_from: date,
+    date_to: date,
+    court: str | None = None,
+    query: str | None = None,
+    cnj_number: str | None = None,
+    kind: str | None = None,
+    limit: int = DEFAULT_LIMIT,
+    cursor: str | None = None,
+) -> PublicationSearchResult:
+    """Return a page of the Court's decisions in the window, matching `query` or of one Case.
+
+    With `cnj_number` (formatted or 20 digits, validated) the Publications are those of that
+    Case: the Court is derived from the number, or checked against `court` when given, and
+    `query` is optional. When present it filters locally and needs no 5-character term, since
+    nothing but the number is sent to the Source. Without it, `court` and `query` are required.
+
+    The query is parsed here (see `publication_query`): each OR group asks the Source for its
+    longest phrase or word, and the rest of the group filters the fetched text locally; the
+    groups' results are united without duplicates. Nothing is called when an argument is
+    invalid. Despachos, intimações and editais are dropped from what the Source answers, and
+    `kind`, when given, keeps only that kind; without it every decision stays, `ambiguous`
+    included. Each item is scored against the others of the page (BM25, see
+    `publication_ranking`), but the order stays by date. The window is walked one day at a time
+    from `date_to` back, a day matching `COUNT_CAP` items being split by issuing body, except
+    that a Case is asked for over the whole window in one slice, and at most
+    `MAX_REQUESTS_PER_CALL` requests are made; `next_cursor` resumes where the call
+    stopped and must come back with the same Court, window, query and kind.
+
+    A capped day is split by every `orgaoId` the `issuing_bodies` catalog knows for the Court,
+    plus any body its first page shows that the catalog lacks. `slice_cap` is reported when a
+    slice itself reaches the cap or such a missing body shows up; a body absent from both the
+    catalog and the first page cannot be detected (docs/known-limits.md). A Cursor issued under
+    another catalog version is `invalid_argument`.
+    """
+    wanted = _parse_kind(kind)
+    case_number = CnjNumber.parse(cnj_number) if cnj_number is not None else None
+    if not 1 <= limit <= MAX_LIMIT:
+        raise invalid_argument(f"limit must be between 1 and {MAX_LIMIT}.")
+    if date_from > date_to:
+        raise invalid_argument("date_from is after date_to.")
+    if (date_to - date_from).days + 1 > MAX_WINDOW_DAYS:
+        raise invalid_argument(
+            f"The window is longer than {MAX_WINDOW_DAYS} days.",
+            hint="Search a shorter window and repeat it for the next one.",
+        )
+    text = (query or "").strip()
+    if case_number is None and not text:
+        raise invalid_argument("query is required without cnj_number.")
+    groups = parse_query(text) if case_number is None else parse_local_query(text)
+    alias = _resolve_court(court, case_number, date_to)
+    known = _KnownBodies(issuing_bodies.version, issuing_bodies.body_ids(alias))
+    key = _search_key(date_from, date_to, text, wanted, case_number)
+    # A Case is asked for over the whole window in one slice; a text search walks it by day.
+    oldest = date_to if case_number else date_from
+    position: _Position | None = _Position(date_to, catalog=known.ids)
+    truncation: IncompleteReason | None = None
+    if cursor is not None:
+        position, truncation = _Position.decode(
+            cursor, alias, key, (date_from, date_to), len(groups), known
+        )
+    chosen: list[Publication] = []
+    dropped = 0
+    requests = 0
+    retrieved_at = None
+    while position is not None and len(chosen) < limit and requests < MAX_REQUESTS_PER_CALL:
+        group = groups[position.group]
+        page = await repository.search(
+            PublicationSearch(
+                court=alias,
+                query=group.source_text,
+                date_from=date_from if case_number else position.day,
+                date_to=position.day,
+                page=position.page,
+                organ_id=position.body,
+                cnj_number=case_number,
+            )
+        )
+        requests += page.requests
+        retrieved_at = page.retrieved_at
+        if page.truncated:
+            truncation = truncation or IncompleteReason.DEPTH_CEILING
+            position = position.next_slice(oldest, len(groups))
+            continue
+        if position.page == 1 and page.total >= COUNT_CAP:
+            extras = tuple(body for body in page.organ_ids if body not in known.ids)
+            if position.index >= 0 or not (known.ids or extras):
+                truncation = truncation or IncompleteReason.SLICE_CAP
+            else:
+                if extras:
+                    truncation = truncation or IncompleteReason.SLICE_CAP
+                position = replace(position, extras=extras, index=0)
+                continue
+        decisions = [p for p in page.publications if p.kind is not PublicationKind.NOT_A_DECISION]
+        dropped += len(page.publications) - len(decisions)
+        available = [
+            p
+            for p in decisions
+            if (wanted is None or p.kind is wanted)
+            and group_returns(groups, position.group, p.text)
+        ][position.skip :]
+        room = limit - len(chosen)
+        chosen.extend(available[:room])
+        if len(available) > room:
+            position = replace(position, skip=position.skip + room)
+            continue
+        position, met = _advance(position, page, oldest, len(groups))
+        truncation = truncation or met
+    ranked = rank_publications(query_terms(groups), chosen)
+    incomplete = IncompleteReason.BUDGET if position is not None else truncation
+    return PublicationSearchResult(
+        court=alias,
+        publications=ranked,
+        complete=incomplete is None,
+        incomplete_reason=incomplete,
+        next_cursor=position.encode(alias, key, known.version, truncation) if position else None,
+        retrieved_at=retrieved_at or datetime.now(UTC),
+        not_decisions_dropped=dropped,
+        hint=_HINTS[incomplete] if incomplete else None,
+    )
+
+
+def _search_key(
+    date_from: date,
+    date_to: date,
+    text: str,
+    kind: PublicationKind | None,
+    case_number: CnjNumber | None,
+) -> str:
+    """Return what a Cursor must agree on with the search that issued it (empty if unset)."""
+    digits = case_number.digits if case_number else ""
+    return "|".join((date_from.isoformat(), date_to.isoformat(), text, kind or "", digits))
+
+
+def _resolve_court(court: str | None, case_number: CnjNumber | None, date_to: date) -> str:
+    """Return the Court of the search: the one given, the one the number derives, or both."""
+    named = [court] if court is not None else []
+    if case_number is not None:
+        named.append(derive_court(case_number))
+    if not named:
+        raise invalid_argument("court is required without cnj_number.")
+    aliases = [resolve_djen_court(alias, date_to) for alias in named]
+    if len(set(aliases)) > 1:
+        raise invalid_argument(
+            f"The CNJ number belongs to {aliases[1].upper()}, not {aliases[0].upper()}.",
+            hint="Omit court, or pass the one in the number.",
+        )
+    return aliases[0]
+
+
+def _parse_kind(kind: str | None) -> PublicationKind | None:
+    if kind is None:
+        return None
+    try:
+        parsed = PublicationKind(kind.strip().lower())
+    except ValueError:
+        parsed = None
+    if parsed is None or parsed is PublicationKind.NOT_A_DECISION:
+        raise invalid_argument(
+            f"Unknown kind: {kind!r}.",
+            hint="Valid kinds: " + ", ".join(k.value for k in DECISION_KINDS),
+        )
+    return parsed

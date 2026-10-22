@@ -1,0 +1,345 @@
+{
+ "aggsEspecies": [
+  {
+   "tipo": "RR",
+   "total": 1282
+  },
+  {
+   "tipo": "SUM",
+   "total": 646
+  },
+  {
+   "tipo": "CT",
+   "total": 498
+  },
+  {
+   "tipo": "IAC",
+   "total": 21
+  },
+  {
+   "tipo": "SIRDR",
+   "total": 11
+  }
+ ],
+ "aggsOrgaos": [
+  {
+   "tipo": "STF",
+   "total": 7469
+  },
+  {
+   "tipo": "STJ",
+   "total": 2458
+  },
+  {
+   "tipo": "TNU",
+   "total": 373
+  },
+  {
+   "tipo": "TST",
+   "total": 320
+  },
+  {
+   "tipo": "TJSP",
+   "total": 233
+  },
+  {
+   "tipo": "TRT04",
+   "total": 189
+  },
+  {
+   "tipo": "TJPE",
+   "total": 182
+  },
+  {
+   "tipo": "TJES",
+   "total": 168
+  },
+  {
+   "tipo": "TJPR",
+   "total": 155
+  },
+  {
+   "tipo": "TJGO",
+   "total": 146
+  },
+  {
+   "tipo": "TJMG",
+   "total": 129
+  },
+  {
+   "tipo": "TJBA",
+   "total": 111
+  },
+  {
+   "tipo": "TRF03",
+   "total": 106
+  },
+  {
+   "tipo": "TJRJ",
+   "total": 98
+  },
+  {
+   "tipo": "TRF01",
+   "total": 97
+  },
+  {
+   "tipo": "TJSC",
+   "total": 85
+  },
+  {
+   "tipo": "TRT15",
+   "total": 77
+  },
+  {
+   "tipo": "TRT01",
+   "total": 76
+  },
+  {
+   "tipo": "TJAM",
+   "total": 71
+  },
+  {
+   "tipo": "TRT03",
+   "total": 70
+  },
+  {
+   "tipo": "TRT18",
+   "total": 70
+  },
+  {
+   "tipo": "TJPA",
+   "total": 69
+  },
+  {
+   "tipo": "TRT02",
+   "total": 68
+  },
+  {
+   "tipo": "TRT08",
+   "total": 63
+  },
+  {
+   "tipo": "TRT13",
+   "total": 63
+  },
+  {
+   "tipo": "TRT09",
+   "total": 62
+  },
+  {
+   "tipo": "TRT24",
+   "total": 61
+  },
+  {
+   "tipo": "TRF04",
+   "total": 53
+  },
+  {
+   "tipo": "TRT05",
+   "total": 49
+  },
+  {
+   "tipo": "TJRS",
+   "total": 47
+  },
+  {
+   "tipo": "TRT07",
+   "total": 47
+  },
+  {
+   "tipo": "TJAP",
+   "total": 43
+  },
+  {
+   "tipo": "TRT12",
+   "total": 42
+  },
+  {
+   "tipo": "TJDF",
+   "total": 41
+  },
+  {
+   "tipo": "TRT17",
+   "total": 40
+  },
+  {
+   "tipo": "TRT22",
+   "total": 39
+  },
+  {
+   "tipo": "TJTO",
+   "total": 37
+  },
+  {
+   "tipo": "TRT06",
+   "total": 36
+  },
+  {
+   "tipo": "TRT19",
+   "total": 36
+  },
+  {
+   "tipo": "TRT14",
+   "total": 35
+  },
+  {
+   "tipo": "TJMS",
+   "total": 33
+  },
+  {
+   "tipo": "TRT20",
+   "total": 33
+  },
+  {
+   "tipo": "TRT11",
+   "total": 32
+  },
+  {
+   "tipo": "TJMT",
+   "total": 29
+  },
+  {
+   "tipo": "TRT21",
+   "total": 27
+  },
+  {
+   "tipo": "TJRR",
+   "total": 26
+  },
+  {
+   "tipo": "TRF02",
+   "total": 24
+  },
+  {
+   "tipo": "TJMA",
+   "total": 23
+  },
+  {
+   "tipo": "TJPI",
+   "total": 23
+  },
+  {
+   "tipo": "TJSE",
+   "total": 22
+  },
+  {
+   "tipo": "TJRO",
+   "total": 21
+  },
+  {
+   "tipo": "TRF06",
+   "total": 21
+  },
+  {
+   "tipo": "TRT10",
+   "total": 21
+  },
+  {
+   "tipo": "TRT23",
+   "total": 21
+  },
+  {
+   "tipo": "TRT16",
+   "total": 18
+  },
+  {
+   "tipo": "TJCE",
+   "total": 17
+  },
+  {
+   "tipo": "TJPB",
+   "total": 10
+  },
+  {
+   "tipo": "TJRN",
+   "total": 10
+  },
+  {
+   "tipo": "TJAC",
+   "total": 7
+  },
+  {
+   "tipo": "TJAL",
+   "total": 4
+  },
+  {
+   "tipo": "TRF05",
+   "total": 4
+  },
+  {
+   "tipo": "STM",
+   "total": 2
+  }
+ ],
+ "posicao_final": 2,
+ "posicao_inicial": 1,
+ "resultados": [
+  {
+   "highlight": {
+    "tese": "A remissão de juros de mora insertos dentro da composição do crédito <mark>tributário</mark> não enseja o resgate de juros remuneratórios incidentes sobre o depósito judicial feito para suspender a exigibilidade desse mesmo crédito <mark>tributário</mark>."
+   },
+   "historico": [
+    {
+     "dataCriacao": "2026-06-09T00:00:00.000-03:00",
+     "situacao": "Acórdão Publicado (RE Pendente)"
+    }
+   ],
+   "id": "stj-rr-490",
+   "nr": 490,
+   "orgao": "STJ",
+   "processosParadigma": [
+    {
+     "classe": 30,
+     "link": "https://processo.stj.jus.br/processo/pesquisa/?termo=201100968572&aplicacao=processos.ea&tipoPesquisa=tipoPesquisaGenerica&chkordem=DESC&chkMorto=MORTO",
+     "numero": "00244986520104040000"
+    }
+   ],
+   "questao": "Discussão sobre a possibilidade de pagamento mediante a transformação em pagamento definitivo (conversão em renda) de depósitos judiciais vinculados a ações já transitadas em julgado. Discute-se ainda sobre a possibilidade de devolução da diferença de juros selic incidentes sobre o valor depositado.",
+   "situacao": "Transitado em julgado",
+   "suspensoes": [
+    {
+     "ativa": true,
+     "dataSuspensao": "06/06/2011",
+     "descricao": "Processos em segunda instância"
+    }
+   ],
+   "tese": "A remissão de juros de mora insertos dentro da composição do crédito tributário não enseja o resgate de juros remuneratórios incidentes sobre o depósito judicial feito para suspender a exigibilidade desse mesmo crédito tributário.<br>",
+   "tipo": "RR",
+   "ultimaAtualizacao": "07/10/2026"
+  },
+  {
+   "highlight": {
+    "tese": "<p>A compensação efetuada pelo contribuinte, antes do ajuizamento do feito executivo, pode figurar como fundamento de defesa dos embargos à execução fiscal, a fim de ilidir a presunção de liquidez e certeza da CDA, máxime quando, à época da compensação, restaram atendidos os requisitos da existência de crédito <mark>tributário</mark> compensável, da configuração do indébito <mark>tributário</mark>, e da existência de lei específica autorizativa da citada modalidade extintiva do crédito <mark>tributário</mark>.</p>"
+   },
+   "historico": [
+    {
+     "dataCriacao": "2026-09-08T00:00:00.000-03:00",
+     "situacao": "Afetado-Possível Revisão de Tese"
+    }
+   ],
+   "id": "stj-rr-294",
+   "nr": 294,
+   "orgao": "STJ",
+   "processosParadigma": [
+    {
+     "classe": 30,
+     "link": "https://processo.stj.jus.br/processo/pesquisa/?termo=200702750399&aplicacao=processos.ea&tipoPesquisa=tipoPesquisaGenerica&chkordem=DESC&chkMorto=MORTO",
+     "numero": "00043674820054039999"
+    }
+   ],
+   "questao": "Questão referente à possibilidade de alegação da compensação nos embargos à execução, em decorrência do advento da Lei n.º 8.383/91, desde que se trate de crédito líquido e certo, como o resultante de declaração de inconstitucionalidade da exação, bem como quando existente lei específica permissiva da compensação.",
+   "situacao": "Transitado em julgado",
+   "suspensoes": [
+    {
+     "ativa": true,
+     "dataSuspensao": "27/10/2009",
+     "descricao": "Abrangência específica"
+    }
+   ],
+   "tese": "<p>A compensação efetuada pelo contribuinte, antes do ajuizamento do feito executivo, pode figurar como fundamento de defesa dos embargos à execução fiscal, a fim de ilidir a presunção de liquidez e certeza da CDA, máxime quando, à época da compensação, restaram atendidos os requisitos da existência de crédito tributário compensável, da configuração do indébito tributário, e da existência de lei específica autorizativa da citada modalidade extintiva do crédito tributário.</p>",
+   "tipo": "RR",
+   "ultimaAtualizacao": "27/04/2026"
+  }
+ ],
+ "total": 77
+}

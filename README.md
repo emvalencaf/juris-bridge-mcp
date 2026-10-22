@@ -1,5 +1,7 @@
 <a id="readme-top"></a>
 
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README.md)
+[![pt-BR](https://img.shields.io/badge/lang-pt--BR-green.svg)](README.pt-BR.md)
 
 <br />
 <div align="center">
@@ -8,7 +10,7 @@
   <p align="center">
     A remote, extensible and testable MCP server that gives AI agents access to Brazilian judicial data through a unified interface. Bridging AI Agents with Brazil's judicial ecosystem.
     <br />
-    <a href="CONTRIBUTING.md"><strong>Explore the docs »</strong></a>
+    <a href="docs/known-limits.md"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/emvalencaf/juris-bridge-mcp/issues/new">Report Bug</a>
@@ -31,9 +33,19 @@
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#installation">Installation</a></li>
+        <li><a href="#quick-start">Quick start</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
+    <li>
+      <a href="#usage">Usage</a>
+      <ul>
+        <li><a href="#running-the-server">Running the server</a></li>
+        <li><a href="#getting-a-norm-and-its-text">Getting a Norm and its text</a></li>
+        <li><a href="#searching-publications">Searching Publications</a></li>
+        <li><a href="#coverage">Coverage</a></li>
+        <li><a href="#known-limits">Known limits</a></li>
+      </ul>
+    </li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
@@ -46,13 +58,38 @@
 
 A remote, extensible and testable MCP server that gives AI agents access to Brazilian judicial data through a unified interface. Bridging AI Agents with Brazil's judicial ecosystem.
 
+It exposes nine read-only tools over four Sources, and every result is a Normalized result with its Source, a Citation and a Content kind:
+
+| Tool | What it does |
+|---|---|
+| `search_cases` | Search Cases of a Court by class, judging body, subject and filing dates (DataJud, metadata only) |
+| `get_case` | Fetch one Case by its CNJ number; the Court is derived from the number |
+| `search_publications` | Search the Publications of a Court released in a window of up to 31 days, newest day first, with a cursor and `complete`/`incomplete_reason` (DJEN, metadata and a plain-text excerpt, classified by `kind` with despachos and notices dropped; party names are personal data under the LGPD) |
+| `get_publication` | Read the full plain text of one Publication by the `id` a search returned, in slices chained by a cursor (DJEN, `full_text`) |
+| `search_precedents` | Search the Precedents (súmulas, repercussão geral themes, repetitive appeals, IRDRs, IACs...) of the Banco Nacional de Precedentes by text, Court, kind, number and update date, with a cursor and `total_is_capped` (BNP, metadata; status is the Source's own text) |
+| `get_precedent` | Fetch one Precedent by the `id` a search returned, with its status history, suspensions, leading Cases (a `cnj_number` only when valid, to chain into `get_case`) and, when the BNP has them, its decisions |
+| `search_legislation` | Find a Norm by type, number and year (Senado) |
+| `get_legislation` | Fetch a Norm by URN Lex, with its text from the Planalto or, as a fallback, Câmara Legin |
+| `list_coverage` | State what the server can and cannot answer, by Source and Court |
+
+Terms such as Case, Court, Source and Citation are defined in [GLOSSARY.md](GLOSSARY.md).
+
+### How it fits together
+
+![Architecture and module layout](docs/diagrams/assets/01-architecture.svg)
+
+Every request passes the same path: Bearer auth, one wide event per request, the tool, its use case and the Source.
+
+![MCP request flow and wide event](docs/diagrams/assets/02-request-flow.svg)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Built With
 
 * [Python](https://www.python.org) managed with [uv](https://docs.astral.sh/uv/)
+* [FastMCP](https://gofastmcp.com) for the MCP server ([ADR 0001](docs/adr/0001-vertical-slices-on-fastmcp.md))
 * [ruff](https://docs.astral.sh/ruff/)
+* [Terraform](https://www.terraform.io) and AWS Lambda for the Reference deployment
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -60,8 +97,8 @@ A remote, extensible and testable MCP server that gives AI agents access to Braz
 
 ### Prerequisites
 
-
-* [`uv`](https://docs.astral.sh/uv/)
+* [`uv`](https://docs.astral.sh/uv/) (Python 3.12 or newer), or Docker
+* A DataJud public key, which the CNJ publishes and may change at any time: see the [DataJud wiki](https://datajud-wiki.cnj.jus.br/api-publica/). Each user runs their own instance with their own key (see [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md)).
 
 ### Installation
 
@@ -70,21 +107,153 @@ A remote, extensible and testable MCP server that gives AI agents access to Braz
    git clone https://github.com/emvalencaf/juris-bridge-mcp.git
    cd juris-bridge-mcp
    ```
-2. Enable the git hooks
+2. Install the dependencies and enable the git hooks (contributors)
    ```bash
+   uv sync
    scripts/setup.sh
    ```
+
+### Quick start
+
+1. Copy `.env.example` to `.env` and set `JURIS_BRIDGE_SERVER_API_KEYS` (the Bearer key your client will send; the server refuses to start without one) and `JURIS_BRIDGE_DATAJUD_API_KEY` (the DataJud public key).
+2. Start the server (with `uv`, or as a container; see [Running the server](#running-the-server))
+   ```bash
+   set -a; source .env; set +a
+   uv run python -m juris_bridge_mcp.main
+   ```
+   The MCP endpoint is `http://localhost:8000/mcp`.
+3. Point your MCP client at it. For a client that takes a JSON configuration:
+   ```json
+   {
+     "mcpServers": {
+       "juris-bridge": {
+         "type": "http",
+         "url": "http://localhost:8000/mcp",
+         "headers": { "Authorization": "Bearer <your JURIS_BRIDGE_SERVER_API_KEYS value>" }
+       }
+     }
+   }
+   ```
+   With Claude Code: `claude mcp add --transport http juris-bridge http://localhost:8000/mcp --header "Authorization: Bearer <key>"`.
+4. Check the chain: ask for a Norm, for example "get Lei 14.133/2021 and quote Art. 1" (Senado and Planalto), then for a Case, for example "get the Case 0000000-00.0000.0.00.0000" with a real CNJ number (DataJud, which needs `JURIS_BRIDGE_DATAJUD_API_KEY`). `list_coverage` answers with no network call, so it shows only that the server is reachable and the Bearer key is accepted.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Usage
+
+### Running the server
+
+The same image runs everywhere; it only reads environment variables (see `.env.example`).
+
+```bash
+# uv
+JURIS_BRIDGE_SERVER_API_KEYS=my-key JURIS_BRIDGE_DATAJUD_API_KEY=... uv run python -m juris_bridge_mcp.main
+
+# container (MCP endpoint: http://localhost:8000/mcp, Authorization: Bearer my-key)
+docker build -t juris-bridge-mcp .
+docker run --rm -p 8000:8000 --env-file .env juris-bridge-mcp
+```
+
+The AWS Reference deployment (Lambda + Function URL, Terraform) lives in
+[`deploy/aws/`](deploy/aws/README.md); run `deploy/aws/deploy.sh`. See the
+[AWS Reference deployment diagram](docs/diagrams/assets/04-aws-deployment.svg).
+
+### Getting a Norm and its text
+
+`get_legislation` takes the metadata from the Senado and, on request, the text from the
+Planalto, then Câmara Legin, then metadata and links only. `content_kind` and `warnings` say
+which one supplied it.
+
+![get_legislation text fallback chain](docs/diagrams/assets/03-get-legislation.svg)
+
+### Searching Publications
+
+`search_publications` reads `query` itself, since the DJEN takes the text as one ordered,
+adjacent phrase and has no operators:
+
+| Write | Meaning |
+|---|---|
+| `recurso especial` | both words (a space is AND) |
+| `"dano moral"` | the words together and in order |
+| `dano OR consumidor` | either group, up to 3 groups; results are united without duplicates |
+| `-honorários` or `-"erro médico"` | exclude, up to 8 in all |
+
+Each group asks the DJEN for its longest phrase, otherwise its longest word (at least 5
+characters); the rest of the group filters the text here, ignoring case and accents and
+matching by word prefix (`recurso` finds `recursos`; there is no stemming). The word asked of
+the DJEN is matched exactly by it, so add an OR group for another form of it.
+
+With `cnj_number` (masked or 20 digits) the search lists the Publications of that Case: the
+court is derived from the number (or checked against `court`), `query` is optional and filters
+here only, with no minimum term length. For the Case itself, call `get_case`.
+
+The window is read one day at a time, newest first, with at most 10 DJEN requests per call.
+`complete` is true when the search reached the end of the window; otherwise
+`incomplete_reason` says why: `budget` (more follows, pass `next_cursor` back as `cursor`),
+`slice_cap` or `depth_ceiling` (the DJEN stops counting at 10,000 matches of a day and paging
+after about 10,000 of a slice, so narrow the query). A day at the count cap is split by Issuing
+body, using the catalog shipped with the server ([ADR 0007](docs/adr/0007-issuing-body-catalog-from-a-maintainer-script.md)).
+
+![search_publications flow](docs/diagrams/assets/05-search-publications.svg)
+
+### Coverage
+
+`list_coverage` states, per Source and Court, what can be answered, with no network call.
+
+| Source | Kind | Covered | Not covered |
+|---|---|---|---|
+| DataJud | Cases | 91 Courts by alias (`tjsp`, `trf1`, `tre-sp`...) | STF |
+| DJEN | Publications | every DataJud Court but the TREs; `available_from` gives the first day with data known | STF and the TREs: `not_covered`, with no fallback to portals |
+| BNP | Precedents | 93 bodies (STF, STJ, TST, the TRFs, TRTs, TJs...); TNU is listed by its sigla | holds only what courts send it, so coverage is very uneven and an empty result proves nothing |
+| Senado | Legislation | federal norms | |
+
+The DJEN is no archive: it holds Publications from about 2021 onward and from later for
+many Courts (TJSP from 2025-03, STJ from 2024-12), and a Court without `available_from` has no
+known start. A window ending before a Court's start is `not_covered`. Results can be
+non-exhaustive.
+
+The BNP has no documented API: the server reads the JSON backend its public web app calls, with
+no key (ADR 0008). That backend can change without notice, so an answer in an unknown shape is
+`source_changed`. It counts no further than 10,000 matches, updates about twice a month, and
+its date filter reads `DD/MM/YYYY` only (the server converts for you).
+
+### Known limits
+
+The rate limit and cache are explained further in [docs/known-limits.md](docs/known-limits.md).
+
+- The rate limiter is **per instance**: each warm environment counts on its own, so
+  several instances can together exceed a Source's limit (DataJud: 120 req/min).
+- The in-memory cache is **per warm environment**: it is lost on cold start and
+  not shared between instances.
+- A DJEN day at the 10,000-item cap is split by Issuing body from a catalog shipped with the
+  server. A body missing from both the catalog and the day's first page goes unnoticed; see
+  [docs/known-limits.md](docs/known-limits.md). The maintainer refreshes the catalog with
+  `scripts/build_issuing_body_catalog.py`.
+- The `revoked` and `superseded` flags of a norm article rest on the Planalto markup (a
+  `(Revogado ...)` note, or a struck-through opening line). Older pages mark them
+  inconsistently, so a revoked article can be missed or a current one flagged.
+- An article runs to the next article or heading. A rubric the parser does not recognise as a
+  title can still trail an article in older norms.
+- Planalto page paths are built by convention, as there is no index by URN. Norms without a
+  convention (a `mensagem`, old provisional measures) and some pre-2004 layouts return metadata
+  and a warning, not the text, unless Câmara Legin has them.
+- When the Planalto has no page or refuses, the text comes from Câmara Legin, whose URL is not
+  derivable from the URN and is read off the LexML URN page and the Câmara data sheet. If the
+  LexML portal serves its security challenge, the server does not solve it and the call is
+  `source_blocked`. The Legin text carries few Annotations, its `warnings` give the amending
+  norms from the data sheet as hints only, and a very large consolidated page (e.g. Lei
+  14.133) may time out at the Câmara (`source_unavailable`, retryable).
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Roadmap
 
-- [ ] First milestone
+- [x] Nine read-only tools over DataJud, the DJEN, the BNP and the Senado, with Planalto and Câmara Legin text
+- [x] Container and AWS Reference deployment
+- [x] Docs, responsible use and diagrams (#32)
+- [ ] Issuing body catalog for the remaining DJEN Courts (#84)
+- [ ] Case law text and more Courts (see the open issues)
 
 See the [open issues](https://github.com/emvalencaf/juris-bridge-mcp/issues) for proposed features and known issues.
 
@@ -101,7 +270,9 @@ Coding and documentation rules are in [CODE_STANDARDS.md](CODE_STANDARDS.md).
 
 ## License
 
-No license has been chosen yet.
+Distributed under the Apache-2.0 licence. See [LICENSE](LICENSE).
+
+**Responsible use.** The code is Apache-2.0, but the data is not. DataJud's terms allow only lawful, non-commercial use and forbid redistributing information derived from it, so run your own instance with your own DataJud key and keep the results for your own use. A shared instance needs written CNJ authorization. For Cases the server returns DataJud metadata only, has no party, judge or CPF search, and never logs search text, CNJ numbers or payloads. Publications carry party names, which are personal data under the LGPD. Read [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md) before you deploy it.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

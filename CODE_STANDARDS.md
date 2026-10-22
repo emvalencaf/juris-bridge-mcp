@@ -25,47 +25,41 @@ of repeating their values.
 
 ## Architecture
 
-Modular and layered, one concept per module, following FastMCP's server model
-([ADR 0001](docs/adr/0001-vertical-slices-on-fastmcp.md)).
+Layered (hexagonal) at the top of the package, with FastMCP as the inbound adapter
+([ADR 0005](docs/adr/0005-layers-at-the-top.md), which supersedes
+[ADR 0001](docs/adr/0001-vertical-slices-on-fastmcp.md)).
 
-| Path (under `juris_bridge_mcp/`) | Role |
+| Path (under `juris_bridge_mcp/`) | Holds |
 |---|---|
-| `main.py` | Entry point: reads settings, starts the server |
-| `bootstrap.py` | Composition root: builds shared clients, mounts one FastMCP sub-server per module on the root server |
-| `config/` | One settings class per concern (`server.py`, `http.py`, `datajud.py`), each with its own `JURIS_BRIDGE_<CONCERN>_` env prefix; shared base in `base.py` |
-| `health.py` | Plain HTTP routes outside MCP |
-| `modules/<concept>/` | A self-contained vertical slice, one per concept (see below) |
-| `providers/<name>/` | External service: `client.py` (transport), `queries.py`, `schemas.py`, `errors.py`; shared by modules, knows nothing of any domain |
-| `shared/` | Cross-cutting errors, HTTP client factory, observability |
-
-Inside `modules/<concept>/`, five sibling folders (flat, none nested in another):
-
-| Folder | Holds |
-|---|---|
-| `domain/` | Entities, value objects and domain errors; pure, imports only `shared/` |
-| `ports/` | The interfaces (`Protocol`s) the module needs or offers; one per file |
+| `main.py` | Entry point: reads settings, prints the startup notice, starts the server |
+| `config/` | One settings class per concern (`server.py`, `http.py`, `datajud.py`, `senado.py`), each with its own `JURIS_BRIDGE_<CONCERN>_` env prefix; shared base in `base.py` |
+| `domain/` | Entities, value objects, domain errors and the Error codes; pure, imports nothing else of the package |
+| `ports/` | The interfaces (`Protocol`s) the application needs or offers; one per file |
 | `application/use_cases/` | One use case per file; depends on `ports/` and `domain/` only |
-| `adapters/` | Implementations of ports (e.g. `datajud_case_repository.py`) and the module's inbound adapter (`mcp_tools.py`, a FastMCP sub-server) |
-| `infrastructure/` | Technical wiring of the module (`container.py`: builds adapters, injects them into use cases, returns the sub-server) |
+| `adapters/` | Implementations of ports (e.g. `datajud_case_repository.py`) and inbound adapters: FastMCP sub-servers (`<concept>_mcp_tools.py`) and the ASGI Bearer auth middleware |
+| `infrastructure/` | Technical wiring: `bootstrap.py`, the composition root that builds adapters, injects them into use cases and mounts one FastMCP sub-server per concept on the root server |
 
-Any of these folders may contain subdirectories that group related files by
-sub-concept, e.g. `application/use_cases/movements/`, `adapters/datajud/` or
-`ports/repositories/`. Rules: create one when about three or more files share a
-sub-concept (not before), name it after the sub-concept (never `misc` or `utils`),
-and keep it to one level unless a second one clearly pays off. Subdirectories do
-not change the dependency rule below, and imports stay absolute from the package
-root.
+Any layer folder may contain subdirectories that group related files by
+sub-concept, e.g. `adapters/cases/`, `adapters/datajud/` or
+`application/use_cases/cases/`. Rules: create one when about three or more files
+share a sub-concept (not before), name it after the sub-concept (never `misc`,
+`utils` or `shared`), and keep it to one level unless a second one clearly pays
+off. Subdirectories do not change the dependency rule below, and imports stay
+absolute from the package root.
 
-Adding a concept means adding a `modules/<concept>/` folder and one `app.mount(...)`
-line in `bootstrap.py`. Rules: one concept per module, one responsibility per file,
-modules do not import each other (share through `shared/` or a port). Settings are
-never read outside `config/` and `main.py`; they reach other code as arguments.
+Adding a concept means adding its files to each layer and one `app.mount(...)` line
+in `infrastructure/bootstrap.py`. Rules: one responsibility per file; code for one
+concept does not import another concept's files (share through `domain/` or a
+port); external services (DataJud, Senado, Planalto) are adapters, their transport
+and schemas grouped in a sub-concept folder. Settings are never read outside
+`config/` and `main.py`; they reach other code as arguments. Tool names stay unique
+across concepts, since sub-servers are mounted without a namespace.
 
 Dependency rule (arrows are "may import"):
-`adapters` → `application` → `ports` → `domain`; `infrastructure` → everything in
-its module. `domain` imports no other layer; `ports` and `application` never import
-`adapters`, `infrastructure` or `providers`. Tests mirror it:
-`tests/unit/modules/`, `tests/contract/providers/`, `tests/integration/mcp/`.
+`adapters` → `application` → `ports` → `domain`; `infrastructure` → everything.
+`domain` imports no other layer; `ports` and `application` never import `adapters`
+or `infrastructure`. Tests mirror the layers: `tests/unit/<layer>/`,
+`tests/contract/providers/`, `tests/integration/mcp/`.
 
 ## Documentation
 
@@ -81,7 +75,9 @@ its module. `domain` imports no other layer; `ports` and `application` never imp
   does this for you.
 - Do not add badges that point to a private repository (they render broken), and
   do not put personal e-mail addresses in the README; link the GitHub profile.
-- Update the README in the same PR as the change it describes.
+- Update the README in the same PR as the change it describes, and mirror the change in
+  `README.pt-BR.md`, the Portuguese translation linked by the language badges (the English
+  `README.md` prevails when they differ).
 
 ## Skills
 
@@ -130,3 +126,5 @@ its module. `domain` imports no other layer; `ports` and `application` never imp
 - [ ] Skill frontmatter complete; `.claude/skills` symlink present
 - [ ] No secrets, tokens or personal data
 - [ ] [CHANGELOG.md](CHANGELOG.md) updated
+- [ ] Release PR to `master` only: a module, flow or ADR illustrated by a diagram changed → regenerate it
+  ([docs/diagrams](docs/diagrams/README.md))

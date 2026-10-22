@@ -4,4 +4,5 @@
 * [Error codes](/domain/errors.md) - closed set of eight
 * [Cursor](/domain/cursor.md) - stateless paging token
 * [Publication model](/domain/publication-model.md) - query, kind, relevance
+* [Precedent model](/domain/precedent-model.md) - Precedent, kinds, BNP body table
 * [Legislation model](/domain/legislation-model.md) - URN Lex and articles

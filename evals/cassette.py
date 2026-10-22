@@ -33,7 +33,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 import httpx
-from fastmcp import Client
+from fastmcp import Client, FastMCP
 from pydantic import SecretStr
 
 from juris_bridge_mcp.config.bnp import BnpSettings
@@ -175,11 +175,9 @@ class ReplaySession:
         return self.transport.misses
 
 
-@asynccontextmanager
-async def replay_session(cassette: Cassette) -> AsyncIterator[ReplaySession]:
-    """Build the real server over `cassette` and yield a connected in-memory client."""
-    transport = ReplayTransport(cassette)
-    server = build_server(
+def build_eval_server(transport: httpx.AsyncBaseTransport) -> FastMCP[Any]:
+    """Build the real server with every Source reached through `transport`."""
+    return build_server(
         datajud=DatajudSettings(api_key=SecretStr("replay-key")),
         djen=DjenSettings(),
         bnp=BnpSettings(),
@@ -189,5 +187,11 @@ async def replay_session(cassette: Cassette) -> AsyncIterator[ReplaySession]:
         legin=LeginSettings(),
         transport=transport,
     )
-    async with Client(server) as client:
+
+
+@asynccontextmanager
+async def replay_session(cassette: Cassette) -> AsyncIterator[ReplaySession]:
+    """Build the real server over `cassette` and yield a connected in-memory client."""
+    transport = ReplayTransport(cassette)
+    async with Client(build_eval_server(transport)) as client:
         yield ReplaySession(client, transport)

@@ -25,7 +25,7 @@ from evals.llm import (
     LLMClient,
     RateLimiter,
     RequestBudget,
-    SingleKeySource,
+    key_source_from,
 )
 from evals.tool_use import TOOL_USE, register_metrics
 
@@ -106,20 +106,17 @@ def run_eval(
 
 
 def gemini_agent_client(settings: EvalLLMSettings) -> GeminiClient:
-    """Build the agent's Gemini client from settings: real clock, one key, run-capped.
+    """Build the agent's Gemini client from settings: real clock, keys per settings, run-capped.
 
     Raises:
         ValueError: When no `GEMINI_API_KEY` is set.
     """
-    keys = settings.api_keys()
-    if not keys:
-        raise ValueError("set GEMINI_API_KEY (or GEMINI_API_KEYS) to run the agent")
     limiter = RateLimiter(
         settings.requests_per_minute, settings.tokens_per_minute, time.monotonic, time.sleep
     )
     return GeminiClient(
         settings.agent_model,
-        SingleKeySource(keys[0]),
+        key_source_from(settings),
         limiter,
         RequestBudget(settings.request_cap),
         settings,

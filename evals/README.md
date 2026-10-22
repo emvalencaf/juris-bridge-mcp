@@ -64,6 +64,7 @@ tickets of the spec.
 | `dataset.py` | Loads Eval cases from the split folders |
 | `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
 | `cassette.py` | The Cassette format and the transport that replays it in place of the network; a request with no recording is a counted miss answered as `source_unavailable` |
+| `record.py` | Record mode: `record_case()` forwards the server's requests to the live Sources (opt-in), redacts and paces them, and saves a Cassette |
 | `cassettes/` | One `<case id>.json` Cassette per Eval case, with its recording date |
 | `cases/tuning/`, `cases/validation/`, `cases/drafts/` | Eval cases as plain JSON lists, split by folder; drafts count toward no result |
 | `cases/seed/` | Three fictitious Eval cases that run against the seed Cassettes; they count toward no result |
@@ -178,8 +179,45 @@ from the AI Studio rate-limit page of your project; they are per project and per
 * Every attempt counts toward the run cap, `min(EVALS_MAX_REQUESTS_PER_RUN,
   EVALS_REQUESTS_PER_DAY)`; past it the client raises `RequestCapReached`.
 * The key travels in a header and is never in a log, error, `repr` or result; calls are
-  identified by a key alias. Key rotation and resuming a stopped run are a later ticket (#96);
-  `KeySource` is the seam for it.
+  identified by a key alias (`ChatResult.key_alias`).
+
+### Key rotation and resuming a run
+
+Rotation is **off by default**: with `GEMINI_API_KEY` alone, or with rotation off, the first key
+is used exactly as before. To opt in, set `EVALS_ROTATE_KEYS=true` and give two or more keys in
+`GEMINI_API_KEYS` (comma-separated). `key_source_from(settings)` builds the right `KeySource`.
+
+* **Quotas are per project, not per key.** Rotation helps only across keys that belong to
+  **different** Google projects; several keys of one project share one quota and gain nothing.
+* A 429 is treated as daily-quota exhaustion when its body names a per-day quota (`...PerDay...`,
+  "per day" or "daily"); the key is then skipped for the rest of the run and the call moves to the
+  next key at once, without waiting or spending a retry. This is an **assumption**: the docs map
+  429 to `quota_exceeded` (daily) and `rate_limit_exceeded` (per minute) but do not publish the
+  body shape ([research](../docs/research/gemini-free-tier-rate-limits.md)). Any other 429 is a
+  per-minute limit and is retried with backoff on the same key.
+* When every key is exhausted the client raises `AllKeysExhausted`. The runner stops there; the
+  daily quota resets at midnight Pacific time, so resume after that.
+* Aliases are `key-1`, `key-2`, ... by position. Only the alias is recorded, never the key.
+
+`evals.progress.Progress` is the resumable store the runner wraps around each unit of work:
+
+```python
+progress = Progress(Path("evals/results/progress-tuning.json"))   # git-ignored
+try:
+    for case in cases:
+        for repetition in range(3):
+            output = progress.run(unit_key(case.id, repetition), lambda: run_agent(case))
+except AllKeysExhausted:
+    ...  # progress is already saved; run the same command again after the quota resets
+```
+
+`run(key, work)` returns the stored output for a finished unit and otherwise calls `work`, saves
+its JSON-serializable output (atomically, after every unit) and returns it. A unit that raises is
+not recorded, so a resumed run repeats only the unfinished calls. Also available: `is_done`,
+`get`, `record`, `clear` and `len`.
+
+**Risk.** Using several keys to widen a free quota is the maintainer's own risk: Google's wider
+terms of service were not read for this feature, and may restrict it.
 
 ### Redaction of personal data
 
@@ -210,6 +248,38 @@ What the name redaction misses (names that stay in the text):
 It also over-redacts: a capitalised run that is not a person (a street, a company, a
 place such as `Praça Tiradentes`, a sentence start followed by a proper noun) becomes
 `[NOME]`, and runs of whitespace inside a redacted run collapse to one space.
+
+### Recording Cassettes
+
+Record mode is off by default and never runs in tests (they use a scripted upstream). To
+record the Cassette of an Eval case from the live DJEN, BNP and other Sources, opt in with
+`JURIS_BRIDGE_EVALS_RECORD=1` (same style as `JURIS_BRIDGE_LIVE_BNP`):
+
+```python
+from evals.record import record_case
+
+async def run(client):
+    await client.call_tool("search_publications", {"court": "tjsp", ...})
+
+path = await record_case("my-case-id", run)   # evals/cassettes/my-case-id.json
+```
+
+Without the variable `recording_session` / `record_case` raise `RecordingDisabledError` before
+any transport exists, so no live request is possible. `run` gets an MCP client on the real
+server; the recording transport sits under it (as the replay one does), keys requests with
+`request_key`, redacts each response with `redact` (JSON bodies keep keys and structure; only
+string values change), keeps only the `content-type` header and writes a Cassette dated with
+the day of recording. A run that raises saves nothing. Replay it with `replay_session`.
+
+Responsible use ([RESPONSIBLE_USE.md](../RESPONSIBLE_USE.md)):
+
+* Recording is read-only: it forwards only what the server's read tools request.
+* Requests are spaced at least `min_interval` seconds apart (default 1 s, under DataJud's 120
+  per minute; the BNP and DJEN limits are undocumented), on top of the server's own limiter.
+  Keep the number of cases and calls low.
+* Redaction of names is heuristic: read a new Cassette before committing it. The request key
+  is stored verbatim, so never record a query containing personal data.
+* Do not redistribute DataJud-derived Cassettes outside your own non-commercial use.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

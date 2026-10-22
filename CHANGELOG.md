@@ -13,7 +13,8 @@ heading when `development` is released to `master`.
   (súmulas, repercussão geral themes, repetitive appeals, IRDRs, IACs) through the JSON backend of
   its public app, with Cursor paging up to the Source's 10,000-result ceiling, best-effort
   decisions, a short in-memory cache, `list_coverage` listing the 93 BNP bodies and an opt-in live
-  drift check (`JURIS_BRIDGE_LIVE_BNP=1`). ADR 0008 records the Source; the glossary gains
+  drift check (`JURIS_BRIDGE_LIVE_BNP=1`); the OKF wiki, `known-limits.md` and
+  `RESPONSIBLE_USE.md` describe the BNP. ADR 0008 records the Source; the glossary gains
   Precedent and Precedent kind.
 - Portuguese README: `README.pt-BR.md` translates the README, and language badges at the top of
   both link them.

@@ -14,8 +14,8 @@ from juris_bridge_mcp.ports.precedent_source import PrecedentSource
 class CachedPrecedentSource:
     """Wraps a source; the BNP changes about twice a month, so answers keep for hours.
 
-    Only found Precedents and non-failing answers are cached, so a missing or failing lookup
-    is asked again.
+    Only found Precedents and decisions with a text are cached, so a missing, failing or empty
+    answer is asked again.
     """
 
     def __init__(self, inner: PrecedentSource, cache: Cache, *, ttl_seconds: float) -> None:
@@ -54,7 +54,10 @@ class CachedPrecedentSource:
         key = f"precedent-decisions:{precedent_id}"
         cached = self._cache.get(key)
         if cached is not None:
+            wide_event.annotate(cache="hit")
             return cached  # type: ignore[no-any-return]
+        wide_event.annotate(cache="miss")
         result = await self._inner.decisions(precedent_id)
-        self._cache.set(key, result, ttl_seconds=self._ttl)
+        if result.texts:
+            self._cache.set(key, result, ttl_seconds=self._ttl)
         return result

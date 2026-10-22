@@ -1,5 +1,6 @@
 """Presents the Precedent use-case results as the Normalized result an MCP client receives."""
 
+from datetime import date
 from typing import Any
 
 from juris_bridge_mcp.adapters.presentation import iso_utc
@@ -48,6 +49,10 @@ def present_precedent(result: PrecedentResult) -> dict[str, Any]:
     return presented
 
 
+def _iso(day: date | None) -> str | None:
+    return day.isoformat() if day else None
+
+
 def _item(precedent: Precedent) -> dict[str, Any]:
     return {
         "id": precedent.id,
@@ -61,7 +66,7 @@ def _item(precedent: Precedent) -> dict[str, Any]:
         "status": precedent.status,
         "question": precedent.question,
         "thesis": precedent.thesis,
-        "updated_on": precedent.updated_on.isoformat() if precedent.updated_on else None,
+        "updated_on": _iso(precedent.updated_on),
         "matched_terms": list(precedent.matched_terms),
     }
 
@@ -70,9 +75,9 @@ def _status(entry: StatusEntry) -> dict[str, Any]:
     return {
         "status": entry.status,
         "recorded_at": iso_utc(entry.recorded_at),
-        "admitted_on": entry.admitted_on.isoformat() if entry.admitted_on else None,
-        "judged_on": entry.judged_on.isoformat() if entry.judged_on else None,
-        "published_on": entry.published_on.isoformat() if entry.published_on else None,
+        "admitted_on": _iso(entry.admitted_on),
+        "judged_on": _iso(entry.judged_on),
+        "published_on": _iso(entry.published_on),
     }
 
 
@@ -89,7 +94,7 @@ def _leading_case(case: LeadingCase) -> dict[str, Any]:
 def _suspension(suspension: Suspension) -> dict[str, Any]:
     return {
         "active": suspension.active,
-        "started_on": suspension.started_on.isoformat() if suspension.started_on else None,
+        "started_on": _iso(suspension.started_on),
         "description": suspension.description,
     }
 

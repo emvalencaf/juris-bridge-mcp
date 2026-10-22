@@ -1,5 +1,6 @@
 """The BNP as the Source of Precedents: the JSON backend its web app calls, read anonymously."""
 
+from datetime import date
 from typing import Any
 
 import httpx
@@ -31,9 +32,14 @@ _ORDERING = "Text"
 _FIND_PAGE_SIZE = 10
 
 
-def _br_date(value: Any) -> str:
-    """The BNP reads dates as `DD/MM/YYYY` and ignores ISO ones."""
-    return value.strftime("%d/%m/%Y")  # type: ignore[no-any-return]
+def _to_br_date(value: date) -> str:
+    """The BNP reads dates in its filters as `DD/MM/YYYY` and ignores ISO ones."""
+    return value.strftime("%d/%m/%Y")
+
+
+def _number_filter(number: str) -> int | str:
+    """The BNP's `nr` filter takes a number as an int and anything else as text."""
+    return int(number) if number.isdigit() else number
 
 
 class BnpPrecedentSource:
@@ -62,10 +68,11 @@ class BnpPrecedentSource:
     async def find(self, precedent_id: str) -> PrecedentRecord | None:
         """Look the id up by body, kind and number, since the BNP has no read-by-id endpoint."""
         body_part, kind, number = precedent_id.split("-", 2)
+        # `filtro` is the BNP's own name for the body of a search.
         filtro = {
             "orgaos": [body_part.upper()],
             "tipos": [kind.upper()],
-            "nr": int(number) if number.isdigit() else number,
+            "nr": _number_filter(number),
             "cancelados": True,
             "ordenacao": _ORDERING,
             "pagina": 1,
@@ -104,11 +111,11 @@ class BnpPrecedentSource:
         if filters.query:
             filtro["buscaGeral"] = filters.query
         if filters.number:
-            filtro["nr"] = int(filters.number) if filters.number.isdigit() else filters.number
+            filtro["nr"] = _number_filter(filters.number)
         if filters.updated_from:
-            filtro["atualizacaoDesde"] = _br_date(filters.updated_from)
+            filtro["atualizacaoDesde"] = _to_br_date(filters.updated_from)
         if filters.updated_to:
-            filtro["atualizacaoAte"] = _br_date(filters.updated_to)
+            filtro["atualizacaoAte"] = _to_br_date(filters.updated_to)
         return filtro
 
     async def _search(self, filtro: dict[str, Any]) -> dict[str, Any]:

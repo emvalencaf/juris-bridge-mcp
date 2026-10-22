@@ -33,23 +33,16 @@ def _text(item: dict[str, Any], key: str) -> str | None:
     return plain_text(value) or None
 
 
-def _br_date(value: Any) -> date | None:
-    """Parse the `DD/MM/YYYY` the BNP uses in some fields; anything else reads as unknown."""
+def _date(value: Any) -> date | None:
+    """Parse a day in either format the BNP mixes (`DD/MM/YYYY` or ISO); else unknown."""
     if not isinstance(value, str):
         return None
-    try:
-        return datetime.strptime(value, "%d/%m/%Y").date()
-    except ValueError:
-        return None
-
-
-def _iso_date(value: Any) -> date | None:
-    if not isinstance(value, str):
-        return None
-    try:
-        return date.fromisoformat(value[:10])
-    except ValueError:
-        return None
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value[:10], fmt).date()
+        except ValueError:
+            continue
+    return None
 
 
 def _moment(value: Any) -> datetime | None:
@@ -117,9 +110,9 @@ def map_precedent(item: Any) -> Precedent:
             StatusEntry(
                 status=_text(entry, "situacao") or "",
                 recorded_at=_moment(entry.get("dataCriacao")),
-                admitted_on=_iso_date(entry.get("dataAdmissao")),
-                judged_on=_iso_date(entry.get("dataJulgamento")),
-                published_on=_iso_date(entry.get("dataPublicacao")),
+                admitted_on=_date(entry.get("dataAdmissao")),
+                judged_on=_date(entry.get("dataJulgamento")),
+                published_on=_date(entry.get("dataPublicacao")),
             )
             for entry in _list(item, "historico")
         ),
@@ -129,12 +122,12 @@ def map_precedent(item: Any) -> Precedent:
         suspensions=tuple(
             Suspension(
                 active=entry["ativa"] if isinstance(entry.get("ativa"), bool) else None,
-                started_on=_br_date(entry.get("dataSuspensao")),
+                started_on=_date(entry.get("dataSuspensao")),
                 description=_text(entry, "descricao"),
             )
             for entry in _list(item, "suspensoes")
         ),
-        updated_on=_br_date(item.get("ultimaAtualizacao")),
+        updated_on=_date(item.get("ultimaAtualizacao")),
         matched_terms=_matched_terms(item),
     )
 

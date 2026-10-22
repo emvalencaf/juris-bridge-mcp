@@ -206,3 +206,5 @@ About 25 read-only requests, honest User-Agent, no volume. Corrections to sectio
 - An empty search answers 200 with `resultados: []` and `total: 0`.
 - STJ `processosParadigma[].numero` was a valid 20-digit CNJ number (check digit included).
 - `textos` of `/decisoes` was empty again in the cases tried (STF RG 1002, STJ RR 328).
+- **`cancelados: true` includes** the cancelled records (STF SUM: 734 against 726 with `false`),
+  so it is a superset and not a "only cancelled" filter.

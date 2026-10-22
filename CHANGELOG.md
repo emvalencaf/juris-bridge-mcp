@@ -7,6 +7,8 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-22
+
 ### Added
 
 - Precedents (#85): `search_precedents` and `get_precedent` read the Banco Nacional de Precedentes
@@ -24,8 +26,9 @@ heading when `development` is released to `master`.
   appears. `scripts/build_issuing_body_catalog.py` builds the catalog by hand (ADR 0007). The
   Cursor now carries the catalog position and version (**Break:** earlier publication cursors
   are `invalid_argument`; one from another catalog version asks to restart). The shipped catalog
-  covers 32 of the 64 DJEN Courts (the state courts are still missing, see #84); a Court with no
-  entry behaves as before.
+  covers 63 of the 64 DJEN Courts (the TSE is still missing, see #84); a Court with no entry
+  behaves as before. The build script saves after each day it reads and retries a 429, a 5xx or a
+  dropped connection with a growing wait.
 - List the DJEN Coverage (#73): `list_coverage` adds the `djen` Source (Publications) with the
   Courts that publish there, the `available_from` date known for each and the Courts that are
   `not_covered` (STF and the TREs) with a `reason`. It reads the same module as

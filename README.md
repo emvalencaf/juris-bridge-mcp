@@ -58,7 +58,7 @@
 
 A remote, extensible and testable MCP server that gives AI agents access to Brazilian judicial data through a unified interface. Bridging AI Agents with Brazil's judicial ecosystem.
 
-It exposes seven read-only tools over three Sources, and every result is a Normalized result with its Source, a Citation and a Content kind:
+It exposes nine read-only tools over four Sources, and every result is a Normalized result with its Source, a Citation and a Content kind:
 
 | Tool | What it does |
 |---|---|
@@ -66,6 +66,8 @@ It exposes seven read-only tools over three Sources, and every result is a Norma
 | `get_case` | Fetch one Case by its CNJ number; the Court is derived from the number |
 | `search_publications` | Search the Publications of a Court released in a window of up to 31 days, newest day first, with a cursor and `complete`/`incomplete_reason` (DJEN, metadata and a plain-text excerpt, classified by `kind` with despachos and notices dropped; party names are personal data under the LGPD) |
 | `get_publication` | Read the full plain text of one Publication by the `id` a search returned, in slices chained by a cursor (DJEN, `full_text`) |
+| `search_precedents` | Search the Precedents (súmulas, repercussão geral themes, repetitive appeals, IRDRs, IACs...) of the Banco Nacional de Precedentes by text, Court, kind, number and update date, with a cursor and `total_is_capped` (BNP, metadata; status is the Source's own text) |
+| `get_precedent` | Fetch one Precedent by the `id` a search returned, with its status history, suspensions, leading Cases (a `cnj_number` only when valid, to chain into `get_case`) and, when the BNP has them, its decisions |
 | `search_legislation` | Find a Norm by type, number and year (Senado) |
 | `get_legislation` | Fetch a Norm by URN Lex, with its text from the Planalto or, as a fallback, Câmara Legin |
 | `list_coverage` | State what the server can and cannot answer, by Source and Court |
@@ -202,12 +204,18 @@ body, using the catalog shipped with the server ([ADR 0007](docs/adr/0007-issuin
 |---|---|---|---|
 | DataJud | Cases | 91 Courts by alias (`tjsp`, `trf1`, `tre-sp`...) | STF |
 | DJEN | Publications | every DataJud Court but the TREs; `available_from` gives the first day with data known | STF and the TREs: `not_covered`, with no fallback to portals |
+| BNP | Precedents | 93 bodies (STF, STJ, TST, the TRFs, TRTs, TJs...); TNU is listed by its sigla | holds only what courts send it, so coverage is very uneven and an empty result proves nothing |
 | Senado | Legislation | federal norms | |
 
 The DJEN is no archive: it holds Publications from about 2021 onward and from later for
 many Courts (TJSP from 2025-03, STJ from 2024-12), and a Court without `available_from` has no
 known start. A window ending before a Court's start is `not_covered`. Results can be
 non-exhaustive.
+
+The BNP has no documented API: the server reads the JSON backend its public web app calls, with
+no key (ADR 0008). That backend can change without notice, so an answer in an unknown shape is
+`source_changed`. It counts no further than 10,000 matches, updates about twice a month, and
+its date filter reads `DD/MM/YYYY` only (the server converts for you).
 
 ### Known limits
 
@@ -241,7 +249,7 @@ The rate limit and cache are explained further in [docs/known-limits.md](docs/kn
 
 ## Roadmap
 
-- [x] Seven read-only tools over DataJud, the DJEN and the Senado, with Planalto and Câmara Legin text
+- [x] Nine read-only tools over DataJud, the DJEN, the BNP and the Senado, with Planalto and Câmara Legin text
 - [x] Container and AWS Reference deployment
 - [x] Docs, responsible use and diagrams (#32)
 - [ ] Issuing body catalog for the remaining DJEN Courts (#84)

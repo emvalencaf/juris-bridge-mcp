@@ -9,10 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
-- Precedents, domain and use cases (#85): `search_precedents` and `get_precedent` logic behind a
-  `PrecedentSource` port, with the BNP body-to-Court table, Cursor paging up to the Source's
-  10,000-result ceiling and best-effort decisions. No tool or adapter yet; ADR 0008 records the
-  BNP as the Source and the glossary gains Precedent and Precedent kind.
+- Precedents (#85): `search_precedents` and `get_precedent` read the Banco Nacional de Precedentes
+  (súmulas, repercussão geral themes, repetitive appeals, IRDRs, IACs) through the JSON backend of
+  its public app, with Cursor paging up to the Source's 10,000-result ceiling, best-effort
+  decisions, a short in-memory cache, `list_coverage` listing the 93 BNP bodies and an opt-in live
+  drift check (`JURIS_BRIDGE_LIVE_BNP=1`). ADR 0008 records the Source; the glossary gains
+  Precedent and Precedent kind.
 - Portuguese README: `README.pt-BR.md` translates the README, and language badges at the top of
   both link them.
 - Issuing body catalog (#77): a capped DJEN day is split by every known `orgaoId` of the Court,

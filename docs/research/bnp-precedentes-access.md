@@ -1,6 +1,6 @@
 # Research: Banco Nacional de Precedentes (BNP / Pangea) as a source for precedent tools
 
-Researched 2026-10-21. Question: for tools on precedents (sumulas, repercussao geral, repetitivos,
+Researched 2026-10-21 (see the addendum at the end for the live probe). Question: for tools on precedents (sumulas, repercussao geral, repetitivos,
 IRDR, IAC and similar), what does the CNJ Banco Nacional de Precedentes hold, and what is needed
 to consume it? Related: [decision-text-by-cnj-number.md](decision-text-by-cnj-number.md) section 6
 (BNP was only a lead there; this note replaces that section's "no API found").
@@ -186,3 +186,23 @@ string `"ADI ADC ADO ADPF"` (a UI group), so do not treat `sigla` as always one 
 - The Portaria CNJ 116/2022 annexes (data standard, list of "situacoes") and how many bodies
   actually send data today.
 - Whether the STJ CKAN `precedentes-qualificados` dataset is richer (its schema was not read).
+
+## Addendum: live probe of 2026-10-21 (implementation of #85)
+
+About 25 read-only requests, honest User-Agent, no volume. Corrections to sections 2 and 5:
+
+- **No read-by-id endpoint**: `GET /precedentes/{id}` answers 404. A single Precedent is found by
+  a search with `orgaos`, `tipos` and `nr`. `GET /precedentes/{id}/decisoes` works.
+- **`ordenacao` is required** in a search: without it the backend answers 500 for text searches
+  and for empty ones (`"Text"` and `"Data"` both work).
+- **Dates**: `atualizacaoDesde` and `atualizacaoAte` read `DD/MM/YYYY`; an ISO date is ignored
+  without an error.
+- **`aggsOrgaos` is global**: the same counts came back for different queries and body filters,
+  so it is no per-query hit count; `aggsEspecies` follows the body filter only. Both are `null`
+  in a search by `nr`. The server does not expose them.
+- Arrays `orgaos` and `tipos` may be narrowed to one value or hold all of them; all 93 bodies
+  with a text search answered in under 2 s, an empty search over all bodies in about 7 s and with
+  `total` exactly 10,000 (the cap is confirmed). An isolated 502 was seen once and not repeated.
+- An empty search answers 200 with `resultados: []` and `total: 0`.
+- STJ `processosParadigma[].numero` was a valid 20-digit CNJ number (check digit included).
+- `textos` of `/decisoes` was empty again in the cases tried (STF RG 1002, STJ RR 328).

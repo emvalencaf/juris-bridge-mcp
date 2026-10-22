@@ -13,6 +13,9 @@ heading when `development` is released to `master`.
   test run, with `assayer` in a separate `evals` dependency group. `uv run --group evals python -m evals`
   loads an empty Dataset and prints an empty Experiment. Adds ADR 0009, the Eval case and Cassette
   terms in the glossary and the research notes behind the spec.
+- Redaction of personal data (#92): `evals.redaction.redact` replaces CPF, CNPJ and, by documented
+  heuristics, names of people in Source text, leaving CNJ numbers, Court aliases and Precedent kind
+  siglas untouched.
 
 ## [0.1.0] - 2026-10-22
 

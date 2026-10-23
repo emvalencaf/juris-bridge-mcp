@@ -9,6 +9,14 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- NER redaction of names (follow-up to #90, replaces the heuristic of #92/#99): people found by
+  spaCy `pt_core_news_md` (`evals` group only, pinned wheel) become `[PESSOA N]`, numbered by a
+  `Redactor` kept per Cassette so the same person (case, accents, connectors ignored; safe
+  containment such as `João da Silva` / `JOAO SILVA`) keeps one number; DJEN structured names share
+  it. CPF is fully masked. Legal terms such as `Código de Defesa do Consumidor` and `Mérito Julgado`
+  are no longer redacted; role and title patterns remain as a fallback. `python -m
+  evals.redact_cassettes` re-applies it to saved Cassettes (a legacy `[NOME]` stays: re-record to
+  number it). ORG and LOC are untouched; redaction stays best effort.
 - Draft Publication Eval cases (#99): `python -m evals.draft_publications` (with
   `JURIS_BRIDGE_EVALS_RECORD=1`) records Cassettes from the live DJEN, paced and in small windows,
   and drafts 19 Eval cases in `evals/cases/drafts/publications.json` (10 text searches, 9 lookups

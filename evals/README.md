@@ -66,7 +66,7 @@ tickets of the spec.
 | `draft_precedents.py` | Records the drafts about Precedents, negatives and Coverage from the live BNP (`python -m evals.draft_precedents`) |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
-| `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
+| `redaction.py` | `Redactor` / `redact()`: replaces personal data in Source text with placeholders (NER names numbered `[PESSOA N]`, `[CPF]`, `[CNPJ]`) | |
 | `cassette.py` | The Cassette format and the transport that replays it in place of the network; a request with no recording is a counted miss answered as `source_unavailable` |
 | `record.py` | Record mode: `record_case()` forwards the server's requests to the live Sources (opt-in), redacts and paces them, and saves a Cassette |
 | `cassettes/` | One `<case id>.json` Cassette per Eval case, with its recording date |
@@ -259,7 +259,7 @@ The report prints the Experiment, then **Consistency** (passing runs and PASS/FA
 A tool that failed twice or more with the same arguments inside a case is flagged `FLAG`: the
 model tried the same thing again, which points at a tool description that does not say how to
 call it (a failure naming `source_unavailable` is a Source, not arguments, and is not counted).
-The limits state that name redaction is heuristic, that the agent is a small model whose scores
+The limits state that name redaction is NER-based and best effort, that the agent is a small model whose scores
 do not transfer to a stronger one, how many cassette misses occurred, and, when the agent and
 judge model names share a family prefix (`gemini-...`), that the judge may favour the agent.
 Sections are plain functions in `evals.report.SECTIONS`; a new metric appends its own.
@@ -354,38 +354,61 @@ terms of service were not read for this feature, and may restrict it.
 
 ### Redaction of personal data
 
-`evals.redaction.redact(value)` takes Source text (or a JSON-like structure of it) and
-returns the same shape with personal data replaced, before a response is stored or sent
-to a model.
+`evals.redaction.Redactor().redact(value)` takes Source text (or a JSON-like structure of
+it) and returns the same shape with personal data replaced, before a response is stored or
+sent to a model. `redact(value)` is the one-off shortcut (a fresh `Redactor` per call). Record
+mode uses one `Redactor` per Cassette, so the numbering is shared by all its responses.
 
 * **CPF and CNPJ** become `[CPF]` and `[CNPJ]`, by their fixed patterns, with or without
-  punctuation. An unpunctuated run of 11 or 14 digits is taken as one, so an unrelated
-  number of that length is replaced too.
-* **Names of people** become `[NOME]` by **heuristics only, not a guarantee**: a name
-  after a party role (`autor`, `réu`, `requerente`, `advogado`...), and runs of two or
-  more capitalised words. Institutional words (`Tribunal`, `Justiça`, `Ministério`...)
-  split a run and are kept.
+  punctuation; no digit is kept. An unpunctuated run of 11 or 14 digits is taken as one, so an
+  unrelated number of that length is replaced too.
+* **Names of people** are found by **named-entity recognition** (spaCy, Portuguese model
+  `pt_core_news_md`; only `PER` entities, `ORG`, `LOC` and `MISC` are left alone) and become
+  `[PESSOA 1]`, `[PESSOA 2]`... The same person gets the same number across the Cassette:
+  names are compared without case, accents, extra whitespace or connectors (`João da Silva` =
+  `JOAO  SILVA`), and a name with two or more words that starts and ends like another and is
+  contained in it in order (`João Silva`, `João Carlos Silva`) is the same person. Two people
+  who share only a surname, or a name that fits more than one known person, count as different.
+  A single word (`Joana`) matches only the same word. Runs of shouted words are shown to the model
+  in title case, because it reads names in capitals poorly. Titles (`Dr.`, `Ministro`) stay.
+* **Fallback patterns** back the model up where it misses an obvious name: a name after a party
+  role (`autor`, `réu`, `advogado`...), after `Dr.`/`Sra.`, and an upper-case name right before
+  `([OAB])`, `(CPF: ...)` or a role in parentheses.
 * **Structured DJEN fields:** `nome` of a party (object with `polo`) or a lawyer (with
-  `numero_oab`) becomes `[NOME]` and `numero_oab` becomes `[OAB]`, by key; OAB registrations in
-  text (`SP405006`, `OAB/SP 123`) become `[OAB]`; names after `Dr.`/`Sra.`, after a role glued to
-  the previous word, and upper-case names right before `([OAB])`, `(CPF: ...)`, `(ID ...)` or a
-  role in parentheses are replaced.
+  `numero_oab`) is numbered like the names in the text, and `numero_oab` becomes `[OAB]`, by
+  key; OAB registrations in text (`SP405006`, `OAB/SP 123`) become `[OAB]`.
 * **Never touched:** CNJ numbers, Court aliases (`TJSP`, `TRF3`...) and Precedent kind
   siglas (`SUM`, `SV`, `RG`, `RR`, `IRDR`, `IAC`, `OJ`...), so the citation check still
-  has something to compare.
+  has something to compare. Legal terms (`Código de Defesa do Consumidor`, `Mérito Julgado`)
+  and institutions are not names.
 
-What the name redaction misses (names that stay in the text):
+The model is the `evals` dependency group only (a pinned wheel, installed by `uv sync --group
+evals`); the default `uv run --dev pytest` and CI do not need it. It loads in under a second.
 
-* a single-word name outside a role (`Joana`), nicknames and initials (`J. da Silva`);
-* names written in lower case or all caps outside a role;
-* a name after a role not in the list, or a second party after the first one's name
-  (`Réu: João Silva, Maria Souza`: only the first is certain);
-* names that contain an institutional word (`Maria Justiça Lima` is split);
+Redaction is **best effort, not a guarantee**. What it misses (names that stay in the text):
+
+* names the model does not tag: rare or foreign names, a single first name, initials
+  (`J. da Silva`), names in lower case, and names inside a long upper-case block;
+* a name inside a larger entity the model reads as one thing (`Apelação de João Silva`
+  may stay whole if tagged `MISC`);
 * people referred to by position or kinship (`o genitor`, `a síndica`).
 
-It also over-redacts: a capitalised run that is not a person (a street, a company, a
-place such as `Praça Tiradentes`, a sentence start followed by a proper noun) becomes
-`[NOME]`, and runs of whitespace inside a redacted run collapse to one space.
+It also gets things wrong the other way: a street, a company or a legal expression the model
+tags as `PER` becomes `[PESSOA N]`, and two different people with the same name are one number
+(and one person written in two unrelated ways is two). The numbers say "the same name", not
+"the same human". Words that name an institution or a role (`Tribunal`, `Ministro`...) cut a
+name, so `Maria Justiça Lima` is only partly replaced.
+
+To apply a newer redaction to Cassettes already saved, offline:
+
+```bash
+uv run --group evals python -m evals.redact_cassettes [--check] [file ...]
+```
+
+It takes `cassettes/draft-*.json` by default, renumbers the people of each Cassette with a fresh
+`Redactor`, keeps the recording date, and with `--check` writes nothing and exits 1 if anything
+would change. A `[NOME]` left by the earlier heuristic redaction stays as it is: the name is gone
+and cannot be numbered, so only a new recording gives `[PESSOA N]` there.
 
 ### Recording Cassettes
 
@@ -405,7 +428,7 @@ path = await record_case("my-case-id", run)   # evals/cassettes/my-case-id.json
 Without the variable `recording_session` / `record_case` raise `RecordingDisabledError` before
 any transport exists, so no live request is possible. `run` gets an MCP client on the real
 server; the recording transport sits under it (as the replay one does), keys requests with
-`request_key`, redacts each response with `redact` (JSON bodies keep keys and structure; only
+`request_key`, redacts each response with one `Redactor` per Cassette (JSON bodies keep keys and structure; only
 string values change), keeps only the `content-type` header and writes a Cassette dated with
 the day of recording. A run that raises saves nothing. Replay it with `replay_session`.
 
@@ -415,7 +438,7 @@ Responsible use ([RESPONSIBLE_USE.md](../RESPONSIBLE_USE.md)):
 * Requests are spaced at least `min_interval` seconds apart (default 1 s, under DataJud's 120
   per minute; the BNP and DJEN limits are undocumented), on top of the server's own limiter.
   Keep the number of cases and calls low.
-* Redaction of names is heuristic: read a new Cassette before committing it. The request key
+* Redaction of names is best effort (NER misses and false positives): read a new Cassette before committing it. The request key
   is stored verbatim, so never record a query containing personal data.
 * Do not redistribute DataJud-derived Cassettes outside your own non-commercial use.
 
@@ -480,7 +503,7 @@ paced (2 s between requests, a few requests per case); it stops at the first `so
 and does not retry. Reference ids, status, thesis and the `not_covered` reason in
 `expected_outcome` are copied from the recording, and a case whose recording does not show what
 its spec claims (a negative that found something) is dropped with its Cassette. Name redaction
-is heuristic and over-redacts legal terms (`Código de [NOME]`, a status shown as `[NOME]`);
-a thesis containing `[NOME]` is left out of the expected outcome. Drafts are unvalidated and
+is NER-based and best effort; the drafts recorded before it (#100) still show `Código de [NOME]` or a
+status as `[NOME]`, from the earlier heuristic. A thesis containing `[NOME]` is left out of the expected outcome. Drafts are unvalidated and
 count toward no result; the maintainer reviews them before moving them to a split. Search drafts
 (`kind: search`) take the top results of the day as references, which the BNP may reorder.

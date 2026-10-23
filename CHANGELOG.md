@@ -15,6 +15,12 @@ heading when `development` is released to `master`.
   reports agreement with the labels (per axis, joint, Cohen's kappa) and writes
   `evals/results/calibration.json`. The report shows the agreement beside the judge's scores and
   drops `[UNCALIBRATED]` only for a measured record. The labels file format is in `evals/README.md`.
+- Draft Precedent, negative and Coverage Eval cases (#100): `python -m evals.draft_precedents`
+  (opt-in with `JURIS_BRIDGE_EVALS_RECORD=1`, read-only, 2 s between requests) records one
+  redacted, dated Cassette per case from the live BNP and writes 20 drafts to
+  `evals/cases/drafts/precedents.json` (11 Precedent lookups and topic searches, 5 negatives
+  the BNP really answers with no result, 4 `list_coverage` / `not_covered`). Expected values
+  are copied from the recordings; a case whose recording contradicts its spec is dropped.
 - Citation-existence Score (#98): the `citation_existence` Metric in `evals/` checks that each CNJ
   number and Precedent identifier cited in the agent's final answer appears in a tool result of the
   same Trajectory, normalising punctuation and kind wordings. Absent ones are flagged as fabricated

@@ -63,6 +63,7 @@ tickets of the spec.
 | `tool_use.py` | The `tool_use` Metric, loose on the route |
 | `judge.py` | The rubric judge Metric (opt-in `--judge`): correctness by grounding, repeated, uncalibrated |
 | `citation_existence.py` | The `citation_existence` Metric: each CNJ number or Precedent cited in the answer must appear in a tool result |
+| `draft_precedents.py` | Records the drafts about Precedents, negatives and Coverage from the live BNP (`python -m evals.draft_precedents`) |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
 | `redaction.py` | `redact()`: replaces personal data in Source text with placeholders |
@@ -444,3 +445,19 @@ Edson Mota Valença Filho - [@emvalencaf](https://github.com/emvalencaf)
 * [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### Draft Precedent, negative and Coverage cases
+
+```bash
+JURIS_BRIDGE_EVALS_RECORD=1 uv run --group evals python -m evals.draft_precedents [case-id ...]
+```
+
+Records 20 drafts into `cases/drafts/precedents.json` with their Cassettes. It is read-only and
+paced (2 s between requests, a few requests per case); it stops at the first `source_unavailable`
+and does not retry. Reference ids, status, thesis and the `not_covered` reason in
+`expected_outcome` are copied from the recording, and a case whose recording does not show what
+its spec claims (a negative that found something) is dropped with its Cassette. Name redaction
+is heuristic and over-redacts legal terms (`Código de [NOME]`, a status shown as `[NOME]`);
+a thesis containing `[NOME]` is left out of the expected outcome. Drafts are unvalidated and
+count toward no result; the maintainer reviews them before moving them to a split. Search drafts
+(`kind: search`) take the top results of the day as references, which the BNP may reorder.

@@ -19,6 +19,9 @@ of repeating their values.
 - Encoding: UTF-8, NFC-normalized, no BOM, no zero-width or bidi control characters
   (enforced by `scripts/check_unicode.py`).
 - Test command: `uv run pytest` (`pytest` with `pytest-asyncio`); tests live in `tests/`.
+- Evals: the evaluation lives in `evals/`, outside the package, with its own tests in
+  `evals/tests/`. They run only with `uv run --group evals pytest evals`; `uv run pytest` and CI
+  do not collect them. See [ADR 0009](docs/adr/0009-assayer-with-own-agent-loop.md).
 - Directory layout: flat package `juris_bridge_mcp/` at the repo root; tests in `tests/`.
   See [Architecture](#architecture).
 - Docstrings: Google style on public modules, classes and functions.

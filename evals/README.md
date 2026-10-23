@@ -240,7 +240,9 @@ its own Trajectory (`Trajectory.repetition`). Every `case#repetition` unit goes 
 `Progress` (`evals/results/progress-<split>.json`): if the keys run out (`AllKeysExhausted`) or
 the request cap is reached, the run stops with `Run stopped: ...` and exit code 1, the finished
 units stay saved, and running the same command again resumes (after midnight Pacific time for a
-daily quota). `--fresh` discards saved progress; a finished run clears it.
+daily quota). `--fresh` discards saved progress; a finished run clears it. The CLI defaults to
+3 repetitions, but the `run_eval` function defaults to 1: pass `repetitions=` when calling it from
+code and you want the consistency rules to mean anything.
 
 A run *passes* when its `tool_use` Score is 1.00. The Eval case declares its kind in the
 `expected_state` field (assayer's loader has no tags field and accepts this one):
@@ -283,7 +285,10 @@ appears in the output of a tool call of the same Trajectory (a failed call is no
 sides are normalised: a CNJ number to its 20 digits, a Precedent to kind sigla and number, so an
 unpunctuated number in the answer matches a punctuated one in the results, and `Tema 1.002`
 matches the id `stf-rg-1002`. The issuing body is not compared, and `Tema` matches `RG`, `RR`
-or `IRR`; `Súmula Vinculante` is only `SV`.
+or `IRR`; `Súmula Vinculante` is only `SV`. Because the issuing body is ignored, a citation to
+another Court's Súmula with the same number as one a tool returned (`Súmula 7` of the STJ when
+the tool returned that of the STF) counts as grounded; the Score checks that a Precedent was
+returned, not that it is the one named.
 
 The Score is the share of distinct citations found in the results (1.0 when all are). A citation
 absent from them is named in the Score's comment (`fabricated citation: CNJ ...`), and the report
@@ -439,7 +444,9 @@ Responsible use ([RESPONSIBLE_USE.md](../RESPONSIBLE_USE.md)):
   per minute; the BNP and DJEN limits are undocumented), on top of the server's own limiter.
   Keep the number of cases and calls low.
 * Redaction of names is best effort (NER misses and false positives): read a new Cassette before committing it. The request key
-  is stored verbatim, so never record a query containing personal data.
+  is stored verbatim (replay matches on it), so never record a query containing personal data
+  (a name, CPF, CNPJ or OAB number). `evals/tests/test_cassette.py` fails if a stored key holds a
+  CPF or CNPJ pattern.
 * Do not redistribute DataJud-derived Cassettes outside your own non-commercial use.
 
 ### Draft Publication Eval cases
@@ -459,6 +466,22 @@ failure stops the run without retrying. Drafts count toward no result until you 
 `evals/tests/test_draft_publications.py` loads every draft and replays its first expected call
 against its Cassette. Cassettes are large (a DJEN page is up to 100 full texts, about 8 MB for the
 19); read them before committing.
+
+### Draft Precedent, negative and Coverage cases
+
+```bash
+JURIS_BRIDGE_EVALS_RECORD=1 uv run --group evals python -m evals.draft_precedents [case-id ...]
+```
+
+Records 20 drafts into `cases/drafts/precedents.json` with their Cassettes. It is read-only and
+paced (2 s between requests, a few requests per case); it stops at the first `source_unavailable`
+and does not retry. Reference ids, status, thesis and the `not_covered` reason in
+`expected_outcome` are copied from the recording, and a case whose recording does not show what
+its spec claims (a negative that found something) is dropped with its Cassette. Name redaction
+is NER-based and best effort; the drafts recorded before it (#100) still show `Código de [NOME]` or a
+status as `[NOME]`, from the earlier heuristic. A thesis containing `[NOME]` is left out of the expected outcome. Drafts are unvalidated and
+count toward no result; the maintainer reviews them before moving them to a split. Search drafts
+(`kind: search`) take the top results of the day as references, which the BNP may reorder.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -491,19 +514,3 @@ Edson Mota Valença Filho - [@emvalencaf](https://github.com/emvalencaf)
 * [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-### Draft Precedent, negative and Coverage cases
-
-```bash
-JURIS_BRIDGE_EVALS_RECORD=1 uv run --group evals python -m evals.draft_precedents [case-id ...]
-```
-
-Records 20 drafts into `cases/drafts/precedents.json` with their Cassettes. It is read-only and
-paced (2 s between requests, a few requests per case); it stops at the first `source_unavailable`
-and does not retry. Reference ids, status, thesis and the `not_covered` reason in
-`expected_outcome` are copied from the recording, and a case whose recording does not show what
-its spec claims (a negative that found something) is dropped with its Cassette. Name redaction
-is NER-based and best effort; the drafts recorded before it (#100) still show `Código de [NOME]` or a
-status as `[NOME]`, from the earlier heuristic. A thesis containing `[NOME]` is left out of the expected outcome. Drafts are unvalidated and
-count toward no result; the maintainer reviews them before moving them to a split. Search drafts
-(`kind: search`) take the top results of the day as references, which the BNP may reorder.

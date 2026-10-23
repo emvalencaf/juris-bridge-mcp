@@ -1,0 +1,13 @@
+{
+  "recorded_on": "2026-10-22",
+  "entries": [
+    {
+      "key": "POST https://pangeabnp.pdpj.jus.br/api/v1/precedentes#b62332a4b3e7680c",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"aggsEspecies\": null, \"aggsOrgaos\": null, \"posicao_final\": 1, \"posicao_inicial\": 1, \"resultados\": [], \"total\": 0}"
+    }
+  ]
+}

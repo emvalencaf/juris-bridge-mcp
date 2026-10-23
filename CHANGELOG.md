@@ -16,6 +16,18 @@ heading when `development` is released to `master`.
   response. Redaction now also covers the DJEN's structured parties and lawyers (`nome`,
   `numero_oab`), OAB registrations, titled names (`Dr.`), roles glued to the previous word and
   upper-case names before a registration, CPF or role in parentheses.
+- Judge calibration (#105): `python -m evals calibrate export RUN` writes about 20 sampled answers
+  (question, expected outcome, tool results, answer, empty labels, never the judge's verdict) for
+  hand labelling, and `calibrate score RUN LABELS` re-judges them with the calibration model,
+  reports agreement with the labels (per axis, joint, Cohen's kappa) and writes
+  `evals/results/calibration.json`. The report shows the agreement beside the judge's scores and
+  drops `[UNCALIBRATED]` only for a measured record. The labels file format is in `evals/README.md`.
+- Draft Precedent, negative and Coverage Eval cases (#100): `python -m evals.draft_precedents`
+  (opt-in with `JURIS_BRIDGE_EVALS_RECORD=1`, read-only, 2 s between requests) records one
+  redacted, dated Cassette per case from the live BNP and writes 20 drafts to
+  `evals/cases/drafts/precedents.json` (11 Precedent lookups and topic searches, 5 negatives
+  the BNP really answers with no result, 4 `list_coverage` / `not_covered`). Expected values
+  are copied from the recordings; a case whose recording contradicts its spec is dropped.
 - Citation-existence Score (#98): the `citation_existence` Metric in `evals/` checks that each CNJ
   number and Precedent identifier cited in the agent's final answer appears in a tool result of the
   same Trajectory, normalising punctuation and kind wordings. Absent ones are flagged as fabricated
@@ -45,6 +57,10 @@ heading when `development` is released to `master`.
   arguments against the expected calls and accepts alternative routes. Adds a seed set of three Eval
   cases (`evals/cases/seed/`) with hand-made seed Cassettes, and states in `RESPONSIBLE_USE.md` that
   redacted Source text goes to a free-tier model provider.
+- Rubric judge (#104): opt-in `python -m evals run --judge` grades each answer on the judge model as
+  correct / incorrect / refusal by grounded / misgrounded / ungrounded, or `unknown` (also for invalid
+  output), repeats each judgment three times and reports the verdict counts and agreement. Results
+  are marked UNCALIBRATED until `evals/results/calibration.json` exists.
 - Consistency, efficiency and the honest report (#103): each Eval case runs `--repetitions` times
   (default 3) as separate Trajectories, wrapped per `case#repetition` in `Progress` so exhausted keys
   stop the run cleanly and the same command resumes it. Lookups pass only if every run passes, open

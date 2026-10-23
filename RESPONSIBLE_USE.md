@@ -137,9 +137,10 @@ is sent to that provider as part of the conversation.
   its products and to have it read by human reviewers. Do not run the evaluation
   with Source text you are not willing to share on those terms.
 - The text is **redacted first**, when a Cassette is recorded: CPF and CNPJ
-  numbers are replaced by placeholders and names of people on a best-effort basis
-  ([redaction](evals/README.md#redaction-of-personal-data)). Name detection is
-  heuristic and misses names; redaction is **not a guarantee** that no personal
+  numbers are masked and names of people are replaced by numbered placeholders
+  (`[PESSOA 1]`...) on a best-effort basis
+  ([redaction](evals/README.md#redaction-of-personal-data)). Names are found by a
+  named-entity model, which misses some names and tags some non-names; redaction is **not a guarantee** that no personal
   data leaves the machine.
 - The Cassettes kept in the repository are redacted the same way. The seed
   Cassettes are built from the fictitious fixtures of the tests and hold no

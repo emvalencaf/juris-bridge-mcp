@@ -104,7 +104,7 @@ async def test_the_saved_cassette_holds_no_cpf_cnpj_or_name(tmp_path):
 
     text = path.read_text(encoding="utf-8")
     assert CPF not in text and CNPJ not in text and "Maria Aparecida" not in text
-    assert "[CPF]" in text and "[NOME]" in text
+    assert "[CPF]" in text and "[PESSOA 1]" in text
     assert "0001234-56.2024.8.26.0100" in text
     entry = next(iter(Cassette.load(path).entries.values()))
     assert set(json.loads(entry.body)) == {"items", "count"}  # still JSON, keys kept

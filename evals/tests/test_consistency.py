@@ -135,7 +135,7 @@ def test_the_report_has_the_sections_and_states_its_limits():
 
     assert "Consistency" in text and "seed-coverage: 2/3 runs | lookup (all-pass) | FAIL" in text
     assert "Efficiency" in text and "calls 1.0" in text
-    assert "heuristic" in text and "small model" in text
+    assert "Name redaction" in text and "small model" in text
     assert "Cassette misses in this run:" in text
     assert "share the 'gemini' family" in text
 

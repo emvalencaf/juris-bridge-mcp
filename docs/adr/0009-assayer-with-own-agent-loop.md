@@ -32,3 +32,11 @@ precision and recall, faithfulness judging, consistency and token tracking, and 
 citation check is a small custom metric. The cost is that we own and maintain the loop
 and that assayer is young and has one maintainer; if that becomes a problem, the Eval
 cases are plain JSON and the loop is small enough to move to another framework.
+
+## Note: names are redacted with a named-entity model
+
+The first redaction of names (#92) was a set of patterns. It over-redacted legal terms and
+could not tell whether two names were one person, so the maintainer asked for named-entity
+recognition: spaCy with `pt_core_news_md`, which, like assayer, lives only in the `evals`
+dependency group (the model is a pinned wheel in `pyproject.toml`). The default test run and CI
+do not install it. Redaction stays best effort.

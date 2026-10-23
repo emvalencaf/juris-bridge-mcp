@@ -93,7 +93,7 @@ def limits_section(experiment: Experiment, meta: dict[str, Any]) -> list[str]:
     """What this report cannot tell you."""
     lines = [
         "Limits",
-        "  - Name redaction is heuristic: missed names stay in the Cassettes.",
+        "  - Name redaction is NER-based, best effort: names the model misses stay in Cassettes.",
         "  - The agent is a small model; its scores do not transfer to a stronger one.",
         f"  - Cassette misses in this run: {cassette_misses(experiment)}"
         " (requests with no recording, answered as source_unavailable).",

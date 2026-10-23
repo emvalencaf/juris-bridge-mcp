@@ -32,6 +32,10 @@ asyncio_mode = "auto"
 python_version = "3.12"
 strict = true
 
+[tool.uv.sources]
+pt-core-news-md = { url = "https://github.com/explosion/spacy-models/releases/download/pt_core_news_md-3.8.0/pt_core_news_md-3.8.0-py3-none-any.whl" }
+pt-core-news-sm = { url = "https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.8.0/pt_core_news_sm-3.8.0-py3-none-any.whl" }
+
 [dependency-groups]
 dev = [
     "mypy>=2.4.0",
@@ -40,4 +44,7 @@ dev = [
 ]
 evals = [
     "llm-assayer-eval>=0.1.1",
+    "pt-core-news-md",
+    "pt-core-news-sm",
+    "spacy>=3.8,<3.9",
 ]

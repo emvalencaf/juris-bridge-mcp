@@ -56,7 +56,7 @@ def recording_enabled(environ: Mapping[str, str] | None = None) -> bool:
     return env.get(RECORD_ENV) == "1"
 
 
-def _redact_body(redactor: Redactor, body: bytes, content_type: str) -> bytes:
+def redact_body(redactor: Redactor, body: bytes, content_type: str) -> bytes:
     try:
         text = body.decode("utf-8")
     except UnicodeDecodeError:
@@ -101,7 +101,7 @@ class RecordingTransport(httpx.AsyncBaseTransport):
         response = await self.inner.handle_async_request(request)
         await response.aread()
         headers = {k: v for k, v in response.headers.items() if k.lower() in _KEPT_HEADERS}
-        body = _redact_body(self._redactor, response.content, headers.get("content-type", ""))
+        body = redact_body(self._redactor, response.content, headers.get("content-type", ""))
         key = request_key(request)
         self.cassette.entries[key] = CassetteEntry.from_response(
             key, response.status_code, headers, body

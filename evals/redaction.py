@@ -10,6 +10,7 @@ CNJ numbers, Court aliases and Precedent kind siglas are never touched, so the c
 still has something to compare. Best effort, not a guarantee: see `evals/README.md`.
 """
 
+import html
 import re
 import unicodedata
 from collections.abc import Iterator
@@ -23,6 +24,8 @@ CPF_PLACEHOLDER = "[CPF]"
 CNPJ_PLACEHOLDER = "[CNPJ]"
 OAB_PLACEHOLDER = "[OAB]"
 PERSON_PLACEHOLDER = "[PESSOA {n}]"
+# written by the earlier heuristic redaction; the name is gone, so it cannot be numbered
+LEGACY_NAME_PLACEHOLDER = "[NOME]"
 
 NER_MODEL = "pt_core_news_md"
 
@@ -62,6 +65,12 @@ _NAME_BEFORE_OAB = re.compile(
 _TITLE_NAME = re.compile(
     rf"\b(?:Dr|Dra|Sr|Sra)\.\s+(?P<name>{_NAME_WORD}(?:\s+(?:(?:{_CONN})\s+)?{_NAME_WORD})*)"
 )
+# A judge or minister by title: only a name of two or more words counts ("Juiz Titular" is not one).
+_JUDGE_NAME = re.compile(
+    r"(?<![\w])(?i:(?:(?:ministro|ministra|min|desembargador|desembargadora|juiz|juíza|relator|"
+    r"relatora|rel)(?:\s+federal)?\.?\s+)+)"
+    rf"(?P<name>{_NAME_WORD}(?:\s+(?:(?:{_CONN})\s+)?{_NAME_WORD})+)"
+)
 _ROLE_NAME = re.compile(
     rf"(?:\b|(?<=[a-zà-ÿ]))(?i:(?:{_ROLES})(?:\(a\))?)\s*[:\-\u2013,]?\s+"
     rf"(?i:(?:(?:dr|dra|sr|sra)\.?\s+)?)"
@@ -84,17 +93,19 @@ _INSTITUTIONAL = frozenset(
         "sudeste centro oeste advogado advogada autor autora réu requerente requerido requerida "
         "apelante apelado apelada agravante agravado agravada exequente executado executada "
         "recorrente recorrido recorrida mérito julgado julgada defesa consumidor dr dra sr sra "
-        "doutor doutora senhor senhora excelentíssimo meritíssimo"
+        "doutor doutora senhor senhora min rel des inciso artigo art alínea parágrafo caput "
+        "titular substituto substituta auxiliar excelentíssimo meritíssimo perícia médica "
+        "questão discussão"
     ).split()
 )
 
 # Aliases of the Courts and kind siglas of the Precedents: shouted words that are not names.
 _PROTECTED = re.compile(
     r"^(?:STF|STJ|TST|TSE|STM|TRF\d*|TRT\d*|TRE-?[A-Z]*|TJ[A-Z]*|"
-    r"SUM|SV|OJ|IAC|IRDR|SIRDR|PN|IRR|RR|RG|ADI|ADC|ADO|ADPF|PUIL|CT|NT|NTA|ENU|RC|DPE|OAB|CPF|CNPJ)$"
+    r"SUM|SV|OJ|IAC|IRDR|SIRDR|PN|IRR|RR|RG|ADI|ADC|ADO|ADPF|PUIL|CT|NT|NTA|ENU|RC|DPE|OAB|CPF|CNPJ|NOME|PESSOA)$"
 )
 
-_PLACEHOLDER = re.compile(r"\[(?:CPF|CNPJ|OAB)\]")
+_PLACEHOLDER = re.compile(r"\[(?:CPF|CNPJ|OAB|NOME|PESSOA \d+)\]")
 _TOKEN = re.compile(r"[^\W\d_][\w'\u2019\-]*")
 # Two or more shouted words: the model reads them far better in title case.
 _SHOUTED_RUN = re.compile(rf"(?<!\w){_UPPER}(?:\s+(?:(?:{_CONN.upper()})\s+)?{_UPPER})+(?!\w)")
@@ -129,16 +140,25 @@ def _runs(text: str, start: int, end: int) -> Iterator[Span]:
     """Yield the stretches of `text[start:end]` made of name words, cut at barrier words."""
     run: list[re.Match[str]] = []
     for m in [*_TOKEN.finditer(text, start, end), None]:
+        if m is not None and run and text[run[-1].end() : m.start()].strip():
+            # punctuation or markup between two words ends the name ("SILVA</td>")
+            yield from _close(run)
+            run = []
         if m is not None and not _is_barrier(m.group()):
             run.append(m)
             continue
-        while run and run[0].group().lower() in _CONNECTORS:
-            run.pop(0)
-        while run and run[-1].group().lower() in _CONNECTORS:
-            run.pop()
-        if run:
-            yield run[0].start(), run[-1].end()
+        yield from _close(run)
         run = []
+
+
+def _close(run: list[re.Match[str]]) -> Iterator[Span]:
+    words = list(run)
+    while words and words[0].group().lower() in _CONNECTORS:
+        words.pop(0)
+    while words and words[-1].group().lower() in _CONNECTORS:
+        words.pop()
+    if words:
+        yield words[0].start(), words[-1].end()
 
 
 def _ner_spans(text: str) -> list[Span]:
@@ -155,6 +175,15 @@ def _title_case_run(match: re.Match[str]) -> str:
     )
 
 
+_ROMAN = re.compile(r"^[IVXLCDM]+$")
+_GAP = re.compile(rf"^\s+(?:{_CONN})\s+$")
+
+
+def _words(text: str, span: Span) -> int:
+    """Count the words of a span that can belong to a name (no lone letters or numerals)."""
+    return sum(1 for t in _TOKEN.findall(text, *span) if len(t) > 1 and not _ROMAN.match(t))
+
+
 def _fallback_spans(text: str) -> list[Span]:
     spans: list[Span] = []
     for m in _ROLE_NAME.finditer(text):
@@ -166,9 +195,24 @@ def _fallback_spans(text: str) -> list[Span]:
         first = next(_runs(text, *m.span("name")), None)
         if first is not None and first[0] == m.start("name"):
             spans.append(first)
+    for m in _JUDGE_NAME.finditer(text):
+        first = next(_runs(text, *m.span("name")), None)
+        if first is not None and first[0] == m.start("name") and _words(text, first) > 1:
+            spans.append(first)
     for m in _NAME_BEFORE_OAB.finditer(text):
         spans.extend(_runs(text, *m.span()))
     return spans
+
+
+def _join_across_connectors(text: str, spans: list[Span]) -> list[Span]:
+    """Join the pieces the model cuts a name into at a connector ("Paulo" "de" "Tarso Silva")."""
+    joined: list[Span] = []
+    for start, end in spans:
+        if joined and _GAP.match(text[joined[-1][1] : start]):
+            joined[-1] = (joined[-1][0], end)
+        else:
+            joined.append((start, end))
+    return joined
 
 
 def _merge(spans: list[Span]) -> list[Span]:
@@ -210,7 +254,7 @@ class Redactor:
     def person(self, name: str) -> str:
         """Return the placeholder of the person called `name`, numbering it if new."""
         tokens = _normalise(name)
-        if not tokens:
+        if name == LEGACY_NAME_PLACEHOLDER or not tokens:
             return name
         for known, number in self._people:
             if known == tokens:
@@ -263,18 +307,45 @@ class Redactor:
     def _redact_text(self, text: str) -> str:
         text = _NUMBER.sub(_mask_number, text)
         text = _OAB_NUMBER.sub(OAB_PLACEHOLDER, text)
+        # names are looked for in the text as read (`&eacute;` as "é"), then cut out of the
+        # original at the matching offsets
+        clean, offsets = _unescape(text)
         spans: list[Span] = []
-        for start, end in _ner_spans(text):
-            spans.extend(_runs(text, start, end))
-        spans.extend(_fallback_spans(text))
+        for start, end in _join_across_connectors(clean, _ner_spans(clean)):
+            # a lone word is mostly a false positive ("Admitido", "Vigente"): see the README
+            spans.extend(r for r in _runs(clean, start, end) if _words(clean, r) > 1)
+        spans.extend(_fallback_spans(clean))
         out: list[str] = []
         last = 0
         for start, end in _merge(spans):
-            out.append(text[last:start])
-            out.append(self.person(text[start:end]))
-            last = end
+            out.append(text[last : offsets[start]])
+            out.append(self.person(clean[start:end]))
+            last = offsets[end]
         out.append(text[last:])
         return "".join(out)
+
+
+_ENTITY = re.compile(r"&(?:#\d+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
+
+
+def _unescape(text: str) -> tuple[str, list[int]]:
+    """Return `text` with HTML entities decoded and, per character, where it starts in `text`."""
+    if "&" not in text:
+        return text, list(range(len(text) + 1))
+    parts: list[str] = []
+    offsets: list[int] = []
+    last = 0
+    for m in [*_ENTITY.finditer(text), None]:
+        stop = m.start() if m else len(text)
+        parts.append(text[last:stop])
+        offsets.extend(range(last, stop))
+        if m:
+            decoded = html.unescape(m.group())
+            parts.append(decoded)
+            offsets.extend([m.start()] * len(decoded))
+            last = m.end()
+    offsets.append(len(text))
+    return "".join(parts), offsets
 
 
 def _mask_number(match: re.Match[str]) -> str:

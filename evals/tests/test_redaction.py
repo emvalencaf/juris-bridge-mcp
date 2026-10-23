@@ -99,6 +99,44 @@ def test_legal_terms_and_institutions_are_not_taken_for_people(text):
     assert redact(text) == text
 
 
+def test_a_lone_word_the_model_tags_as_a_person_is_kept():
+    text = {"situacao": "Admitido", "outra": "Vigente"}
+
+    assert redact(text) == text
+
+
+def test_a_name_the_model_cuts_at_a_connector_is_one_person():
+    out = redact("Rel. Ministro Paulo de Tarso Sanseverino votou")
+
+    assert out == f"Rel. Ministro {person(1)} votou"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "nos termos do artigo 487, inciso I, do CPC",
+        "Sentença Homologatória, Juiz Titular da Vara",
+        "art. 105, III, a, da Constituição",
+    ],
+)
+def test_legal_citations_and_court_posts_are_not_people(text):
+    assert redact(text) == text
+
+
+def test_html_entities_are_read_as_text_and_names_in_them_are_replaced_whole():
+    out = redact(
+        "<td>JOS&Eacute; DA SILVA</td> em Embargos de Declara&ccedil;&atilde;o C&iacute;vel"
+    )
+
+    assert out == f"<td>{person(1)}</td> em Embargos de Declara&ccedil;&atilde;o C&iacute;vel"
+
+
+def test_shouted_legal_headings_are_not_people():
+    text = "QUEST&Atilde;O EM DISCUSS&Atilde;O: realização de PERÍCIA MÉDICA na parte autora"
+
+    assert redact(text) == text
+
+
 def test_names_next_to_institutional_words_are_still_replaced():
     out = redact("Apelação de João Silva em face do Estado")
 
@@ -184,6 +222,19 @@ def test_a_name_before_cpf_in_parentheses_is_redacted_and_the_cpf_masked():
 
 def test_precedent_ids_are_not_taken_for_a_registration():
     assert redact("RG1002 e TRF3 e stf-rg-1002") == "RG1002 e TRF3 e stf-rg-1002"
+
+
+def test_a_legacy_name_placeholder_is_left_alone_and_not_numbered():
+    r = Redactor()
+    body = {
+        "destinatarios": [{"nome": "[NOME]", "polo": "A"}],
+        "texto": "Autor: [NOME] e Rui Costa",
+    }
+
+    out = r.redact(body)
+
+    assert out["destinatarios"][0]["nome"] == "[NOME]"
+    assert out["texto"] == f"Autor: [NOME] e {person(1)}"
 
 
 def test_a_role_glued_to_the_previous_word_is_still_found():

@@ -87,3 +87,11 @@ _Avoid_: support matrix
 **Error code**:
 One of a closed set of values (`invalid_argument`, `not_found`, `not_covered`, `rate_limited`, `source_unavailable`, `source_auth_failed`, `source_changed`, `source_blocked`) that tells an agent why a call failed and whether to retry.
 _Avoid_: error type, status
+
+**Eval case**:
+One question put to an agent in an evaluation of this server, with the outcome expected of it; unrelated to a Case, which is a judicial proceeding.
+_Avoid_: case (alone, in an evaluation), test case, example
+
+**Cassette**:
+A dated set of real responses recorded from a Source, replayed in an evaluation in place of that Source so its result does not depend on what the Source says today.
+_Avoid_: fixture (a response edited by hand for a test), mock, snapshot

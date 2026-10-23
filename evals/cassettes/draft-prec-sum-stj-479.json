@@ -1,0 +1,13 @@
+{
+  "recorded_on": "2026-10-22",
+  "entries": [
+    {
+      "key": "POST https://pangeabnp.pdpj.jus.br/api/v1/precedentes#a0578a8cc635e88a",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"aggsEspecies\": null, \"aggsOrgaos\": null, \"posicao_final\": 1, \"posicao_inicial\": 1, \"resultados\": [{\"highlight\": {\"tese\": \"<p>As instituições financeiras respondem objetivamente pelos danos gerados por fortuito interno relativo a fraudes e delitos praticados por terceiros no âmbito de operações bancárias.</p><br>\", \"tese_snippet\": \" As instituições financeiras respondem objetivamente pelos danos gerados por fortuito interno relativo a fraudes e delitos praticados por terceiros no âmbito de operações bancárias. \"}, \"historico\": [{\"dataAdmissao\": \"2025-11-24\", \"dataCriacao\": \"2026-06-02T00:00:00.000-03:00\", \"dataJulgamento\": \"2026-04-29\", \"dataPublicacao\": \"2026-04-30\", \"situacao\": \"Admitido\"}, {\"dataAdmissao\": \"2025-11-24\", \"dataCriacao\": \"2026-08-21T00:00:00.000-03:00\", \"dataJulgamento\": \"2026-04-29\", \"dataPublicacao\": \"2026-04-30\", \"situacao\": \"Acórdão Publicado\"}], \"id\": \"stj-sum-479\", \"nr\": 479, \"orgao\": \"STJ\", \"situacao\": \"Vigente\", \"tese\": \"<p>As instituições financeiras respondem objetivamente pelos danos gerados por fortuito interno relativo a fraudes e delitos praticados por terceiros no âmbito de operações bancárias.</p><br>\", \"tipo\": \"SUM\", \"ultimaAtualizacao\": \"01/04/2025\"}], \"total\": 1}"
+    }
+  ]
+}

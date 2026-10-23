@@ -7,6 +7,93 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Fixed
+
+- Review fixes of the evals (#90): the alias of the key that served each model call is now kept in
+  the Trajectory `final_state` (`key_aliases`) and so in saved runs (user story 46), never the key
+  itself; a test fails if a stored Cassette request key holds a CPF or CNPJ.
+
+### Changed
+
+- evals: `record_case` and `recording_session` take a typed `RecordOptions` instead of
+  `**options`; the label normalisation and the `case#n` unit key each have one helper.
+- Docs: the draft Precedent section of `evals/README.md` moved into Usage; the CLI (3) versus
+  `run_eval` (1) repetition defaults, the Precedent matching that ignores the issuing body and the
+  verbatim request key are documented; `evals/` tests noted in CODE_STANDARDS.md and ADR 0009.
+
+### Added
+
+- NER redaction of names (follow-up to #90, replaces the heuristic of #92/#99): people found by
+  spaCy `pt_core_news_md` (`evals` group only, pinned wheel) become `[PESSOA N]`, numbered by a
+  `Redactor` kept per Cassette so the same person (case, accents, connectors ignored; safe
+  containment such as `João da Silva` / `JOAO SILVA`) keeps one number; DJEN structured names share
+  it. CPF is fully masked. Legal terms such as `Código de Defesa do Consumidor` and `Mérito Julgado`
+  are no longer redacted; role and title patterns remain as a fallback. `python -m
+  evals.redact_cassettes` re-applies it to saved Cassettes (a legacy `[NOME]` stays: re-record to
+  number it). ORG and LOC are untouched; redaction stays best effort.
+- Draft Publication Eval cases (#99): `python -m evals.draft_publications` (with
+  `JURIS_BRIDGE_EVALS_RECORD=1`) records Cassettes from the live DJEN, paced and in small windows,
+  and drafts 19 Eval cases in `evals/cases/drafts/publications.json` (10 text searches, 9 lookups
+  by CNJ number found in the recorded searches), every expected value copied from the recorded
+  response. Redaction now also covers the DJEN's structured parties and lawyers (`nome`,
+  `numero_oab`), OAB registrations, titled names (`Dr.`), roles glued to the previous word and
+  upper-case names before a registration, CPF or role in parentheses.
+- Judge calibration (#105): `python -m evals calibrate export RUN` writes about 20 sampled answers
+  (question, expected outcome, tool results, answer, empty labels, never the judge's verdict) for
+  hand labelling, and `calibrate score RUN LABELS` re-judges them with the calibration model,
+  reports agreement with the labels (per axis, joint, Cohen's kappa) and writes
+  `evals/results/calibration.json`. The report shows the agreement beside the judge's scores and
+  drops `[UNCALIBRATED]` only for a measured record. The labels file format is in `evals/README.md`.
+- Draft Precedent, negative and Coverage Eval cases (#100): `python -m evals.draft_precedents`
+  (opt-in with `JURIS_BRIDGE_EVALS_RECORD=1`, read-only, 2 s between requests) records one
+  redacted, dated Cassette per case from the live BNP and writes 20 drafts to
+  `evals/cases/drafts/precedents.json` (11 Precedent lookups and topic searches, 5 negatives
+  the BNP really answers with no result, 4 `list_coverage` / `not_covered`). Expected values
+  are copied from the recordings; a case whose recording contradicts its spec is dropped.
+- Citation-existence Score (#98): the `citation_existence` Metric in `evals/` checks that each CNJ
+  number and Precedent identifier cited in the agent's final answer appears in a tool result of the
+  same Trajectory, normalising punctuation and kind wordings. Absent ones are flagged as fabricated
+  in the report; an answer with no citation is not applicable. It is registered with the others and
+  shown in the Experiment report; it blocks nothing.
+- Evaluation skeleton (#91): a top-level `evals/` directory, outside the package and the default
+  test run, with `assayer` in a separate `evals` dependency group. `uv run --group evals python -m evals`
+  loads an empty Dataset and prints an empty Experiment. Adds ADR 0009, the Eval case and Cassette
+  terms in the glossary and the research notes behind the spec.
+- Evaluation model client (#95): `evals/llm` with an injected `LLMClient` Protocol, a Gemini REST
+  implementation that waits on requests and tokens per minute, retries 429 with backoff and stops
+  at a per-run request cap, settings read from the environment, and a scripted client for tests.
+- Key rotation and resumable runs (#96): opt-in `RotatingKeySource` (`EVALS_ROTATE_KEYS`, off by
+  default) that moves to the next key on a daily-quota 429, `AllKeysExhausted` when none is left,
+  and `evals.progress.Progress`, a JSON store of finished units so a stopped run resumes without
+  repeating calls. Documents that quotas are per project and the maintainer's risk.
+- Redaction of personal data (#92): `evals.redaction.redact` replaces CPF, CNPJ and, by documented
+  heuristics, names of people in Source text, leaving CNJ numbers, Court aliases and Precedent kind
+  siglas untouched.
+- Cassette replay (#93): `evals/cassette.py` stores dated, recorded Source responses per Eval case and
+  replays them through the Source transport under the real server; a request with no recording is
+  counted as a cassette miss and surfaces as `source_unavailable`, never reaching the network.
+- Agent loop and tool-use Score (#97): `python -m evals run [--split NAME]` puts each Eval case to an
+  agent that lists the server's real tools over the in-memory MCP client, converts them for the
+  model, loops model, tool calls and results up to a step cap, and keeps the Trajectory (calls,
+  arguments, results, errors, answer, tokens). A registered `tool_use` Metric scores tool and
+  arguments against the expected calls and accepts alternative routes. Adds a seed set of three Eval
+  cases (`evals/cases/seed/`) with hand-made seed Cassettes, and states in `RESPONSIBLE_USE.md` that
+  redacted Source text goes to a free-tier model provider.
+- Rubric judge (#104): opt-in `python -m evals run --judge` grades each answer on the judge model as
+  correct / incorrect / refusal by grounded / misgrounded / ungrounded, or `unknown` (also for invalid
+  output), repeats each judgment three times and reports the verdict counts and agreement. Results
+  are marked UNCALIBRATED until `evals/results/calibration.json` exists.
+- Consistency, efficiency and the honest report (#103): each Eval case runs `--repetitions` times
+  (default 3) as separate Trajectories, wrapped per `case#repetition` in `Progress` so exhausted keys
+  stop the run cleanly and the same command resumes it. Lookups pass only if every run passes, open
+  searches if one does (declared as `expected_state.kind`, strict by default). The report gives calls,
+  tokens and tool errors per Eval case, flags repeated invalid arguments as a likely bad tool
+  description, and states its limits (heuristic redaction, small agent, shared model family,
+  cassette misses). Runs are saved to `evals/results/` and `python -m evals compare A B` compares two.
+- Record mode (#94): `evals/record.py` records Cassettes from the live Sources behind
+  `JURIS_BRIDGE_EVALS_RECORD=1`, redacting each response, pacing requests and naming the dated
+  Cassette after its Eval case; refused without the variable. `record_case(case_id, run)` is the helper.
+
 ## [0.1.0] - 2026-10-22
 
 ### Added

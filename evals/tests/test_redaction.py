@@ -62,3 +62,67 @@ def test_structures_are_redacted_in_every_string_and_keys_are_kept():
         "a": [f"Réu: {NAME_PLACEHOLDER}", 3, None],
         "n": {"cpf": CPF_PLACEHOLDER},
     }
+
+
+def test_djen_parties_and_lawyers_are_redacted_by_their_keys():
+    body = {
+        "destinatarios": [{"comunicacao_id": 1, "nome": "FLAVIO LUIZ SILVA OLIVEIRA", "polo": "A"}],
+        "destinatarioadvogados": [
+            {"advogado": {"id": 3, "nome": "PRISCILLA JANTOLCIC COURI", "numero_oab": "168766"}}
+        ],
+        "numeroprocessocommascara": "1234567-76.2025.8.26.0100",
+        "nomeOrgao": "1ª Vara Cível",
+    }
+
+    out = redact(body)
+
+    assert out["destinatarios"][0]["nome"] == NAME_PLACEHOLDER
+    assert out["destinatarioadvogados"][0]["advogado"]["nome"] == NAME_PLACEHOLDER
+    assert out["destinatarioadvogados"][0]["advogado"]["numero_oab"] == "[OAB]"
+    assert out["numeroprocessocommascara"] == "1234567-76.2025.8.26.0100"
+    assert out["nomeOrgao"] == "1ª Vara Cível"
+
+
+def test_a_nome_that_is_not_a_person_is_kept():
+    classe = {"classe": {"codigo": 7, "nome": "procedimento comum"}}
+
+    assert redact(classe) == classe
+
+
+def test_lawyer_titles_registrations_and_advogado_markers_are_redacted():
+    text = (
+        "REQUERIDO: Fulano Silva ADVOGADO(A): JOSE AURELIO DE ARAUJO (DPE) - SP405006-N, "
+        "Dr. FELIPE GONÇALVES PINTO, OAB/SP 123.456"
+    )
+
+    out = redact(text)
+
+    for leaked in ("JOSE", "AURELIO", "FELIPE", "405006", "123.456"):
+        assert leaked not in out
+
+
+def test_precedent_ids_are_not_taken_for_a_registration():
+    assert redact("RG1002 e TRF3 e stf-rg-1002") == "RG1002 e TRF3 e stf-rg-1002"
+
+
+def test_a_role_glued_to_the_previous_word_is_still_found():
+    out = redact(
+        "Justiça ADVOGADO(A): JOSE AURELIO DE ARAUJO (DPE)ADVOGADO(A): ALMIR GONCALVES FILHO"
+    )
+
+    assert "JOSE" not in out
+    assert "ALMIR" not in out
+
+
+def test_a_name_before_a_registration_in_parentheses_is_redacted():
+    assert redact("JOSÉ EDUARDO GOMES DA COSTA (SP123456)") == "[NOME] ([OAB])"
+
+
+def test_a_name_before_cpf_or_oab_in_parentheses_is_redacted():
+    assert redact("VALDIR ALVES NEVES (CPF: 123.456.789-09)") == "[NOME] (CPF: [CPF])"
+    assert redact("MARCIO GONCALVES DELFINO (OAB 12345/SP)") == "[NOME] ([OAB])"
+
+
+def test_a_name_before_id_cpf_or_a_role_in_parentheses_is_redacted():
+    assert redact("CIERDI ALVES BRAGA (ID 123.456.789-09)") == "[NOME] (ID [CPF])"
+    assert redact("SILVA DOS SANTOS (REQUERENTE)") == "[NOME] (REQUERENTE)"

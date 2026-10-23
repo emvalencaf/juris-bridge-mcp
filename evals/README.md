@@ -63,6 +63,8 @@ tickets of the spec.
 | `tool_use.py` | The `tool_use` Metric, loose on the route |
 | `judge.py` | The rubric judge Metric (opt-in `--judge`): correctness by grounding, repeated, uncalibrated |
 | `citation_existence.py` | The `citation_existence` Metric: each CNJ number or Precedent cited in the answer must appear in a tool result |
+| `retrieval.py` | The `context_precision` and `context_recall` Scores of what the tools returned against `reference_context_ids` (validated splits only) |
+| `extend_cassettes.py` | Adds to a Cassette the calls an agent made that it had no answer for (`python -m evals.extend_cassettes`, opt-in like recording) |
 | `draft_precedents.py` | Records the drafts about Precedents, negatives and Coverage from the live BNP (`python -m evals.draft_precedents`) |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
@@ -111,7 +113,7 @@ From the repository root:
 uv run --group evals python -m evals run --split seed
 ```
 
-It loads the Eval cases of the split (`tuning` by default; an empty split prints an empty
+It loads the Eval cases of the split (`tuning` by default; an empty split, such as `drafts`, prints an empty
 Experiment and needs no model), puts each to the agent over the Cassette named after its id,
 and prints the Experiment: per Eval case the `tool_use` Score, the number of tool calls and
 errors, the tokens and the cassette misses. The model is built from the settings below, so
@@ -462,7 +464,7 @@ from memory. Each draft's `reference_context_ids` and `expected_outcome` facts (
 document types) are copied from the recorded response, and nothing about parties or text is
 written. A Cassette that already exists is replayed instead of re-recorded, so a second run makes
 no live request for it; delete it to refresh. Requests are 2 s apart, and the first Source
-failure stops the run without retrying. Drafts count toward no result until you validate them.
+failure stops the run without retrying. Drafts count toward no result until you validate them; the 38 kept were validated in #101 and moved to `cases/tuning/` (28) and `cases/validation/` (10, held out while tuning tool descriptions).
 `evals/tests/test_draft_publications.py` loads every draft and replays its first expected call
 against its Cassette. Cassettes are large (a DJEN page is up to 100 full texts, about 8 MB for the
 19); read them before committing.

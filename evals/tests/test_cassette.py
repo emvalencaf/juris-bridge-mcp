@@ -1,6 +1,7 @@
 """Cassette replay: a recorded request is answered, an unrecorded one is a counted miss."""
 
 import json
+import re
 import socket
 from datetime import date
 from pathlib import Path
@@ -9,6 +10,7 @@ import httpx
 import pytest
 
 from evals.cassette import (
+    CASSETTES_DIR,
     Cassette,
     CassetteEntry,
     ReplayTransport,
@@ -123,3 +125,17 @@ async def test_replay_never_reaches_the_network():
         response = await client.get("https://example.invalid/anything")
 
     assert response.status_code == 503 and transport.misses == 1
+
+
+_CPF = re.compile(r"(?<!\d)(\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11})(?!\d)")
+_CNPJ = re.compile(r"(?<!\d)(\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}|\d{14})(?!\d)")
+
+
+def test_no_stored_request_key_holds_a_cpf_or_cnpj():
+    """Keys are stored verbatim (replay matches on them), so none may carry a person's number."""
+    offending = []
+    for path in sorted(CASSETTES_DIR.glob("*.json")):
+        for key in Cassette.load(path).entries:
+            if _CPF.search(key) or _CNPJ.search(key):
+                offending.append(f"{path.name}: {key}")
+    assert not offending

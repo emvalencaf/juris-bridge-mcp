@@ -9,6 +9,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Draft Publication Eval cases (#99): `python -m evals.draft_publications` (with
+  `JURIS_BRIDGE_EVALS_RECORD=1`) records Cassettes from the live DJEN, paced and in small windows,
+  and drafts 19 Eval cases in `evals/cases/drafts/publications.json` (10 text searches, 9 lookups
+  by CNJ number found in the recorded searches), every expected value copied from the recorded
+  response. Redaction now also covers the DJEN's structured parties and lawyers (`nome`,
+  `numero_oab`), OAB registrations, titled names (`Dr.`), roles glued to the previous word and
+  upper-case names before a registration, CPF or role in parentheses.
 - Citation-existence Score (#98): the `citation_existence` Metric in `evals/` checks that each CNJ
   number and Precedent identifier cited in the agent's final answer appears in a tool result of the
   same Trajectory, normalising punctuation and kind wordings. Absent ones are flagged as fabricated

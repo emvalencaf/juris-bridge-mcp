@@ -1,0 +1,449 @@
+[
+  {
+    "id": "draft-pub-search-tjsp-recurso",
+    "input": "Procure no TJSP publicações com o termo \"recurso\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "tjsp",
+          "query": "recurso",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "0002480-49.2025.8.26.0268",
+      "1002098-05.2026.8.26.0268",
+      "1005985-31.2025.8.26.0268",
+      "0004230-15.1997.8.26.0609",
+      "0004192-17.2008.8.26.0609"
+    ],
+    "expected_outcome": "Reports the Publications found in TJSP for \"recurso\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: Intimação; kinds: ambiguous, sentenca.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-search-tjsp-tutela",
+    "input": "Procure no TJSP publicações com o termo \"tutela\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "tjsp",
+          "query": "tutela",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "1006507-39.2024.8.26.0609",
+      "1013595-31.2024.8.26.0609",
+      "1002966-61.2026.8.26.0533",
+      "1500962-91.2026.8.26.0630",
+      "1508013-11.2026.8.26.0451"
+    ],
+    "expected_outcome": "Reports the Publications found in TJSP for \"tutela\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: Intimação; kinds: ambiguous, sentenca.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-search-tjmg-apelacao",
+    "input": "Procure no TJMG publicações com o termo \"apelação\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "tjmg",
+          "query": "apelação",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "4839370-58.2009.8.13.0024",
+      "5002109-97.2024.8.13.0558",
+      "5306422-78.2024.8.13.0024",
+      "5016201-50.2025.8.13.0686",
+      "5044743-27.2025.8.13.0024"
+    ],
+    "expected_outcome": "Reports the Publications found in TJMG for \"apelação\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: Apelação; Intimação; kinds: acordao, ambiguous, decisao_monocratica, sentenca.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-search-tjrj-sentenca",
+    "input": "Procure no TJRJ publicações com o termo \"sentença\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "tjrj",
+          "query": "sentença",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "0816619-93.2026.8.19.0021",
+      "0817729-30.2026.8.19.0021",
+      "0856255-37.2024.8.19.0021",
+      "0813699-49.2026.8.19.0021",
+      "0810579-47.2025.8.19.0210"
+    ],
+    "expected_outcome": "Reports the Publications found in TJRJ for \"sentença\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: Decisão; Sentença; kinds: decisao_interlocutoria, sentenca.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-search-tjrs-agravo",
+    "input": "Procure no TJRS publicações com o termo \"agravo\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "tjrs",
+          "query": "agravo",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "5019950-76.2022.8.21.0001",
+      "5060680-37.2019.8.21.0001",
+      "5010226-39.2008.8.21.0001",
+      "5219927-10.2026.8.21.0001",
+      "5030629-87.2012.8.21.0001"
+    ],
+    "expected_outcome": "Reports the Publications found in TJRS for \"agravo\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: DESPACHO/DECISÃO; kinds: ambiguous, decisao_interlocutoria, sentenca.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-search-tjpr-embargos",
+    "input": "Procure no TJPR publicações com o termo \"embargos\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "tjpr",
+          "query": "embargos",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "0007303-79.2026.8.16.0019",
+      "0001503-14.2025.8.16.0146",
+      "0009853-91.2026.8.16.0069",
+      "0005209-11.2024.8.16.0123",
+      "0028352-75.2026.8.16.0182"
+    ],
+    "expected_outcome": "Reports the Publications found in TJPR for \"embargos\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: Ementa de Acórdão; kinds: acordao.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-search-trf1-previdenciario",
+    "input": "Procure no TRF1 publicações com o termo \"previdenciário\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "trf1",
+          "query": "previdenciário",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "1004308-53.2026.4.01.3309",
+      "1032230-33.2025.4.01.3300",
+      "1001030-91.2023.4.01.3101",
+      "1006488-12.2026.4.01.3901",
+      "1026405-61.2023.4.01.3500"
+    ],
+    "expected_outcome": "Reports the Publications found in TRF1 for \"previdenciário\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: Decisão; Intimação; Sentença Tipo A; Sentença Tipo B; kinds: ambiguous, decisao_interlocutoria, sentenca.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-search-trf3-aposentadoria",
+    "input": "Procure no TRF3 publicações com o termo \"aposentadoria\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "trf3",
+          "query": "aposentadoria",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "5002539-37.2026.4.03.6331",
+      "5004170-50.2025.4.03.6331",
+      "5001042-22.2025.4.03.6331",
+      "5002406-63.2024.4.03.6331",
+      "5000278-36.2025.4.03.6331"
+    ],
+    "expected_outcome": "Reports the Publications found in TRF3 for \"aposentadoria\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: Sentença; Sentença Tipo C; kinds: decisao_interlocutoria, sentenca.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-search-trf4-contribuicao",
+    "input": "Procure no TRF4 publicações com o termo \"contribuição\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "trf4",
+          "query": "contribuição",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "5065963-47.2026.4.04.7100",
+      "5003869-91.2025.4.04.7102",
+      "5002509-25.2024.4.04.7210",
+      "5001438-51.2025.4.04.7210",
+      "5002533-58.2026.4.04.7121"
+    ],
+    "expected_outcome": "Reports the Publications found in TRF4 for \"contribuição\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: Sentença; kinds: sentenca.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-search-stj-especial",
+    "input": "Procure no STJ publicações com o termo \"especial\" disponibilizadas entre 19/10/2026 e 21/10/2026.",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "court": "stj",
+          "query": "especial",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "1178767-34.2023.8.26.0100",
+      "0730078-58.2023.8.07.0001",
+      "1025604-12.2022.4.01.3200"
+    ],
+    "expected_outcome": "Reports the Publications found in STJ for \"especial\" between 2026-10-19 and 2026-10-21, citing only CNJ numbers the tool returned. The Source returned 5 Publication(s) (incomplete (budget)) released on 2026-10-21; document types: DESPACHO / DECISÃO; kinds: decisao_monocratica.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-pub-lookup-01-tjsp",
+    "input": "Quais publicações há no processo 0002480-49.2025.8.26.0268 entre 19/10/2026 e 21/10/2026?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "0002480-49.2025.8.26.0268",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "0002480-49.2025.8.26.0268"
+    ],
+    "expected_outcome": "Lists the Publications of Case 0002480-49.2025.8.26.0268 in the window, citing only CNJ numbers the tool returned. The Source returned 1 Publication(s) (complete) released on 2026-10-21; document types: Intimação; kinds: sentenca.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-pub-lookup-02-tjsp",
+    "input": "Quais publicações há no processo 1006507-39.2024.8.26.0609 entre 19/10/2026 e 21/10/2026?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "1006507-39.2024.8.26.0609",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "1006507-39.2024.8.26.0609"
+    ],
+    "expected_outcome": "Lists the Publications of Case 1006507-39.2024.8.26.0609 in the window, citing only CNJ numbers the tool returned. The Source returned 1 Publication(s) (complete) released on 2026-10-21; document types: Intimação; kinds: ambiguous.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-pub-lookup-03-tjmg",
+    "input": "Quais publicações há no processo 4839370-58.2009.8.13.0024 entre 19/10/2026 e 21/10/2026?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "4839370-58.2009.8.13.0024",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "4839370-58.2009.8.13.0024"
+    ],
+    "expected_outcome": "Lists the Publications of Case 4839370-58.2009.8.13.0024 in the window, citing only CNJ numbers the tool returned. The Source returned 2 Publication(s) (complete) released on 2026-10-21; document types: Apelação; kinds: ambiguous, decisao_monocratica.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-pub-lookup-04-tjrj",
+    "input": "Quais publicações há no processo 0816619-93.2026.8.19.0021 entre 19/10/2026 e 21/10/2026?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "0816619-93.2026.8.19.0021",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "0816619-93.2026.8.19.0021"
+    ],
+    "expected_outcome": "Lists the Publications of Case 0816619-93.2026.8.19.0021 in the window, citing only CNJ numbers the tool returned. The Source returned 1 Publication(s) (complete) released on 2026-10-21; document types: Decisão; kinds: sentenca.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-pub-lookup-05-tjrs",
+    "input": "Quais publicações há no processo 5019950-76.2022.8.21.0001 entre 19/10/2026 e 21/10/2026?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "5019950-76.2022.8.21.0001",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "5019950-76.2022.8.21.0001"
+    ],
+    "expected_outcome": "Lists the Publications of Case 5019950-76.2022.8.21.0001 in the window, citing only CNJ numbers the tool returned. The Source returned 1 Publication(s) (complete) released on 2026-10-21; document types: DESPACHO/DECISÃO; kinds: sentenca.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-pub-lookup-06-tjpr",
+    "input": "Quais publicações há no processo 0007303-79.2026.8.16.0019 entre 19/10/2026 e 21/10/2026?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "0007303-79.2026.8.16.0019",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "0007303-79.2026.8.16.0019"
+    ],
+    "expected_outcome": "Lists the Publications of Case 0007303-79.2026.8.16.0019 in the window, citing only CNJ numbers the tool returned. The Source returned 1 Publication(s) (complete) released on 2026-10-21; document types: Ementa de Acórdão; kinds: acordao.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-pub-lookup-07-trf1",
+    "input": "Quais publicações há no processo 1004308-53.2026.4.01.3309 entre 19/10/2026 e 21/10/2026?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "1004308-53.2026.4.01.3309",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "1004308-53.2026.4.01.3309"
+    ],
+    "expected_outcome": "Lists the Publications of Case 1004308-53.2026.4.01.3309 in the window, citing only CNJ numbers the tool returned. The Source returned 1 Publication(s) (complete) released on 2026-10-21; document types: Intimação; kinds: sentenca.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-pub-lookup-08-trf3",
+    "input": "Quais publicações há no processo 5002539-37.2026.4.03.6331 entre 19/10/2026 e 21/10/2026?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "5002539-37.2026.4.03.6331",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "5002539-37.2026.4.03.6331"
+    ],
+    "expected_outcome": "Lists the Publications of Case 5002539-37.2026.4.03.6331 in the window, citing only CNJ numbers the tool returned. The Source returned 2 Publication(s) (complete) released on 2026-10-20, 2026-10-21; document types: Sentença; kinds: sentenca.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-pub-lookup-09-trf4",
+    "input": "Quais publicações há no processo 5065963-47.2026.4.04.7100 entre 19/10/2026 e 21/10/2026?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "5065963-47.2026.4.04.7100",
+          "date_from": "2026-10-19",
+          "date_to": "2026-10-21"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "5065963-47.2026.4.04.7100"
+    ],
+    "expected_outcome": "Lists the Publications of Case 5065963-47.2026.4.04.7100 in the window, citing only CNJ numbers the tool returned. The Source returned 1 Publication(s) (complete) released on 2026-10-21; document types: Sentença; kinds: sentenca.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  }
+]

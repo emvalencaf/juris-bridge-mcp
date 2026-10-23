@@ -21,7 +21,10 @@ def no_network(monkeypatch):
 
 
 def _drafts() -> list[dict]:
-    return json.loads(DRAFTS_FILE.read_text(encoding="utf-8"))
+    files = [
+        DRAFTS_FILE.parent.parent / split / DRAFTS_FILE.name for split in ("tuning", "validation")
+    ]
+    return [c for f in files for c in json.loads(f.read_text(encoding="utf-8"))]
 
 
 def _first_call(case: dict) -> tuple[str, dict]:
@@ -33,7 +36,8 @@ def _first_call(case: dict) -> tuple[str, dict]:
 
 
 def test_the_drafts_load_with_the_dataset_and_assayer_loaders():
-    dataset = load_split("drafts")
+    dataset = load_split("tuning")
+    dataset.cases += load_split("validation").cases
     ids = {c["id"] for c in _drafts()}
     assert ids <= {case.id for case in dataset.cases}
     assert len(load_cases(_drafts()).cases) == len(ids)

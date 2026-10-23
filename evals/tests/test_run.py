@@ -158,7 +158,7 @@ def test_main_runs_the_split_with_an_injected_client(capsys, tmp_path):
 
 
 def test_the_empty_split_still_works_without_a_model(capsys):
-    assert main([]) == 0
+    assert main(["run", "--split", "drafts"]) == 0
     assert "cases: 0" in capsys.readouterr().out
 
 

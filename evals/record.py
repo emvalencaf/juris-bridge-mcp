@@ -5,8 +5,9 @@ Opt-in, in the style of the BNP live check: nothing is recorded unless
 transport is built, so no request can reach a live Source. The transport sits under the real
 server (as `ReplayTransport` does) and uses the same `request_key` and Cassette format.
 
-Responses are redacted before they are stored (`evals.redaction.redact`): for a JSON body only
-the string values change, keys and structure are kept. Only the `content-type` header is kept.
+Responses are redacted before they are stored, all through one `Redactor` per Cassette so that a
+person keeps one `[PESSOA N]` across its responses: for a JSON body only the string values
+change, keys and structure are kept. Only the `content-type` header is kept.
 The request key is stored as is, because replay matches on it; the server has no CPF, party or
 judge search, so it carries no personal data. Requests are spaced at least `min_interval`
 seconds apart on top of the server's own rate limiter. Recording is read-only: it only
@@ -34,7 +35,7 @@ from evals.cassette import (
     cassette_path,
     request_key,
 )
-from evals.redaction import redact
+from evals.redaction import Redactor
 
 RECORD_ENV = "JURIS_BRIDGE_EVALS_RECORD"
 
@@ -55,7 +56,7 @@ def recording_enabled(environ: Mapping[str, str] | None = None) -> bool:
     return env.get(RECORD_ENV) == "1"
 
 
-def _redact_body(body: bytes, content_type: str) -> bytes:
+def _redact_body(redactor: Redactor, body: bytes, content_type: str) -> bytes:
     try:
         text = body.decode("utf-8")
     except UnicodeDecodeError:
@@ -66,8 +67,8 @@ def _redact_body(body: bytes, content_type: str) -> bytes:
         except ValueError:
             pass
         else:
-            return json.dumps(redact(data), ensure_ascii=False).encode("utf-8")
-    return redact(text).encode("utf-8")
+            return json.dumps(redactor.redact(data), ensure_ascii=False).encode("utf-8")
+    return redactor.redact(text).encode("utf-8")
 
 
 class RecordingTransport(httpx.AsyncBaseTransport):
@@ -88,6 +89,7 @@ class RecordingTransport(httpx.AsyncBaseTransport):
         self._clock = clock
         self._sleep = sleep
         self._last: float | None = None
+        self._redactor = Redactor()
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         """Wait for the interval, forward the request, store the redacted response."""
@@ -99,7 +101,7 @@ class RecordingTransport(httpx.AsyncBaseTransport):
         response = await self.inner.handle_async_request(request)
         await response.aread()
         headers = {k: v for k, v in response.headers.items() if k.lower() in _KEPT_HEADERS}
-        body = _redact_body(response.content, headers.get("content-type", ""))
+        body = _redact_body(self._redactor, response.content, headers.get("content-type", ""))
         key = request_key(request)
         self.cassette.entries[key] = CassetteEntry.from_response(
             key, response.status_code, headers, body

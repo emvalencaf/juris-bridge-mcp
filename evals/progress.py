@@ -32,6 +32,11 @@ def unit_key(case_id: str, repetition: int) -> str:
     return f"{case_id}#{repetition}"
 
 
+def case_of(key: str) -> str:
+    """Return the Eval case id of a `unit_key`."""
+    return key.rsplit("#", 1)[0]
+
+
 class Progress:
     """A JSON file of finished units and their outputs, saved after every unit.
 

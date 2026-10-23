@@ -33,7 +33,9 @@ from evals.judge import (
     UNKNOWN,
     _context,
     make_rubric_judge,
+    normalise_label,
 )
+from evals.progress import case_of, unit_key
 
 LABELS_VERSION = 1
 CALIBRATION_VERSION = 1
@@ -45,17 +47,12 @@ class CalibrationError(Exception):
     """The labels file is unreadable or invalid, or nothing in it is labelled."""
 
 
-def item_id(case_id: str, index: int) -> str:
-    """The stable id of a run's `index`-th answer to a case (`case_id#index`, from zero)."""
-    return f"{case_id}#{index}"
-
-
 def _answers(experiment: Experiment) -> dict[str, Trajectory]:
     seen: Counter[str] = Counter()
     answers: dict[str, Trajectory] = {}
     for trajectory in experiment.trajectories:
         case_id = trajectory.case_id or ""
-        key = item_id(case_id, seen[case_id])
+        key = unit_key(case_id, seen[case_id])
         seen[case_id] += 1
         if trajectory.final_output:
             answers[key] = trajectory
@@ -66,7 +63,7 @@ def sample_ids(experiment: Experiment, n: int = DEFAULT_SAMPLE) -> list[str]:
     """Pick up to `n` answer ids, deterministically, spread across cases (round robin)."""
     by_case: dict[str, list[str]] = {}
     for key in _answers(experiment):
-        by_case.setdefault(key.rsplit("#", 1)[0], []).append(key)
+        by_case.setdefault(case_of(key), []).append(key)
     queues = [by_case[case] for case in sorted(by_case)]
     picked: list[str] = []
     depth = 0
@@ -125,7 +122,7 @@ def load_labels(path: Path) -> dict[str, Any]:
 
 def _human(item: dict[str, Any], axis: str) -> str | None:
     value = item.get(axis)
-    label = value.strip().casefold() if isinstance(value, str) else ""
+    label = normalise_label(value)
     if not label:
         return None
     if label not in (*AXES[axis], UNKNOWN):

@@ -29,7 +29,7 @@ from typing import Any
 from fastmcp import Client
 
 from evals.cassette import CASSETTES_DIR, cassette_path
-from evals.record import RecordingDisabledError, record_case
+from evals.record import RecordingDisabledError, RecordOptions, record_case
 
 DRAFTS_FILE = Path(__file__).parent / "cases" / "drafts" / "precedents.json"
 MIN_INTERVAL_SECONDS = 2.0
@@ -449,7 +449,9 @@ async def _record(spec: DraftSpec, root: Path) -> Recorded | None:
             else:
                 recorded.results.append((name, arguments, result.structured_content, None))
 
-    await record_case(spec.id, run, root=root, min_interval=MIN_INTERVAL_SECONDS)
+    await record_case(
+        spec.id, run, root=root, options=RecordOptions(min_interval=MIN_INTERVAL_SECONDS)
+    )
     problem = spec.check(recorded)
     if problem is not None:
         cassette_path(spec.id, root=root).unlink()

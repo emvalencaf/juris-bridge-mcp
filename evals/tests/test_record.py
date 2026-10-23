@@ -13,6 +13,7 @@ from evals.record import (
     RECORD_ENV,
     RecordingDisabledError,
     RecordingTransport,
+    RecordOptions,
     record_case,
     recording_session,
 )
@@ -62,7 +63,7 @@ async def test_without_the_variable_a_session_is_refused_and_nothing_is_sent():
     inner = httpx.MockTransport(lambda r: sent.append(r) or httpx.Response(200))
 
     with pytest.raises(RecordingDisabledError):
-        async with recording_session("c1", environ={}, inner=inner):
+        async with recording_session("c1", RecordOptions(environ={}, inner=inner)):
             pass
 
     assert sent == []
@@ -70,13 +71,18 @@ async def test_without_the_variable_a_session_is_refused_and_nothing_is_sent():
 
 async def test_a_value_other_than_one_is_refused_too():
     with pytest.raises(RecordingDisabledError):
-        async with recording_session("c1", environ={RECORD_ENV: "true"}, inner=upstream()):
+        async with recording_session(
+            "c1", RecordOptions(environ={RECORD_ENV: "true"}, inner=upstream())
+        ):
             pass
 
 
 async def test_record_case_saves_a_dated_cassette_named_after_the_case(tmp_path):
     path = await record_case(
-        "case-001", search, environ=ENABLED, inner=upstream(), root=tmp_path, today=TODAY
+        "case-001",
+        search,
+        root=tmp_path,
+        options=RecordOptions(environ=ENABLED, inner=upstream(), today=TODAY),
     )
 
     assert path == cassette_path("case-001", root=tmp_path)
@@ -99,7 +105,10 @@ async def test_the_saved_cassette_holds_no_cpf_cnpj_or_name(tmp_path):
     ).encode()
 
     path = await record_case(
-        "case-002", search, environ=ENABLED, inner=upstream(body), root=tmp_path, today=TODAY
+        "case-002",
+        search,
+        root=tmp_path,
+        options=RecordOptions(environ=ENABLED, inner=upstream(body), today=TODAY),
     )
 
     text = path.read_text(encoding="utf-8")
@@ -113,7 +122,10 @@ async def test_the_saved_cassette_holds_no_cpf_cnpj_or_name(tmp_path):
 
 async def test_a_recorded_cassette_replays_through_the_replay_transport(tmp_path):
     path = await record_case(
-        "case-003", search, environ=ENABLED, inner=upstream(), root=tmp_path, today=TODAY
+        "case-003",
+        search,
+        root=tmp_path,
+        options=RecordOptions(environ=ENABLED, inner=upstream(), today=TODAY),
     )
 
     async with replay_session(Cassette.load(path)) as session:
@@ -154,7 +166,10 @@ async def test_a_failed_run_saves_nothing(tmp_path):
 
     with pytest.raises(RuntimeError):
         await record_case(
-            "case-004", run, environ=ENABLED, inner=upstream(), root=tmp_path, today=TODAY
+            "case-004",
+            run,
+            root=tmp_path,
+            options=RecordOptions(environ=ENABLED, inner=upstream(), today=TODAY),
         )
 
     assert not cassette_path("case-004", root=tmp_path).exists()

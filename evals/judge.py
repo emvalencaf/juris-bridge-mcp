@@ -111,8 +111,13 @@ def _object(text: str) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def normalise_label(value: Any) -> str:
+    """Return a label trimmed and case-folded; "" when it is not a string."""
+    return value.strip().casefold() if isinstance(value, str) else ""
+
+
 def _label(value: Any, allowed: tuple[str, ...]) -> str:
-    label = value.strip().casefold() if isinstance(value, str) else ""
+    label = normalise_label(value)
     return label if label in allowed else UNKNOWN
 
 

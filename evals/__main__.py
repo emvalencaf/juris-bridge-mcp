@@ -5,15 +5,33 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from evals.calibrate import (
+    DEFAULT_SAMPLE,
+    CalibrationError,
+    export_labels,
+    format_calibration,
+    load_labels,
+    score_labels,
+    write_json,
+)
 from evals.compare import format_comparison
 from evals.dataset import SPLITS, load_split
+from evals.judge import LLMClientJudge
 from evals.llm import EvalLLMSettings, LLMClient
 from evals.progress import Progress
 from evals.report import format_report
-from evals.run import RunStopped, gemini_agent_client, gemini_judge_client, run_eval
+from evals.run import (
+    RunStopped,
+    gemini_agent_client,
+    gemini_calibration_client,
+    gemini_judge_client,
+    run_eval,
+)
 from evals.store import RESULTS_DIR, StoreError, load_run, save_run
 
 DEFAULT_REPETITIONS = 3
+LABELS_FILE = "calibration-labels.json"
+CALIBRATION_FILE = "calibration.json"
 
 
 def main(
@@ -21,6 +39,7 @@ def main(
     *,
     llm: LLMClient | None = None,
     judge_llm: LLMClient | None = None,
+    calibration_llm: LLMClient | None = None,
     results_dir: Path = RESULTS_DIR,
 ) -> int:
     """Run a split of Eval cases through the agent, or compare two saved runs.
@@ -29,10 +48,14 @@ def main(
 
     Args:
         argv: Command-line arguments after the program name: `run [--split NAME]
-            [--repetitions N] [--fresh] [--judge]`, `compare A B`, or none (a `run` of `tuning`).
+            [--repetitions N] [--fresh] [--judge]`, `compare A B`,
+            `calibrate export RUN [--n N] [--out FILE]`, `calibrate score RUN LABELS`, or none
+            (a `run` of `tuning`).
         llm: The model client; built from settings (Gemini) when None. Tests pass a scripted one.
         judge_llm: The judge model's client, used only with `--judge`; built from settings
             (the judge model) when None.
+        calibration_llm: The calibration model's client, used only by `calibrate score`; built
+            from settings (the calibration model) when None.
         results_dir: Where runs and the progress file are kept (git-ignored by default).
 
     Returns:
@@ -57,8 +80,23 @@ def main(
     compared = commands.add_parser("compare", help="compare two saved runs (B minus A)")
     compared.add_argument("a", help="saved run A: a path, or a file name under evals/results/")
     compared.add_argument("b", help="saved run B")
+    calibrate = commands.add_parser("calibrate", help="calibrate the judge against hand labels")
+    steps = calibrate.add_subparsers(dest="step", required=True)
+    export = steps.add_parser("export", help="export answers of a saved run to label by hand")
+    export.add_argument("run", help="saved run: a path, or a file name under evals/results/")
+    export.add_argument("--n", type=int, default=DEFAULT_SAMPLE, help="answers (default: 20)")
+    export.add_argument("--out", help=f"labels file to write (default: results/{LABELS_FILE})")
+    scored = steps.add_parser("score", help="measure the judge's agreement with the labels")
+    scored.add_argument("run", help="the saved run the labels were exported from")
+    scored.add_argument("labels", help="the labelled file")
     args = parser.parse_args(list(argv))
 
+    if args.command == "calibrate":
+        if args.step == "export":
+            if args.n < 1:
+                parser.error("--n must be at least 1")
+            return _calibrate_export(args.run, args.n, args.out, results_dir)
+        return _calibrate_score(args.run, args.labels, calibration_llm, results_dir)
     if args.command == "compare":
         return _compare(args.a, args.b, results_dir)
 
@@ -103,6 +141,42 @@ def main(
         if progress is not None:
             progress.clear()
         print(f"\nSaved: {path}")
+    return 0
+
+
+def _calibrate_export(run: str, n: int, out: str | None, results_dir: Path) -> int:
+    try:
+        experiment, _ = load_run(run, root=results_dir)
+    except StoreError as error:
+        print(f"error: {error}")
+        return 1
+    template = export_labels(experiment, Path(run).stem, n)
+    path = Path(out) if out else results_dir / LABELS_FILE
+    write_json(path, template)
+    print(f"Exported {len(template['items'])} answers to label: {path}")
+    return 0
+
+
+def _calibrate_score(
+    run: str, labels: str, calibration_llm: LLMClient | None, results_dir: Path
+) -> int:
+    try:
+        experiment, _ = load_run(run, root=results_dir)
+        data = load_labels(Path(labels))
+        model = "scripted"
+        if calibration_llm is None:
+            settings = EvalLLMSettings()
+            calibration_llm, model = gemini_calibration_client(settings), settings.calibration_model
+        record = score_labels(
+            experiment, data, LLMClientJudge(calibration_llm), run=Path(run).stem, model=model
+        )
+    except (StoreError, CalibrationError) as error:
+        print(f"error: {error}")
+        return 1
+    path = results_dir / CALIBRATION_FILE
+    write_json(path, record)
+    print("\n".join(format_calibration(record)))
+    print(f"\nSaved: {path}")
     return 0
 
 

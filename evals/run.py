@@ -9,7 +9,7 @@ apart so a later wrapper (resuming, key rotation) can go around it.
 import asyncio
 import dataclasses
 import time
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -185,6 +185,15 @@ def gemini_judge_client(settings: EvalLLMSettings) -> GeminiClient:
     return _gemini_client(settings, settings.judge_model)
 
 
+def gemini_calibration_client(settings: EvalLLMSettings) -> GeminiClient:
+    """Build the Gemini client of the calibration model (stronger than the judge's).
+
+    Raises:
+        ValueError: When no `GEMINI_API_KEY` is set.
+    """
+    return _gemini_client(settings, settings.calibration_model)
+
+
 def _gemini_client(settings: EvalLLMSettings, model: str) -> GeminiClient:
     limiter = RateLimiter(
         settings.requests_per_minute, settings.tokens_per_minute, time.monotonic, time.sleep
@@ -199,7 +208,7 @@ def _gemini_client(settings: EvalLLMSettings, model: str) -> GeminiClient:
     )
 
 
-def format_experiment(experiment: Experiment) -> str:
+def format_experiment(experiment: Experiment, calibration: Mapping[str, Any] | None = None) -> str:
     """Render the Experiment: a summary, then one line per Eval case, then the caveats."""
     lines = [
         f"Experiment {experiment.name!r}",
@@ -209,7 +218,7 @@ def format_experiment(experiment: Experiment) -> str:
         f"  failures: {len(experiment.failures)}",
     ]
     for trajectory in experiment.trajectories:
-        lines.append("  " + _case_line(experiment, trajectory))
+        lines.append("  " + _case_line(experiment, trajectory, calibration))
     citation = [s.value for s in experiment.scores if s.name == CITATION_EXISTENCE]
     if citation:
         lines.append(f"  mean citation_existence: {sum(citation) / len(citation):.2f}")
@@ -226,7 +235,9 @@ def format_experiment(experiment: Experiment) -> str:
     return "\n".join(lines)
 
 
-def _case_line(experiment: Experiment, trajectory: Trajectory) -> str:
+def _case_line(
+    experiment: Experiment, trajectory: Trajectory, calibration: Mapping[str, Any] | None = None
+) -> str:
     score = next(
         (s for s in experiment.scores if s.name == TOOL_USE and s.target_id == trajectory.case_id),
         None,
@@ -249,7 +260,7 @@ def _case_line(experiment: Experiment, trajectory: Trajectory) -> str:
         line += f" | {score.comment}"
     line += _citation_note(experiment, trajectory)
     if judged:
-        line += "\n    " + format_judge_line(judged)
+        line += "\n    " + format_judge_line(judged, calibration)
     return line
 
 

@@ -9,6 +9,12 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Judge calibration (#105): `python -m evals calibrate export RUN` writes about 20 sampled answers
+  (question, expected outcome, tool results, answer, empty labels, never the judge's verdict) for
+  hand labelling, and `calibrate score RUN LABELS` re-judges them with the calibration model,
+  reports agreement with the labels (per axis, joint, Cohen's kappa) and writes
+  `evals/results/calibration.json`. The report shows the agreement beside the judge's scores and
+  drops `[UNCALIBRATED]` only for a measured record. The labels file format is in `evals/README.md`.
 - Citation-existence Score (#98): the `citation_existence` Metric in `evals/` checks that each CNJ
   number and Precedent identifier cited in the agent's final answer appears in a tool result of the
   same Trajectory, normalising punctuation and kind wordings. Absent ones are flagged as fabricated

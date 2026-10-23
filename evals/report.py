@@ -11,7 +11,9 @@ from typing import Any
 
 from assayer.models import Experiment
 
+from evals.calibrate import format_calibration
 from evals.consistency import consistency, efficiency
+from evals.judge import JUDGE, is_measured, load_calibration
 from evals.run import format_experiment
 
 Section = Callable[[Experiment, dict[str, Any]], list[str]]
@@ -71,6 +73,22 @@ def efficiency_section(experiment: Experiment, meta: dict[str, Any]) -> list[str
     return lines
 
 
+def calibration_lines(experiment: Experiment, record: dict[str, Any] | None) -> list[str]:
+    """Agreement of the judge with the human labels, shown beside its scores (only if judged)."""
+    scores = [s for s in experiment.scores if s.name == JUDGE]
+    if not scores:
+        return []
+    mean = sum(s.value for s in scores) / len(scores)
+    head = [f"Judge scores: mean {mean:.2f} over {len(scores)} answers"]
+    if is_measured(record):
+        return [*head, *format_calibration(record)]  # type: ignore[arg-type]
+    return [
+        *head,
+        "  UNCALIBRATED: no measured agreement with human labels yet"
+        " (python -m evals calibrate export/score).",
+    ]
+
+
 def limits_section(experiment: Experiment, meta: dict[str, Any]) -> list[str]:
     """What this report cannot tell you."""
     lines = [
@@ -102,13 +120,21 @@ def format_report(
     meta: dict[str, Any] | None = None,
     *,
     sections: list[Section] | None = None,
+    calibration: dict[str, Any] | None | str = "load",
 ) -> str:
-    """Render the Experiment, then every section, then the limits."""
+    """Render the Experiment, then every section, the judge calibration, then the limits.
+
+    `calibration` is a calibration record, None, or "load" (default) to read the saved one.
+    """
     meta = meta or {}
-    blocks = [format_experiment(experiment)]
+    record = load_calibration() if calibration == "load" else calibration
+    blocks = [format_experiment(experiment, record)]  # type: ignore[arg-type]
     for section in SECTIONS if sections is None else sections:
         lines = section(experiment, meta)
         if lines:
             blocks.append("\n".join(lines))
+    judged = calibration_lines(experiment, record)  # type: ignore[arg-type]
+    if judged:
+        blocks.append("\n".join(judged))
     blocks.append("\n".join(limits_section(experiment, meta)))
     return "\n\n".join(blocks)

@@ -145,13 +145,13 @@ def test_results_are_uncalibrated_without_a_calibration_record(tmp_path):
 
 def test_a_calibration_record_clears_the_mark(tmp_path):
     path = tmp_path / "calibration.json"
-    path.write_text('{"agreement": 0.9}')
+    path.write_text('{"measured": true, "agreement": 0.9}')
     record = load_calibration(path)
     metric = make_rubric_judge(LLMClientJudge(ScriptedLLMClient([reply()] * 3)), calibration=record)
 
     meta = metric.evaluate(trajectory(), CASE).scores[0].metadata
 
-    assert record == {"agreement": 0.9}
+    assert record == {"measured": True, "agreement": 0.9}
     assert meta["uncalibrated"] is False
 
 

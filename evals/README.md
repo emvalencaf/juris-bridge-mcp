@@ -178,9 +178,59 @@ agreement per axis. A tie is `unknown`. The Score value is the share of repetiti
 and grounded. The verdict is stored in the Score's `metadata` (`correctness`, `grounding`, `counts`,
 `agreement`, `repetitions`, `uncalibrated`, `prompt`, `prompt_hash`) for the calibration to read.
 
-Results are marked `[UNCALIBRATED]` until a calibration record exists at
-`evals/results/calibration.json` (`evals.judge.load_calibration` reads it; absent or unreadable means
-uncalibrated). Do not read an uncalibrated verdict as a measure of the server.
+Results are marked `[UNCALIBRATED]` until a measured calibration record exists at
+`evals/results/calibration.json` (`evals.judge.load_calibration` reads it; absent, unreadable or
+without `"measured": true` means uncalibrated). Do not read an uncalibrated verdict as a measure of
+the server. See "Calibrating the judge" below.
+
+### Calibrating the judge
+
+The judge is checked against your own labels, using a stronger model (`EVALS_CALIBRATION_MODEL`).
+
+```bash
+python -m evals calibrate export RUN [--n 20] [--out FILE]   # default: results/calibration-labels.json
+# ... label the file by hand ...
+python -m evals calibrate score RUN LABELS
+```
+
+`RUN` is a saved run (a path or a file name under `evals/results/`). `export` samples about 20
+answers, the same ones every time and spread across the Eval cases, and never writes the judge's
+verdict, so you label blind. `score` re-judges the labelled answers with the calibration model,
+prints the agreement with your labels (per axis and joint, with Cohen's kappa and the counts) and
+writes `evals/results/calibration.json`. From then on `python -m evals run` and the report show the
+agreement beside the judge's scores and drop `[UNCALIBRATED]`.
+
+Labels file (version 1; ticket #106 saves labels in this format):
+
+```json
+{
+  "version": 1,
+  "run": "tuning-20260101-120000",
+  "items": [
+    {
+      "id": "citation-01#0",
+      "case_id": "citation-01",
+      "question": "What does Súmula 7 say?",
+      "expected_outcome": "States the thesis and cites the Precedent",
+      "context": "[get_precedent] TESE: ...",
+      "answer": "A tese é ...",
+      "correctness": "correct",
+      "grounding": "grounded"
+    }
+  ]
+}
+```
+
+How to label: read `question`, `expected_outcome` and `context`, then the `answer`. Set
+`correctness` to `correct` (does what the expected outcome asks), `incorrect` (wrong or beside the
+point) or `refusal` (declines). Set `grounding` to `grounded` (every claim is in `context`),
+`misgrounded` (relies on a result that does not support the claim) or `ungrounded` (states facts in
+no result). Either field may be `unknown` when you cannot decide. Leave both empty to skip an item;
+unlabeled items are ignored and counted. `id` is `<case_id>#<n>`, the n-th answer to that case in
+the run; do not edit it. An invalid label makes `score` stop with an error and write nothing.
+
+The record keeps `measured`, the run, the calibration model, the counts, the agreement and kappa per
+axis (`correctness`, `grounding`), the `joint` agreement and every (human, judge) pair.
 
 ### Repetitions, consistency and the report
 

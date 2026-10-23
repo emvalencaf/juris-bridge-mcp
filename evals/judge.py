@@ -169,7 +169,7 @@ def make_rubric_judge(
     repetitions: int = DEFAULT_REPETITIONS,
     *,
     name: str = JUDGE,
-    calibration: Mapping[str, Any] | None | str = "load",
+    calibration: Mapping[str, Any] | str | None = "load",
 ) -> Metric:
     """Build the rubric judge Metric.
 

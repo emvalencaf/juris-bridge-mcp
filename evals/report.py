@@ -120,7 +120,7 @@ def format_report(
     meta: dict[str, Any] | None = None,
     *,
     sections: list[Section] | None = None,
-    calibration: dict[str, Any] | None | str = "load",
+    calibration: dict[str, Any] | str | None = "load",
 ) -> str:
     """Render the Experiment, then every section, the judge calibration, then the limits.
 

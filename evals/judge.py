@@ -6,9 +6,9 @@ metric is an ordinary assayer judge-based `Metric`. Each judgment is repeated
 `DEFAULT_REPETITIONS` times and the spread (verdict counts, agreement) is kept on the Score.
 Output that is not valid JSON or uses another label counts as "unknown", never a crash.
 
-Results are UNCALIBRATED until a calibration record exists at `CALIBRATION_PATH`
-(`evals/results/calibration.json`, written by the calibration ticket #105): `load_calibration`
-returns it, or None when it is absent or unreadable.
+Results are UNCALIBRATED until a measured calibration record exists at `CALIBRATION_PATH`
+(`evals/results/calibration.json`, written by `python -m evals calibrate score`, with
+`"measured": true`): `load_calibration` returns it, or None when it is absent or unreadable.
 
 Stored verdict (a Score's `metadata`, read by the calibration): `correctness` and `grounding`
 (majority label; "unknown" on a tie), `counts` (per axis, label to repetitions), `agreement`
@@ -136,6 +136,11 @@ def load_calibration(path: Path = CALIBRATION_PATH) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def is_measured(record: Any) -> bool:
+    """True only for a calibration record that was measured (`"measured": true`)."""
+    return isinstance(record, Mapping) and record.get("measured") is True
+
+
 def _majority(labels: list[str]) -> tuple[str, float]:
     counts = Counter(labels)
     top = counts.most_common()
@@ -206,7 +211,7 @@ def make_rubric_judge(
                     {"correctness": v.correctness, "grounding": v.grounding, "reason": v.reason}
                     for v in verdicts
                 ],
-                "uncalibrated": not record,
+                "uncalibrated": not is_measured(record),
                 "prompt": RUBRIC_PROMPT.ref,
                 "prompt_hash": RUBRIC_PROMPT.hash,
             },
@@ -226,10 +231,14 @@ def _spread(counts: Mapping[str, int]) -> str:
     return ", ".join(f"{label} {n}" for label, n in sorted(counts.items(), key=lambda kv: -kv[1]))
 
 
-def format_judge_line(score: Score) -> str:
-    """One report line for a judge Score: verdicts, spread and agreement, UNCALIBRATED mark."""
+def format_judge_line(score: Score, calibration: Mapping[str, Any] | None = None) -> str:
+    """One report line for a judge Score: verdicts, spread and agreement, UNCALIBRATED mark.
+
+    The mark is dropped only when the Score was calibrated or `calibration` is a measured record.
+    """
     meta = score.metadata
-    mark = " [UNCALIBRATED]" if meta.get("uncalibrated", True) else ""
+    uncalibrated = meta.get("uncalibrated", True) and not is_measured(calibration)
+    mark = " [UNCALIBRATED]" if uncalibrated else ""
     agreement = meta["agreement"]
     return (
         f"judge: {meta['correctness']} / {meta['grounding']}{mark} | "

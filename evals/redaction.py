@@ -31,8 +31,10 @@ NER_MODEL = "pt_core_news_md"
 
 # A CNJ number is matched first only so that its digits are never read as a CPF or CNPJ.
 _CNJ = r"\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}"
-_CNPJ = r"\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}"
-_CPF = r"\d{3}\.?\d{3}\.?\d{3}-?\d{2}"
+# The hyphen may be wrapped onto the next line or written as the HTML non-breaking hyphen.
+_DASH = r"(?:-\s*|&#x2011;|\u2011)?"
+_CNPJ = rf"\d{{2}}\.?\d{{3}}\.?\d{{3}}/?\d{{4}}{_DASH}\d{{2}}"
+_CPF = rf"\d{{3}}\.?\d{{3}}\.?\d{{3}}{_DASH}\d{{2}}"
 _NUMBER = re.compile(
     rf"(?<![\d.\-/])(?:(?P<cnj>{_CNJ})|(?P<cnpj>{_CNPJ})|(?P<cpf>{_CPF}))(?!\d|[.\-/]\d)"
 )

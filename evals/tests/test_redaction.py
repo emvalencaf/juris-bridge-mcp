@@ -28,6 +28,11 @@ def test_cnpj_is_replaced_in_every_written_form(cnpj):
     assert redact(f"empresa {cnpj}, ré") == f"empresa {CNPJ_PLACEHOLDER}, ré"
 
 
+@pytest.mark.parametrize("cnpj", ["06.871.830/0002-\n 51", "39.911.488/0001&#x2011;44"])
+def test_cnpj_with_a_wrapped_or_entity_hyphen_is_replaced(cnpj):
+    assert redact(f"CNPJ {cnpj}, ré") == f"CNPJ {CNPJ_PLACEHOLDER}, ré"
+
+
 def test_cnj_court_alias_and_kind_sigla_are_left_alone():
     text = (
         "Proc. 0001234-56.2023.8.26.0100 (TJSP, TRF3) 00012345620238260100 "

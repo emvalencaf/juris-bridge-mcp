@@ -1,7 +1,7 @@
 [project]
 name = "juris-bridge-mcp"
 description = "A remote, extensible and testable MCP server that gives AI agents access to Brazilian judicial data through a unified interface."
-version = "0.1.0"
+version = "0.1.1"
 requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=4.1.0",

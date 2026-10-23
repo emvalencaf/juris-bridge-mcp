@@ -7,6 +7,8 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-23
+
 ### Added
 
 - Retrieval Scores (#102): `context_precision` and `context_recall` per Eval case and per run,

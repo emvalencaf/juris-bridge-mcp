@@ -1,0 +1,39 @@
+[
+  {
+    "id": "seed-publications-by-cnj",
+    "input": "Quais publicações saíram no TJSP em 15/10/2026 no processo 1234567-76.2025.8.26.0100?",
+    "expected_tool_calls": [
+      {
+        "name": "search_publications",
+        "arguments": {
+          "cnj_number": "1234567-76.2025.8.26.0100",
+          "date_from": "2026-10-15",
+          "date_to": "2026-10-15"
+        }
+      }
+    ],
+    "reference_context_ids": ["1234567-76.2025.8.26.0100"],
+    "expected_outcome": "Lists the Publications of that Case released on 2026-10-15 and cites only CNJ numbers the tool returned."
+  },
+  {
+    "id": "seed-precedent-rg-1002",
+    "input": "Qual é a tese fixada no Tema 1002 da repercussão geral do STF?",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          {"name": "search_precedents", "arguments": {"number": "1002", "kind": "RG"}},
+          {"name": "search_precedents", "arguments": {"query": "tema 1002"}},
+          {"name": "get_precedent", "arguments": {"id": "stf-rg-1002"}}
+        ]
+      }
+    ],
+    "reference_context_ids": ["stf-rg-1002"],
+    "expected_outcome": "States the thesis of the repercussão geral theme 1002 (Defensoria Pública and sucumbencial fees) as the tool returned it."
+  },
+  {
+    "id": "seed-coverage",
+    "input": "O que este servidor consegue responder? Quais fontes e tribunais cobre?",
+    "expected_tool_calls": ["list_coverage"],
+    "expected_outcome": "Describes the Sources and Courts from the coverage the tool returned, without naming any that it did not list."
+  }
+]

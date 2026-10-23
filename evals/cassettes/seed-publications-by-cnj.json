@@ -1,0 +1,13 @@
+{
+  "recorded_on": "2026-10-22",
+  "entries": [
+    {
+      "key": "GET https://comunicaapi.pje.jus.br/api/v1/comunicacao?dataDisponibilizacaoFim=2026-10-15&dataDisponibilizacaoInicio=2026-10-15&itensPorPagina=100&numeroProcesso=12345677620258260100&pagina=1&siglaTribunal=TJSP",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\n  \"status\": \"success\",\n  \"message\": \"Sucesso\",\n  \"count\": 2,\n  \"items\": [\n    {\n      \"id\": 900000001,\n      \"data_disponibilizacao\": \"2026-10-15\",\n      \"datadisponibilizacao\": \"15/10/2026\",\n      \"siglaTribunal\": \"TJSP\",\n      \"tipoComunicacao\": \"Intimação\",\n      \"nomeOrgao\": \"1ª Vara Cível de Exemplo\",\n      \"idOrgao\": 1001,\n      \"texto\": \"DECISÃO\\nVistos. Trata-se de recurso especial interposto contra o acórdão proferido. Defiro o pedido de tutela de urgência, nos termos do artigo 300 do Código de Processo Civil.\",\n      \"numero_processo\": \"12345677620258260100\",\n      \"numeroprocessocommascara\": \"1234567-76.2025.8.26.0100\",\n      \"meio\": \"D\",\n      \"meiocompleto\": \"Diário de Justiça Eletrônico Nacional\",\n      \"link\": \"https://dje.example.test/publicacao/900000001\",\n      \"tipoDocumento\": \"DESPACHO/DECISÃO\",\n      \"nomeClasse\": \"PROCEDIMENTO COMUM CÍVEL\",\n      \"codigoClasse\": 7,\n      \"numeroComunicacao\": 1,\n      \"ativo\": true,\n      \"hash\": \"hashdecision0001\",\n      \"status\": \"P\",\n      \"destinatarios\": [{\"nome\": \"PARTE FICTICIA A\", \"polo\": \"A\"}],\n      \"destinatarioadvogados\": []\n    },\n    {\n      \"id\": 900000002,\n      \"data_disponibilizacao\": \"2026-10-14\",\n      \"datadisponibilizacao\": \"14/10/2026\",\n      \"siglaTribunal\": \"TJSP\",\n      \"tipoComunicacao\": \"Intimação\",\n      \"nomeOrgao\": \"Câmara de Direito Privado de Exemplo\",\n      \"idOrgao\": 1002,\n      \"texto\": \"<html><body><table><tr><td>Relator</td><td>Fulano de Tal</td></tr></table><p>EMENTA: <b>RECURSO ESPECIAL</b> &amp; honorários. Provimento negado.</p><p>Acórdão unânime.</p></body></html>\",\n      \"numero_processo\": \"76543211420264036100\",\n      \"numeroprocessocommascara\": \"7654321-14.2026.4.03.6100\",\n      \"meio\": \"D\",\n      \"meiocompleto\": \"Diário de Justiça Eletrônico Nacional\",\n      \"link\": null,\n      \"tipoDocumento\": \"Intimação de acórdão\",\n      \"nomeClasse\": \"APELAÇÃO CÍVEL\",\n      \"codigoClasse\": 198,\n      \"numeroComunicacao\": 2,\n      \"ativo\": true,\n      \"hash\": \"hashruling000002\",\n      \"status\": \"P\",\n      \"destinatarios\": [],\n      \"destinatarioadvogados\": []\n    }\n  ]\n}\n"
+    }
+  ]
+}

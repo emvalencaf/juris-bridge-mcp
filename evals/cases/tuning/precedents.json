@@ -1,0 +1,397 @@
+[
+  {
+    "id": "draft-prec-sum-stj-7",
+    "input": "Qual é o enunciado da Súmula 7 do STJ?",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "court": "stj",
+              "kind": "SUM",
+              "number": "7"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "number": "7",
+              "kind": "SUM"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "query": "súmula 7"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [
+      "stj-sum-7"
+    ],
+    "expected_outcome": "Identifies the Precedent stj-sum-7 (SUM 7, stj) with the status the tool returned ('Vigente') and states its thesis as the tool returned it: 'A pretensão de simples reexame de prova não enseja recurso especial.'. Cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-prec-rg-69",
+    "input": "Qual é a tese do Tema 69 da repercussão geral do STF?",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "court": "stf",
+              "kind": "RG",
+              "number": "69"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "number": "69",
+              "kind": "RG"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "query": "tema 69"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [
+      "stf-rg-69"
+    ],
+    "expected_outcome": "Identifies the Precedent stf-rg-69 (RG 69, stf) with the status the tool returned ('Há repercussão geral. Leading case: transitado em julgado') and states its thesis as the tool returned it: 'O ICMS não compõe a base de cálculo para a incidência do PIS e da COFINS.'. Cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-prec-sum-stj-297",
+    "input": "A Súmula 297 do STJ ainda está em vigor? O que ela diz? Consulte-a pelo número, sem incluir súmulas canceladas.",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "court": "stj",
+              "kind": "SUM",
+              "number": "297"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "number": "297",
+              "kind": "SUM"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "query": "súmula 297"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [
+      "stj-sum-297"
+    ],
+    "expected_outcome": "Identifies the Precedent stj-sum-297 (SUM 297, stj) with the status the tool returned ('Vigente'), and does not invent a thesis the tool did not give. Cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-prec-sv-25-get",
+    "input": "Mostre em detalhes a Súmula Vinculante 25 do STF, com histórico de status.",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "court": "stf",
+              "kind": "SV",
+              "number": "25"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "number": "25",
+              "kind": "SV"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "query": "súmula vinculante 25"
+            }
+          }
+        ]
+      },
+      {
+        "name": "get_precedent",
+        "arguments": {
+          "id": "stf-sv-25"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "stf-sv-25"
+    ],
+    "expected_outcome": "Identifies the Precedent stf-sv-25 (SV 25, stf) with the status the tool returned ('APROVADO'), and does not invent a thesis the tool did not give. Cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-prec-stj-prescricao-intercorrente",
+    "input": "Quais recursos repetitivos do STJ tratam de prescrição intercorrente?",
+    "expected_tool_calls": [
+      {
+        "name": "search_precedents",
+        "arguments": {
+          "query": "prescrição intercorrente",
+          "court": "stj",
+          "kind": "RR"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "stj-rr-328",
+      "stj-rr-1253",
+      "stj-rr-1294"
+    ],
+    "expected_outcome": "Presents Precedents the search returned (the Source counted 93; for example stj-rr-328, stj-rr-1253, stj-rr-1294), with their thesis as returned, and cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-prec-stj-negativacao",
+    "input": "O STJ tem precedente sobre dano moral por inscrição indevida em cadastro de inadimplentes? Pesquise exatamente por \"dano moral inscrição indevida cadastro de inadimplentes\", filtrando pelo STJ.",
+    "expected_tool_calls": [
+      {
+        "name": "search_precedents",
+        "arguments": {
+          "query": "dano moral inscrição indevida cadastro de inadimplentes",
+          "court": "stj"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "stj-rr-922",
+      "stj-rr-34",
+      "stj-rr-32"
+    ],
+    "expected_outcome": "Presents Precedents the search returned (the Source counted 208; for example stj-rr-922, stj-rr-34, stj-rr-32), with their thesis as returned, and cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-prec-stf-honorarios",
+    "input": "Quais temas de repercussão geral do STF tratam de honorários sucumbenciais da Fazenda Pública?",
+    "expected_tool_calls": [
+      {
+        "name": "search_precedents",
+        "arguments": {
+          "query": "honorários sucumbenciais Fazenda Pública",
+          "court": "stf",
+          "kind": "RG"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "stf-rg-1142",
+      "stf-rg-1002",
+      "stf-rg-1064"
+    ],
+    "expected_outcome": "Presents Precedents the search returned (the Source counted 441; for example stf-rg-1142, stf-rg-1002, stf-rg-1064), with their thesis as returned, and cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-prec-tjsp-irdr",
+    "input": "Quais IRDRs do TJSP existem? Liste 3, filtrando por tribunal TJSP e tipo IRDR.",
+    "expected_tool_calls": [
+      {
+        "name": "search_precedents",
+        "arguments": {
+          "court": "tjsp",
+          "kind": "IRDR",
+          "limit": 3
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "tjsp-irdr-1",
+      "tjsp-irdr-2",
+      "tjsp-irdr-3"
+    ],
+    "expected_outcome": "Presents Precedents the search returned (the Source counted 59; for example tjsp-irdr-1, tjsp-irdr-2, tjsp-irdr-3), with their thesis as returned, and cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-prec-neg-stj-sum-9999",
+    "input": "O que diz a Súmula 9999 do STJ?",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "court": "stj",
+              "kind": "SUM",
+              "number": "9999"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "number": "9999",
+              "kind": "SUM"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "query": "súmula 9999"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [],
+    "expected_outcome": "States that the BNP returned no Precedent for STJ súmula 9999 (total 0), says an empty result does not prove none exists, and invents no Precedent, number or thesis.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-prec-neg-rg-99999",
+    "input": "Qual é a tese do Tema 99999 de repercussão geral do STF?",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "court": "stf",
+              "kind": "RG",
+              "number": "99999"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "number": "99999",
+              "kind": "RG"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "query": "tema 99999"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [],
+    "expected_outcome": "States that the BNP returned no Precedent for STF repercussão geral tema 99999 (total 0), says an empty result does not prove none exists, and invents no Precedent, number or thesis.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-prec-neg-nonsense-stj",
+    "input": "O STJ tem algum precedente sobre 'xyzzyqwertz'?",
+    "expected_tool_calls": [
+      {
+        "name": "search_precedents",
+        "arguments": {
+          "query": "xyzzyqwertz",
+          "court": "stj"
+        }
+      }
+    ],
+    "reference_context_ids": [],
+    "expected_outcome": "States that the BNP returned no Precedent for 'xyzzyqwertz' no STJ (total 0), says an empty result does not prove none exists, and invents no Precedent, number or thesis.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-cov-what-covered",
+    "input": "Quais fontes e tribunais este servidor consegue consultar? Ele cobre legislação federal?",
+    "expected_tool_calls": [
+      "list_coverage"
+    ],
+    "reference_context_ids": [],
+    "expected_outcome": "Describes only what list_coverage returned: the Sources datajud (cases), djen (publications), bnp (precedents), senado (legislation); names no Source or Court the tool did not list and does not promise unlisted data.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-cov-tre-publications",
+    "input": "Mostre as publicações do TRE de São Paulo de 15/10/2026.",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          "list_coverage",
+          {
+            "name": "search_publications",
+            "arguments": {
+              "court": "tre-sp"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [],
+    "expected_outcome": "Tells the user the server cannot answer this, as the tools declared: 'TRE-SP is not covered by the DJEN: Sends to the DJEN only now and then (sampled weeks held no items); not covered.' It lists no Publication and suggests no Court it did not see in list_coverage.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-cov-tjsp-before-start",
+    "input": "Quais publicações do TJSP saíram em 10/12/2024?",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          "list_coverage",
+          {
+            "name": "search_publications",
+            "arguments": {
+              "court": "tjsp"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [],
+    "expected_outcome": "Tells the user the server cannot answer this, as the tools declared: 'TJSP has no Publications in the DJEN before 2025-03-01.' It lists no Publication and suggests no Court it did not see in list_coverage.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  }
+]

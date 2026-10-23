@@ -27,3 +27,6 @@ graphify-out/
 
 # Playwright MCP output
 .playwright-mcp/
+
+# Local evaluation results
+evals/results/

@@ -1,0 +1,29 @@
+{
+  "recorded_on": "2026-10-22",
+  "entries": [
+    {
+      "key": "POST https://pangeabnp.pdpj.jus.br/api/v1/precedentes#5bd5d4819792036e",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"aggsEspecies\": null, \"aggsOrgaos\": null, \"posicao_final\": 1, \"posicao_inicial\": 1, \"resultados\": [{\"highlight\": {\"tese\": \"não informado\", \"tese_snippet\": \"não informado\"}, \"historico\": [{\"dataAdmissao\": \"2025-11-24\", \"dataCriacao\": \"2026-06-02T00:00:00.000-03:00\", \"dataJulgamento\": \"2026-04-29\", \"dataPublicacao\": \"2026-04-30\", \"situacao\": \"Admitido\"}, {\"dataAdmissao\": \"2025-11-24\", \"dataCriacao\": \"2026-08-21T00:00:00.000-03:00\", \"dataJulgamento\": \"2026-04-29\", \"dataPublicacao\": \"2026-04-30\", \"situacao\": \"Acórdão Publicado\"}], \"id\": \"stf-sv-25\", \"nr\": 25, \"orgao\": \"STF\", \"questao\": \"É ilícita a prisão civil de depositário infiel, qualquer que seja a modalidade do depósito.  \", \"situacao\": \"APROVADO\", \"tese\": \"não informado\", \"tipo\": \"SV\", \"ultimaAtualizacao\": \"22/05/2025\"}], \"total\": 1}"
+    },
+    {
+      "key": "POST https://pangeabnp.pdpj.jus.br/api/v1/precedentes#ad8382217ea2dcfc",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"aggsEspecies\": null, \"aggsOrgaos\": null, \"posicao_final\": 1, \"posicao_inicial\": 1, \"resultados\": [{\"highlight\": {\"tese\": \"não informado\", \"tese_snippet\": \"não informado\"}, \"historico\": [{\"dataAdmissao\": \"2025-11-24\", \"dataCriacao\": \"2026-06-02T00:00:00.000-03:00\", \"dataJulgamento\": \"2026-04-29\", \"dataPublicacao\": \"2026-04-30\", \"situacao\": \"Admitido\"}, {\"dataAdmissao\": \"2025-11-24\", \"dataCriacao\": \"2026-08-21T00:00:00.000-03:00\", \"dataJulgamento\": \"2026-04-29\", \"dataPublicacao\": \"2026-04-30\", \"situacao\": \"Acórdão Publicado\"}], \"id\": \"stf-sv-25\", \"nr\": 25, \"orgao\": \"STF\", \"questao\": \"É ilícita a prisão civil de depositário infiel, qualquer que seja a modalidade do depósito.  \", \"situacao\": \"APROVADO\", \"tese\": \"não informado\", \"tipo\": \"SV\", \"ultimaAtualizacao\": \"22/05/2025\"}], \"total\": 1}"
+    },
+    {
+      "key": "GET https://pangeabnp.pdpj.jus.br/api/v1/precedentes/stf-sv-25/decisoes",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": "{\"linkAcompanhamentoProcesssual\": null, \"relator\": null, \"textos\": []}"
+    }
+  ]
+}

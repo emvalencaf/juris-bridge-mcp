@@ -91,7 +91,7 @@ async def test_the_trajectory_records_calls_results_answer_and_usage():
         ("agent-m", 20, 7),
     ]
     assert trajectory.total_usage().input_tokens == 30
-    assert trajectory.final_state == {"cassette_misses": 0}
+    assert trajectory.final_state["cassette_misses"] == 0
 
 
 async def test_the_tool_result_reaches_the_model():
@@ -126,7 +126,7 @@ async def test_an_unrecorded_request_is_counted_as_a_cassette_miss():
 
     step = next(s for s in trajectory.steps if s.kind == "tool")
     assert "source_unavailable" in step.error
-    assert trajectory.final_state == {"cassette_misses": 1}
+    assert trajectory.final_state["cassette_misses"] == 1
 
 
 async def test_an_unknown_tool_is_an_error_step_not_a_crash():
@@ -148,3 +148,21 @@ async def test_the_loop_stops_at_the_step_cap():
     assert sum(s.kind == "tool" for s in trajectory.steps) == 3
     assert trajectory.final_output is None
     assert trajectory.steps[-1].kind == "other" and "step cap" in trajectory.steps[-1].error
+
+
+async def test_the_alias_of_the_key_behind_each_model_call_is_kept_in_the_final_state():
+    cassette = await _cassette_for(SEARCH)
+    llm = ScriptedLLMClient(
+        [
+            ChatResult(
+                tool_calls=(ToolCall("search_publications", SEARCH),),
+                usage=Usage(1, 1),
+                key_alias="key-1",
+            ),
+            ChatResult(text="done", usage=Usage(1, 1), key_alias="key-2"),
+        ]
+    )
+    async with replay_session(cassette) as session:
+        trajectory = await run_agent("q", session, llm)
+
+    assert trajectory.final_state["key_aliases"] == ["key-1", "key-2"]

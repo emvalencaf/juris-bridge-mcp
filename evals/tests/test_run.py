@@ -92,7 +92,7 @@ def test_the_expected_route_scores_one_and_leaves_a_trajectory_per_case():
     for case in dataset.cases:
         assert score_of(experiment, case.id).value == 1.0
     assert not experiment.failures
-    assert all(t.final_state == {"cassette_misses": 0} for t in experiment.trajectories)
+    assert all(t.final_state["cassette_misses"] == 0 for t in experiment.trajectories)
 
 
 def test_an_alternative_valid_route_is_not_marked_wrong():

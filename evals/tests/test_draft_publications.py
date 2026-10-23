@@ -23,7 +23,8 @@ def no_network(monkeypatch):
 
 
 def publication_drafts():
-    return [c for c in load_split("drafts").cases if c.id.startswith("draft-pub-")]
+    cases = load_split("tuning").cases + load_split("validation").cases
+    return [c for c in cases if c.id.startswith("draft-pub-")]
 
 
 def test_drafts_exist_and_are_about_twenty():
@@ -60,6 +61,10 @@ def test_cassettes_hold_no_cpf_or_cnpj(case):
 
     assert not CPF.search(text)
     assert not CNPJ.search(text)
+
+
+def test_no_unvalidated_case_is_left_in_the_drafts_split():
+    assert not load_split("drafts").cases
 
 
 def test_the_drafts_file_is_the_one_the_loader_reads():

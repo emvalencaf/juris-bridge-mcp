@@ -7,6 +7,25 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Added
+
+- Retrieval Scores (#102): `context_precision` and `context_recall` per Eval case and per run,
+  for the `tuning` and `validation` splits only, with the dates of the Cassettes behind them.
+- `evals.extend_cassettes` to record the calls an agent made that a Cassette lacked, and
+  `scripts/setup-evals-env.sh` to write the Gemini key, models and limits into `.env`.
+- `tool_use` accepts a CNJ number with or without punctuation.
+
+### Changed
+
+- Eval case questions now pin what the Cassette was recorded with (exact search term, result
+  limit, "listing is enough" for lookups), because a Cassette answers only the exact request.
+  On the tuning split this took cassette misses from 11 to 1 and context precision and recall
+  from 0.73 to 1.00 (one repetition, `gemini-3.5-flash-lite`).
+- Validated the drafted Eval cases (#101): 28 moved to `cases/tuning/` and 10 to
+  `cases/validation/`; `draft-prec-neg-tst-sum-331` discarded (the real Súmula 331 exists, so its
+  "nothing found" outcome only reflects a BNP gap); CNPJs split by a line break or a
+  non-breaking-hyphen entity are now redacted, and five Cassettes were re-redacted.
+
 ### Fixed
 
 - Review fixes of the evals (#90): the alias of the key that served each model call is now kept in

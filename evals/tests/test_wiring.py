@@ -19,7 +19,7 @@ def test_split_cases_are_read_from_its_json_files(tmp_path):
 
 
 def test_main_prints_an_empty_experiment(capsys):
-    assert main([]) == 0
+    assert main(["run", "--split", "drafts"]) == 0
 
     out = capsys.readouterr().out
     assert "Experiment" in out

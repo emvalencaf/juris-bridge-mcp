@@ -12,11 +12,13 @@ An Eval case lists `expected_tool_calls`, each one a requirement the Trajectory 
   (for example `get_publication` by id, or `search_publications` by CNJ number).
 
 A requirement scores the share of its `arguments` keys that the best matching call holds
-(strings compared ignoring case and surrounding space); 0 when no call of an accepted tool
-exists, 1 when it names no arguments. Keys the case does not mention and calls it does not
-expect are never penalised. The Score is the mean over the requirements.
+(strings compared ignoring case and surrounding space; a CNJ number with or without
+punctuation); 0 when no call of an accepted tool exists, 1 when it names no arguments. Keys the
+case does not mention and calls it does not expect are never penalised. The Score is the mean
+over the requirements.
 """
 
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -31,8 +33,14 @@ def _names(call: Any) -> list[str]:
     return [name] if isinstance(name, str) else list(name or [])
 
 
+_CNJ = re.compile(r"\d{7}-?\d{2}\.?\d{4}\.?\d\.?\d{2}\.?\d{4}")
+
+
 def _norm(value: Any) -> Any:
-    return value.strip().casefold() if isinstance(value, str) else value
+    if not isinstance(value, str):
+        return value
+    text = value.strip().casefold()
+    return re.sub(r"\D", "", text) if _CNJ.fullmatch(text) else text
 
 
 def _argument_share(expected: Mapping[str, Any], given: Mapping[str, Any]) -> float:

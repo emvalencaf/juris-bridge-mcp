@@ -1,0 +1,141 @@
+[
+  {
+    "id": "draft-prec-sv-11",
+    "input": "O que diz a Súmula Vinculante 11 do STF?",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "court": "stf",
+              "kind": "SV",
+              "number": "11"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "number": "11",
+              "kind": "SV"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "query": "súmula vinculante 11"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [
+      "stf-sv-11"
+    ],
+    "expected_outcome": "Identifies the Precedent stf-sv-11 (SV 11, stf) with the status the tool returned ('APROVADO'), and does not invent a thesis the tool did not give. Cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-prec-sum-stj-479",
+    "input": "Qual é a Súmula 479 do STJ e qual o seu status?",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "court": "stj",
+              "kind": "SUM",
+              "number": "479"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "number": "479",
+              "kind": "SUM"
+            }
+          },
+          {
+            "name": "search_precedents",
+            "arguments": {
+              "query": "súmula 479"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [
+      "stj-sum-479"
+    ],
+    "expected_outcome": "Identifies the Precedent stj-sum-479 (SUM 479, stj) with the status the tool returned ('Vigente') and states its thesis as the tool returned it: 'As instituições financeiras respondem objetivamente pelos danos gerados por fortuito interno relativo a fraudes e delitos praticados por terceiros no âmbito de operações bancárias.'. Cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-prec-tst-outsourcing",
+    "input": "Há precedentes do TST sobre terceirização de atividade-fim? Pesquise exatamente por \"terceirização atividade-fim\", filtrando pelo TST.",
+    "expected_tool_calls": [
+      {
+        "name": "search_precedents",
+        "arguments": {
+          "query": "terceirização atividade-fim",
+          "court": "tst"
+        }
+      }
+    ],
+    "reference_context_ids": [
+      "tst-irr-18",
+      "tst-rr-18",
+      "tst-irr-48"
+    ],
+    "expected_outcome": "Presents Precedents the search returned (the Source counted 47; for example tst-irr-18, tst-rr-18, tst-irr-48), with their thesis as returned, and cites no Precedent the tools did not return.",
+    "expected_state": {
+      "kind": "search"
+    }
+  },
+  {
+    "id": "draft-prec-neg-sv-cripto",
+    "input": "Existe súmula vinculante do STF sobre criptomoedas? Pesquise exatamente por \"criptomoeda blockchain\" no STF, só súmulas vinculantes. Não inclua súmulas canceladas.",
+    "expected_tool_calls": [
+      {
+        "name": "search_precedents",
+        "arguments": {
+          "query": "criptomoeda blockchain",
+          "court": "stf",
+          "kind": "SV"
+        }
+      }
+    ],
+    "reference_context_ids": [],
+    "expected_outcome": "States that the BNP returned no Precedent for súmula vinculante sobre criptomoeda (total 0), says an empty result does not prove none exists, and invents no Precedent, number or thesis.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  },
+  {
+    "id": "draft-cov-stf-publications",
+    "input": "Quais publicações do STF saíram no diário em 15/10/2026?",
+    "expected_tool_calls": [
+      {
+        "any_of": [
+          "list_coverage",
+          {
+            "name": "search_publications",
+            "arguments": {
+              "court": "stf"
+            }
+          }
+        ]
+      }
+    ],
+    "reference_context_ids": [],
+    "expected_outcome": "Tells the user the server cannot answer this, as the tools declared: 'STF is not covered by the DJEN: Not a DJEN sender: its queries fail, and it keeps its own portal.' It lists no Publication and suggests no Court it did not see in list_coverage.",
+    "expected_state": {
+      "kind": "lookup"
+    }
+  }
+]

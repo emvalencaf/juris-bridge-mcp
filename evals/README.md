@@ -63,6 +63,8 @@ tickets of the spec.
 | `tool_use.py` | The `tool_use` Metric, loose on the route |
 | `judge.py` | The rubric judge Metric (opt-in `--judge`): correctness by grounding, repeated, uncalibrated |
 | `citation_existence.py` | The `citation_existence` Metric: each CNJ number or Precedent cited in the answer must appear in a tool result |
+| `retrieval.py` | The `context_precision` and `context_recall` Scores of what the tools returned against `reference_context_ids` (validated splits only) |
+| `extend_cassettes.py` | Adds to a Cassette the calls an agent made that it had no answer for (`python -m evals.extend_cassettes`, opt-in like recording) |
 | `draft_precedents.py` | Records the drafts about Precedents, negatives and Coverage from the live BNP (`python -m evals.draft_precedents`) |
 | `seed.py` | Builds the seed Cassettes from the test fixtures |
 | `dataset.py` | Loads Eval cases from the split folders |
@@ -111,7 +113,7 @@ From the repository root:
 uv run --group evals python -m evals run --split seed
 ```
 
-It loads the Eval cases of the split (`tuning` by default; an empty split prints an empty
+It loads the Eval cases of the split (`tuning` by default; an empty split, such as `drafts`, prints an empty
 Experiment and needs no model), puts each to the agent over the Cassette named after its id,
 and prints the Experiment: per Eval case the `tool_use` Score, the number of tool calls and
 errors, the tokens and the cassette misses. The model is built from the settings below, so
@@ -462,7 +464,7 @@ from memory. Each draft's `reference_context_ids` and `expected_outcome` facts (
 document types) are copied from the recorded response, and nothing about parties or text is
 written. A Cassette that already exists is replayed instead of re-recorded, so a second run makes
 no live request for it; delete it to refresh. Requests are 2 s apart, and the first Source
-failure stops the run without retrying. Drafts count toward no result until you validate them.
+failure stops the run without retrying. Drafts count toward no result until you validate them; the 38 kept were validated in #101 and moved to `cases/tuning/` (28) and `cases/validation/` (10, held out while tuning tool descriptions).
 `evals/tests/test_draft_publications.py` loads every draft and replays its first expected call
 against its Cassette. Cassettes are large (a DJEN page is up to 100 full texts, about 8 MB for the
 19); read them before committing.
@@ -482,6 +484,40 @@ is NER-based and best effort; the drafts recorded before it (#100) still show `C
 status as `[NOME]`, from the earlier heuristic. A thesis containing `[NOME]` is left out of the expected outcome. Drafts are unvalidated and
 count toward no result; the maintainer reviews them before moving them to a split. Search drafts
 (`kind: search`) take the top results of the day as references, which the BNP may reorder.
+
+### First full evaluation report
+
+Run on 2026-10-23 with `python -m evals run --split <split> --judge` (3 repetitions, judge on),
+agent `gemini-3.5-flash-lite`, judge `gemini-3.1-flash-lite`, Cassettes recorded on 2026-10-22.
+The saved runs are in `evals/results/` (git-ignored). The `validation` run is the second one,
+made after fixing `tool_use` for unpunctuated CNJ numbers and pinning one question.
+
+| | `tuning` (28 cases, 84 runs) | `validation` (10 cases, 30 runs) |
+|---|---|---|
+| Context precision and recall | 1.00 (22 cases with references) | 1.00 (8 cases with references) |
+| `tool_use` | 1.00 | 1.00 |
+| Consistency (every repetition passes) | lookups 16/16, searches 12/12 | lookups 7/7, searches 3/3 |
+| `citation_existence` | 0.93 | 1.00 |
+| Judge (uncalibrated) | 0.92 | 1.00 |
+| Cassette misses | 0 | 0 |
+
+How to read it:
+
+* The agent is a small model; its scores do not transfer to a stronger one. The judge is
+  uncalibrated until about 20 answers are labelled by hand, and it shares the `gemini` family
+  with the agent, so it may favour the agent's answers.
+* The questions pin the exact search term, the result limit and the exclusions (such as
+  cancelled súmulas) the Cassettes were recorded with, because a Cassette answers only the exact
+  request. A first run without that pinning scored retrieval 0.73 on `tuning` (11 cassette
+  misses). The 1.00 therefore measures regressions of the server, not the agent's robustness to
+  free-form questions.
+* `citation_existence` is below 1.00 on `tuning` only because of the negative cases
+  (`neg-stj-sum-9999`, `neg-rg-99999`): the agent repeats the number from the question to say it
+  does not exist, and the check reads that as a fabricated citation. It is a known false
+  positive; the check is not loosened because it would then let through a real invention that
+  repeats the user's number.
+* The golden set carries one date (2026-10-22). The DJEN and the BNP will drift from it; refresh
+  a Cassette to see the drift.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

@@ -9,6 +9,13 @@ heading when `development` is released to `master`.
 
 ### Added
 
+- Draft Publication Eval cases (#99): `python -m evals.draft_publications` (with
+  `JURIS_BRIDGE_EVALS_RECORD=1`) records Cassettes from the live DJEN, paced and in small windows,
+  and drafts 19 Eval cases in `evals/cases/drafts/publications.json` (10 text searches, 9 lookups
+  by CNJ number found in the recorded searches), every expected value copied from the recorded
+  response. Redaction now also covers the DJEN's structured parties and lawyers (`nome`,
+  `numero_oab`), OAB registrations, titled names (`Dr.`), roles glued to the previous word and
+  upper-case names before a registration, CPF or role in parentheses.
 - Judge calibration (#105): `python -m evals calibrate export RUN` writes about 20 sampled answers
   (question, expected outcome, tool results, answer, empty labels, never the judge's verdict) for
   hand labelling, and `calibrate score RUN LABELS` re-judges them with the calibration model,

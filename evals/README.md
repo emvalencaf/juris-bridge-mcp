@@ -365,6 +365,11 @@ to a model.
   after a party role (`autor`, `réu`, `requerente`, `advogado`...), and runs of two or
   more capitalised words. Institutional words (`Tribunal`, `Justiça`, `Ministério`...)
   split a run and are kept.
+* **Structured DJEN fields:** `nome` of a party (object with `polo`) or a lawyer (with
+  `numero_oab`) becomes `[NOME]` and `numero_oab` becomes `[OAB]`, by key; OAB registrations in
+  text (`SP405006`, `OAB/SP 123`) become `[OAB]`; names after `Dr.`/`Sra.`, after a role glued to
+  the previous word, and upper-case names right before `([OAB])`, `(CPF: ...)`, `(ID ...)` or a
+  role in parentheses are replaced.
 * **Never touched:** CNJ numbers, Court aliases (`TJSP`, `TRF3`...) and Precedent kind
   siglas (`SUM`, `SV`, `RG`, `RR`, `IRDR`, `IAC`, `OJ`...), so the citation check still
   has something to compare.
@@ -413,6 +418,24 @@ Responsible use ([RESPONSIBLE_USE.md](../RESPONSIBLE_USE.md)):
 * Redaction of names is heuristic: read a new Cassette before committing it. The request key
   is stored verbatim, so never record a query containing personal data.
 * Do not redistribute DataJud-derived Cassettes outside your own non-commercial use.
+
+### Draft Publication Eval cases
+
+```bash
+JURIS_BRIDGE_EVALS_RECORD=1 uv run --group evals python -m evals.draft_publications
+```
+
+Records, from the live DJEN, one Cassette per draft (`evals/cassettes/draft-pub-*.json`) and writes
+`evals/cases/drafts/publications.json`. Searches by Court, text and a three-day window come first;
+the CNJ numbers of the lookups (`kind: lookup`) are then taken from those recorded responses, never
+from memory. Each draft's `reference_context_ids` and `expected_outcome` facts (counts, dates,
+document types) are copied from the recorded response, and nothing about parties or text is
+written. A Cassette that already exists is replayed instead of re-recorded, so a second run makes
+no live request for it; delete it to refresh. Requests are 2 s apart, and the first Source
+failure stops the run without retrying. Drafts count toward no result until you validate them.
+`evals/tests/test_draft_publications.py` loads every draft and replays its first expected call
+against its Cassette. Cassettes are large (a DJEN page is up to 100 full texts, about 8 MB for the
+19); read them before committing.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

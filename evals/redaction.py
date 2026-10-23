@@ -36,9 +36,23 @@ _ROLES = (
     "paciente|interessado|interessada|advogado|advogada|vítima|testemunha|investigado|"
     "denunciado|denunciada|acusado|acusada"
 )
+OAB_PLACEHOLDER = "[OAB]"
+# A lawyer's registration: "SP405006", "SP403110-N", "OAB/SP 123456", "OAB 12345".
+_OAB_NUMBER = re.compile(
+    r"\bOAB\W{0,3}(?:[A-Z]{2}\W{0,3})?\d[\d.]*(?:-?[A-Z]\b|/[A-Z]{2}\b)?|\b(?:AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|SC|SP|SE|TO)\d{4,6}(?:-?[A-Z]\b)?"
+)
+# "JOSÉ EDUARDO GOMES DA COSTA ([OAB])": the name a registration in parentheses belongs to.
+_NAME_BEFORE_OAB = re.compile(
+    rf"{_UPPER}(?:\s+(?:(?:{_CONN})\s+|(?:DE|DA|DO|DOS|DAS)\s+)?{_UPPER})+(?=\s*\((?:\[OAB\]|(?:CPF:?\s*|ID\s*)?\[CPF\]|(?i:{_ROLES})\)))"
+)
+# A name after a courtesy title ("Dr. FELIPE GONÇALVES PINTO"); handled like a role's name.
+_TITLE_NAME = re.compile(
+    rf"\b(?P<role>(?:Dr|Dra|Sr|Sra)\.)(?P<sep>\s+)"
+    rf"(?P<name>{_NAME_WORD}(?:\s+(?:(?:{_CONN})\s+)?{_NAME_WORD})*)"
+)
 _ROLE_NAME = re.compile(
-    rf"\b(?P<role>(?i:(?:{_ROLES})(?:\(a\))?))(?P<sep>\s*[:\-\u2013,]?\s+(?i:(?:(?:dr|dra|sr|sra)\.?\s+)?))"
-    rf"(?P<name>{_NAME_WORD}(?:\s+(?:(?:{_CONN})\s+)?{_NAME_WORD})*)",
+    rf"(?:\b|(?<=[a-zà-ÿ]))(?P<role>(?i:(?:{_ROLES})(?:\(a\))?))(?P<sep>\s*[:\-\u2013,]?\s+(?i:(?:(?:dr|dra|sr|sra)\.?\s+)?))"
+    rf"(?P<name>(?!(?:Dr|Dra|Sr|Sra)\b){_NAME_WORD}(?:\s+(?:(?:{_CONN})\s+)?{_NAME_WORD})*)",
 )
 
 # Institutions and legal vocabulary: a run is split at them and they are never replaced.
@@ -53,7 +67,9 @@ _INSTITUTIONAL = frozenset(
         "advocacia procuradoria conselho órgão pleno plenário julgamento incidente resolução "
         "demandas repetitivas competência assunção tese tema precedente diário eletrônico "
         "publicação intimação sentença decisão despacho acórdão brasil sul norte nordeste "
-        "sudeste centro oeste"
+        "sudeste centro oeste advogado advogada autor autora réu requerente requerido requerida "
+        "apelante apelado apelada agravante agravado agravada exequente executado executada "
+        "recorrente recorrido recorrida"
     ).split()
 )
 
@@ -123,8 +139,29 @@ def _redact_number(match: re.Match[str]) -> str:
 
 def _redact_text(text: str) -> str:
     text = _NUMBER.sub(_redact_number, text)
-    text = _ROLE_NAME.sub(_redact_role_name, text)
+    for _ in range(2):  # a role inside the tail of a previous match needs a second pass
+        text = _ROLE_NAME.sub(_redact_role_name, text)
+    text = _TITLE_NAME.sub(_redact_role_name, text)
+    text = _OAB_NUMBER.sub(OAB_PLACEHOLDER, text)
+    text = _NAME_BEFORE_OAB.sub(NAME_PLACEHOLDER, text)
     return _TITLE_RUN.sub(_redact_title_run, text)
+
+
+# Structured fields that hold a person by their key, whatever the value looks like: the DJEN
+# lists the parties (`destinatarios[].nome`) and the lawyers (`advogado.nome`, `numero_oab`)
+# of a communication, in capitals, which no pattern over free text would catch.
+# `nome` alone is not enough (a DataJud class has one): the object must also carry `polo` (a
+# party) or `numero_oab` (a lawyer).
+_PERSON_MARKERS = frozenset({"polo", "numero_oab"})
+
+
+def _redact_field(owner: dict[str, Any], key: str, value: Any) -> Any:
+    if isinstance(value, str) and _PERSON_MARKERS & owner.keys():
+        if key == "nome":
+            return NAME_PLACEHOLDER
+        if key == "numero_oab":
+            return OAB_PLACEHOLDER
+    return redact(value)
 
 
 def redact[T](value: T) -> T:
@@ -144,7 +181,7 @@ def redact[T](value: T) -> T:
     if isinstance(value, str):
         result = _redact_text(value)
     elif isinstance(value, dict):
-        result = {k: redact(v) for k, v in value.items()}
+        result = {k: _redact_field(value, k, v) for k, v in value.items()}
     elif isinstance(value, list):
         result = [redact(v) for v in value]
     return result  # type: ignore[no-any-return]

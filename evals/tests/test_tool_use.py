@@ -119,3 +119,14 @@ def test_it_registers_as_a_metric_named_tool_use():
     register_metrics(registry)
 
     assert registry.get(TOOL_USE).requires == ("expected_tool_calls",)
+
+
+def test_a_cnj_number_matches_with_or_without_punctuation():
+    expected = [
+        {"name": "search_publications", "arguments": {"cnj_number": "5002539-37.2026.4.03.6331"}}
+    ]
+
+    assert score(expected, ("search_publications", {"cnj_number": "50025393720264036331"})) == 1.0
+    assert (
+        score(expected, ("search_publications", {"cnj_number": "5002539-37.2026.4.03.6332"})) == 0.0
+    )

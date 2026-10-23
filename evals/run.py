@@ -33,8 +33,13 @@ from evals.llm import (
     key_source_from,
 )
 from evals.progress import Progress, unit_key
+from evals.retrieval import CONTEXT_PRECISION, CONTEXT_RECALL
+from evals.retrieval import register_metrics as register_retrieval_metrics
 from evals.store import trajectory_from_dict, trajectory_to_dict
 from evals.tool_use import TOOL_USE, register_metrics
+
+# Splits whose cases are validated: only these are scored for retrieval.
+VALIDATED_SPLITS = frozenset({"tuning", "validation"})
 
 
 def prepare(dataset: Dataset) -> Dataset:
@@ -109,6 +114,7 @@ def run_eval(
     registry = Registry()
     register_metrics(registry)
     register_citation_metrics(registry)
+    register_retrieval_metrics(registry)
     done: dict[str, int] = {}
 
     def work(case_input: dict[str, Any]) -> Trajectory:
@@ -139,6 +145,8 @@ def run_eval(
             raise _Stop(unit_key(case_id, repetition), stop) from stop
 
     metrics = [registry.get(TOOL_USE), registry.get(CITATION_EXISTENCE)]
+    if dataset.name in VALIDATED_SPLITS:
+        metrics += [registry.get(CONTEXT_PRECISION), registry.get(CONTEXT_RECALL)]
     if judge is not None:
         register_judge(registry, judge, judge_repetitions)
         metrics.append(registry.get(JUDGE))
@@ -222,6 +230,7 @@ def format_experiment(experiment: Experiment, calibration: Mapping[str, Any] | N
     citation = [s.value for s in experiment.scores if s.name == CITATION_EXISTENCE]
     if citation:
         lines.append(f"  mean citation_existence: {sum(citation) / len(citation):.2f}")
+    lines += _retrieval_summary(experiment)
     tool_use = [s.value for s in experiment.scores if s.name == TOOL_USE]
     if tool_use:
         lines.append(f"  mean tool_use: {sum(tool_use) / len(tool_use):.2f}")
@@ -259,6 +268,7 @@ def _case_line(
     if score and score.comment:
         line += f" | {score.comment}"
     line += _citation_note(experiment, trajectory)
+    line += _retrieval_note(experiment, trajectory)
     if judged:
         line += "\n    " + format_judge_line(judged, calibration)
     return line
@@ -278,3 +288,39 @@ def _citation_note(experiment: Experiment, trajectory: Trajectory) -> str:
     return f" | citation_existence {found.value:.2f}" + (
         f" ({found.comment})" if found.comment else ""
     )
+
+
+def _retrieval_note(experiment: Experiment, trajectory: Trajectory) -> str:
+    values = {
+        name: next(
+            (
+                s.value
+                for s in experiment.scores
+                if s.name == name and s.target_id == trajectory.case_id
+            ),
+            None,
+        )
+        for name in (CONTEXT_PRECISION, CONTEXT_RECALL)
+    }
+    if values[CONTEXT_PRECISION] is None:
+        return ""
+    return f" | precision {values[CONTEXT_PRECISION]:.2f} recall {values[CONTEXT_RECALL]:.2f}"
+
+
+def _retrieval_summary(experiment: Experiment, root: Path = CASSETTES_DIR) -> list[str]:
+    """The retrieval means of the run and the dates of the Cassettes behind them."""
+    scored = {s.target_id for s in experiment.scores if s.name == CONTEXT_PRECISION}
+    if not scored:
+        return []
+    lines = []
+    for name in (CONTEXT_PRECISION, CONTEXT_RECALL):
+        values = [s.value for s in experiment.scores if s.name == name]
+        lines.append(f"  mean {name}: {sum(values) / len(values):.2f} ({len(scored)} case(s))")
+    dates = sorted(
+        Cassette.load(path).recorded_on
+        for case_id in scored
+        if (path := cassette_path(case_id, root=root)).exists()
+    )
+    if dates:
+        lines.append(f"  golden set recorded: {dates[0]} to {dates[-1]} (Cassette dates)")
+    return lines

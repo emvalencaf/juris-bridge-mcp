@@ -25,7 +25,7 @@ import asyncio
 import json
 import sys
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -33,7 +33,13 @@ from typing import Any
 from fastmcp import Client
 
 from evals.cassette import CASSETTES_DIR, Cassette, cassette_path, replay_session
-from evals.record import RECORD_ENV, RecordingDisabledError, record_case, recording_enabled
+from evals.record import (
+    RECORD_ENV,
+    RecordingDisabledError,
+    RecordOptions,
+    record_case,
+    recording_enabled,
+)
 
 DRAFTS_PATH = Path(__file__).parent / "cases" / "drafts" / "publications.json"
 
@@ -178,7 +184,7 @@ def _structured(result: Any) -> dict[str, Any]:
 
 
 async def _record_search(
-    case_id: str, arguments: dict[str, Any], root: Path, **options: Any
+    case_id: str, arguments: dict[str, Any], root: Path, options: RecordOptions | None = None
 ) -> dict[str, Any]:
     captured: dict[str, Any] = {}
     existing = cassette_path(case_id, root=root)
@@ -193,7 +199,12 @@ async def _record_search(
         result = await client.call_tool("search_publications", arguments, raise_on_error=False)
         captured.update(_structured(result))
 
-    await record_case(case_id, run, root=root, min_interval=MIN_INTERVAL_SECONDS, **options)
+    await record_case(
+        case_id,
+        run,
+        root=root,
+        options=replace(options or RecordOptions(), min_interval=MIN_INTERVAL_SECONDS),
+    )
     return captured
 
 
@@ -204,7 +215,7 @@ async def draft_all(
     drafts_path: Path = DRAFTS_PATH,
     lookup_count: int = LOOKUP_COUNT,
     pause: float = PAUSE_BETWEEN_CASES_SECONDS,
-    **options: Any,
+    options: RecordOptions | None = None,
 ) -> list[dict[str, Any]]:
     """Record the searches, then the lookups, and write the drafts; return them.
 
@@ -224,7 +235,7 @@ async def draft_all(
                 "date_to": spec.date_to.isoformat(),
                 "limit": SEARCH_LIMIT,
             }
-            result = await _record_search(search_id(spec), arguments, root, **options)
+            result = await _record_search(search_id(spec), arguments, root, options)
             if _items(result):
                 drafts.append(draft_search(spec, result))
                 candidates.append((str(_items(result)[0]["cnj_number"]), spec))
@@ -242,7 +253,7 @@ async def draft_all(
                 "date_from": spec.date_from.isoformat(),
                 "date_to": spec.date_to.isoformat(),
             }
-            result = await _record_search(case_id, arguments, root, **options)
+            result = await _record_search(case_id, arguments, root, options)
             if _items(result):
                 drafts.append(draft_lookup(case_id, cnj, spec.date_from, spec.date_to, result))
             else:

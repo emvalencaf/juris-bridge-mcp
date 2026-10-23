@@ -40,3 +40,6 @@ could not tell whether two names were one person, so the maintainer asked for na
 recognition: spaCy with `pt_core_news_md`, which, like assayer, lives only in the `evals`
 dependency group (the model is a pinned wheel in `pyproject.toml`). The default test run and CI
 do not install it. Redaction stays best effort.
+
+The tests of `evals/` run only with `uv run --group evals pytest evals`. They are not
+part of `uv run pytest` or CI, and `evals/` is outside the published package.

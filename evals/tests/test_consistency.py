@@ -174,6 +174,16 @@ def test_the_run_is_saved_with_a_timestamped_name_and_loads_back(tmp_path):
     assert load_run("seed-20261022-093005", root=tmp_path)[0].name == "seed"
 
 
+def test_the_key_aliases_survive_a_save_and_load_and_never_the_key(tmp_path):
+    experiment = run([GOOD])
+    experiment.trajectories[0].final_state = {"cassette_misses": 0, "key_aliases": ["key-1"]}
+
+    path = save_run(experiment, {}, root=tmp_path)
+
+    loaded, _ = load_run(path)
+    assert loaded.trajectories[0].final_state["key_aliases"] == ["key-1"]
+
+
 def test_a_missing_or_broken_run_is_a_store_error(tmp_path):
     with pytest.raises(StoreError):
         load_run("nope", root=tmp_path)

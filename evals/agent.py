@@ -107,16 +107,20 @@ async def run_agent(
     Returns:
         The Trajectory: a model Step per model call (with its usage) and a tool Step per
         tool call (`input` the arguments, `output` the result text, `error` the failure),
-        the final answer, and the cassette-miss count as `final_state`.
+        the final answer, and `final_state`: the cassette-miss count and `key_aliases`, the alias
+        of the key that served each model call, in order (never the key itself).
     """
     served = await session.client.list_tools()
     tools = [to_declaration(t) for t in served if tool_names is None or t.name in tool_names]
     messages = [Message(role="user", text=question)]
     steps: list[Step] = []
+    key_aliases: list[str] = []
     final_output: str | None = None
 
     for _ in range(max_steps):
         reply = await asyncio.to_thread(llm.chat, messages, tools, system=system)
+        if reply.key_alias:
+            key_aliases.append(reply.key_alias)
         steps.append(
             Step(
                 kind="model",
@@ -140,7 +144,9 @@ async def run_agent(
         steps.append(Step(kind="other", error=f"step cap of {max_steps} model calls reached"))
 
     return Trajectory(
-        steps=steps, final_output=final_output, final_state={"cassette_misses": session.misses}
+        steps=steps,
+        final_output=final_output,
+        final_state={"cassette_misses": session.misses, "key_aliases": key_aliases},
     )
 
 

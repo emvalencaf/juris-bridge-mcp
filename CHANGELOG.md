@@ -7,6 +7,20 @@ heading when `development` is released to `master`.
 
 ## [Unreleased]
 
+### Fixed
+
+- Review fixes of the evals (#90): the alias of the key that served each model call is now kept in
+  the Trajectory `final_state` (`key_aliases`) and so in saved runs (user story 46), never the key
+  itself; a test fails if a stored Cassette request key holds a CPF or CNPJ.
+
+### Changed
+
+- evals: `record_case` and `recording_session` take a typed `RecordOptions` instead of
+  `**options`; the label normalisation and the `case#n` unit key each have one helper.
+- Docs: the draft Precedent section of `evals/README.md` moved into Usage; the CLI (3) versus
+  `run_eval` (1) repetition defaults, the Precedent matching that ignores the issuing body and the
+  verbatim request key are documented; `evals/` tests noted in CODE_STANDARDS.md and ADR 0009.
+
 ### Added
 
 - NER redaction of names (follow-up to #90, replaces the heuristic of #92/#99): people found by

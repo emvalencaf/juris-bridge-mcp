@@ -5,7 +5,7 @@ import json
 import pytest
 
 from evals.llm import AllKeysExhausted
-from evals.progress import Progress, ProgressError, unit_key
+from evals.progress import Progress, ProgressError, case_of, unit_key
 
 
 def test_a_unit_key_joins_the_case_id_and_the_repetition():
@@ -95,3 +95,7 @@ def test_clear_forgets_everything_and_removes_the_file(tmp_path):
 
     assert len(progress) == 0
     assert not path.exists()
+
+
+def test_the_case_id_is_read_back_from_a_unit_key():
+    assert case_of(unit_key("draft-pub#x", 2)) == "draft-pub#x"

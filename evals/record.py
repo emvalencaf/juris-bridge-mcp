@@ -20,6 +20,7 @@ import os
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,27 @@ RECORD_ENV = "JURIS_BRIDGE_EVALS_RECORD"
 DEFAULT_MIN_INTERVAL_SECONDS = 1.0
 
 _KEPT_HEADERS = ("content-type",)
+
+
+@dataclass(frozen=True)
+class RecordOptions:
+    """How a recording session runs; the defaults are the real thing (tests override them).
+
+    Attributes:
+        environ: The environment checked for `JURIS_BRIDGE_EVALS_RECORD` (`os.environ` when None).
+        inner: The transport under the recorder (a real HTTP one when None).
+        today: The Cassette's recorded-on date (today when None).
+        min_interval: The least seconds between two requests.
+        clock: Monotonic clock for the pacing.
+        sleep: Awaitable sleep for the pacing.
+    """
+
+    environ: Mapping[str, str] | None = None
+    inner: httpx.AsyncBaseTransport | None = None
+    today: date | None = None
+    min_interval: float = DEFAULT_MIN_INTERVAL_SECONDS
+    clock: Callable[[], float] = time.monotonic
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
 
 
 class RecordingDisabledError(RuntimeError):
@@ -111,32 +133,30 @@ class RecordingTransport(httpx.AsyncBaseTransport):
 
 @asynccontextmanager
 async def recording_session(
-    case_id: str,
-    *,
-    environ: Mapping[str, str] | None = None,
-    inner: httpx.AsyncBaseTransport | None = None,
-    today: date | None = None,
-    min_interval: float = DEFAULT_MIN_INTERVAL_SECONDS,
-    clock: Callable[[], float] = time.monotonic,
-    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    case_id: str, options: RecordOptions | None = None
 ) -> AsyncIterator[tuple[Client[Any], Cassette]]:
     """Yield an in-memory client over the real server and the Cassette it fills.
+
+    Args:
+        case_id: The Eval case id (named in the refusal message).
+        options: Environment, transport, date and pacing; the real ones when None.
 
     Raises:
         RecordingDisabledError: `JURIS_BRIDGE_EVALS_RECORD` is not `1`; no transport is built.
     """
-    if not recording_enabled(environ):
+    options = options or RecordOptions()
+    if not recording_enabled(options.environ):
         raise RecordingDisabledError(
             f"set {RECORD_ENV}=1 to record {case_id!r} from the live Sources "
             "(read-only, rate limited; see evals/README.md)"
         )
-    cassette = Cassette(recorded_on=today or date.today())
+    cassette = Cassette(recorded_on=options.today or date.today())
     transport = RecordingTransport(
-        inner if inner is not None else httpx.AsyncHTTPTransport(),
+        options.inner if options.inner is not None else httpx.AsyncHTTPTransport(),
         cassette,
-        min_interval=min_interval,
-        clock=clock,
-        sleep=sleep,
+        min_interval=options.min_interval,
+        clock=options.clock,
+        sleep=options.sleep,
     )
     async with Client(build_eval_server(transport)) as client:
         yield client, cassette
@@ -147,7 +167,7 @@ async def record_case[T](
     run: Callable[[Client[Any]], Awaitable[T]],
     *,
     root: Path = CASSETTES_DIR,
-    **options: Any,
+    options: RecordOptions | None = None,
 ) -> Path:
     """Run `run(client)` on the real server over the recording transport; save the Cassette.
 
@@ -155,13 +175,12 @@ async def record_case[T](
         case_id: The Eval case id; names the file `<root>/<case_id>.json`.
         run: A coroutine function making the tool calls of the case.
         root: Folder of the Cassettes.
-        **options: `environ`, `inner`, `today`, `min_interval`, `clock`, `sleep` (see
-            `recording_session`).
+        options: See `RecordOptions`; the real ones when None.
 
     Returns:
         The path of the saved Cassette. Nothing is saved if `run` raises.
     """
-    async with recording_session(case_id, **options) as (client, cassette):
+    async with recording_session(case_id, options) as (client, cassette):
         await run(client)
     path = cassette_path(case_id, root=root)
     cassette.save(path)
